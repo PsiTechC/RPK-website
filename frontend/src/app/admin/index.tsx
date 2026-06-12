@@ -207,9 +207,14 @@ function ProductTable({
   onEdit: (p: Product) => void;
   onDelete: (id: number) => void;
 }) {
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={styles.table}>
+  const { width } = useWindowDimensions();
+  // On roomy screens the table fills the container (flex columns absorb the
+  // extra width — no empty gap on the right). On small screens it keeps its
+  // min width and scrolls horizontally so nothing gets squashed.
+  const fits = width >= 820;
+
+  const table = (
+    <View style={[styles.table, fits ? styles.tableFull : styles.tableMin]}>
         <View style={[styles.tr, styles.thead]}>
           <Text style={[styles.th, styles.colImg]}>Image</Text>
           <Text style={[styles.th, styles.colName]}>Name</Text>
@@ -237,9 +242,11 @@ function ProductTable({
             </View>
           </View>
         ))}
-      </View>
-    </ScrollView>
+    </View>
   );
+
+  // Full width on desktop; horizontal scroll only when the screen is narrow.
+  return fits ? table : <ScrollView horizontal showsHorizontalScrollIndicator={false}>{table}</ScrollView>;
 }
 
 // Grid view — image-forward cards.
@@ -404,7 +411,9 @@ const styles = StyleSheet.create({
   viewIcon: { fontSize: 16, color: colors.muted, fontWeight: '900' },
   viewIconActive: { color: colors.orange },
   // table
-  table: { minWidth: 760, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.white },
+  table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.white },
+  tableFull: { width: '100%' },
+  tableMin: { minWidth: 760 },
   tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
   thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
   trAlt: { backgroundColor: '#FCFCFD' },

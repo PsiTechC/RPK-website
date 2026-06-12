@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { api, Category, Product } from '../lib/api';
 import { colors, radius, BRAND } from '../lib/theme';
@@ -9,6 +10,8 @@ import { CategoryCarousel } from '../components/CategoryCarousel';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button } from '../components/ui';
 import { FadeInUp, Reveal, CountUp, LetterReveal } from '../components/Motion';
+
+const CHILI = require('../../assets/images/chili.png');
 
 const HEADER_H = 66;
 
@@ -52,7 +55,8 @@ export default function Home() {
         <View style={{ maxWidth: 780, alignItems: 'center' }}>
           <FadeInUp delay={100}>
             <View style={styles.pill}>
-              <Text style={styles.pillText}>🌶️ Dubai · Worldwide Import & Export</Text>
+              <Image source={CHILI} style={styles.pillChili} contentFit="contain" />
+              <Text style={styles.pillText}>Dubai · Worldwide Import & Export</Text>
             </View>
           </FadeInUp>
           <View style={{ marginBottom: 14 }}>
@@ -140,7 +144,8 @@ function Trust({ n, l }: { n: string; l: string }) {
 }
 
 const styles = StyleSheet.create({
-  pill: { backgroundColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, marginBottom: 16 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, marginBottom: 16 },
+  pillChili: { width: 26, height: 14 },
   pillText: { color: colors.white, fontWeight: '700', fontSize: 13 },
   heroTitle: { color: colors.white, fontWeight: '900', textAlign: 'center', marginBottom: 14 },
   heroSub: { color: '#F3E7E5', fontSize: 16, textAlign: 'center', lineHeight: 24, maxWidth: 640, marginBottom: 22 },
