@@ -5,6 +5,7 @@ import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, Button, Field, Card } from '../components/ui';
+import { vEmail, vName, vPassword, vPhone, vRequired, isClean } from '../lib/validate';
 
 export default function Login() {
   const router = useRouter();
@@ -13,11 +14,32 @@ export default function Login() {
   const [mode, setMode] = useState<'login' | 'register'>(params.mode === 'register' ? 'register' : 'login');
   const [role, setRole] = useState<'customer' | 'business'>('customer');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Update a field and clear its inline error as the user types.
+  const set = (k: keyof typeof form) => (t: string) => {
+    setForm((f) => ({ ...f, [k]: t }));
+    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+  };
+
+  function validate(): boolean {
+    const e: Record<string, string | null> = {
+      email: vEmail(form.email),
+      password: mode === 'login' ? vRequired(form.password, 'Password') : vPassword(form.password),
+    };
+    if (mode === 'register') {
+      e.name = vName(form.name, 'Full name');
+      e.phone = vPhone(form.phone, true);
+    }
+    setErrors(e);
+    return isClean(e);
+  }
+
   async function submit() {
     setError('');
+    if (!validate()) return;
     setBusy(true);
     try {
       if (mode === 'login') {
@@ -53,8 +75,8 @@ export default function Login() {
 
           {mode === 'register' && (
             <>
-              <Field label="Full name" value={form.name} onChangeText={(t) => setForm({ ...form, name: t })} placeholder="Your name" />
-              <Field label="Phone" value={form.phone} onChangeText={(t) => setForm({ ...form, phone: t })} placeholder="+971 …" />
+              <Field label="Full name" value={form.name} onChangeText={set('name')} placeholder="Your name" error={errors.name} />
+              <Field label="Phone" value={form.phone} onChangeText={set('phone')} placeholder="+971 …" keyboardType="phone-pad" error={errors.phone} />
               <View style={{ gap: 6 }}>
                 <Text style={styles.label}>Account type</Text>
                 <View style={styles.roleRow}>
@@ -65,8 +87,8 @@ export default function Login() {
             </>
           )}
 
-          <Field label="Email" value={form.email} onChangeText={(t) => setForm({ ...form, email: t })} placeholder="you@email.com" keyboardType="email-address" />
-          <Field label="Password" value={form.password} onChangeText={(t) => setForm({ ...form, password: t })} placeholder="••••••" secureTextEntry />
+          <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
+          <Field label="Password" value={form.password} onChangeText={set('password')} placeholder="••••••" secureTextEntry error={errors.password} />
 
           {!!error && <Text style={styles.error}>{error}</Text>}
           <Button label={busy ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'} onPress={submit} disabled={busy} />

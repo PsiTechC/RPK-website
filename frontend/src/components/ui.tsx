@@ -55,6 +55,7 @@ export function Field({
   keyboardType,
   multiline,
   style,
+  error,
 }: {
   label?: string;
   value: string;
@@ -64,6 +65,7 @@ export function Field({
   keyboardType?: any;
   multiline?: boolean;
   style?: ViewStyle;
+  error?: string | null;
 }) {
   return (
     <View style={[{ gap: 6 }, style]}>
@@ -76,8 +78,9 @@ export function Field({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         multiline={multiline}
-        style={[styles.input, multiline && { height: 96, textAlignVertical: 'top', paddingTop: 10 }]}
+        style={[styles.input, multiline && { height: 96, textAlignVertical: 'top', paddingTop: 10 }, !!error && styles.inputError]}
       />
+      {!!error && <Text style={styles.fieldError}>{error}</Text>}
     </View>
   );
 }
@@ -130,5 +133,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     outlineStyle: 'none' as any,
   },
+  inputError: { borderColor: colors.red, backgroundColor: '#FFF7F6' },
+  fieldError: { color: colors.red, fontSize: 12, fontWeight: '600' },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 18, ...shadow.soft },
 });

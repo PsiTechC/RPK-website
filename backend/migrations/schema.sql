@@ -25,8 +25,12 @@ CREATE TABLE IF NOT EXISTS products (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Soft-delete: archived products are hidden from the store & admin list but can
+-- be restored. NULL = live, a timestamp = archived (deleted) at that moment.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active   ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_products_archived ON products(archived_at);
 
 CREATE TABLE IF NOT EXISTS users (
     id            BIGSERIAL PRIMARY KEY,

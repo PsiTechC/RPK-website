@@ -5,6 +5,7 @@ import { api, Product, Category, imageUri } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { Button, Field } from '../ui';
 import { useToast } from '../Toast';
+import { vRequired, vPrice, vStock, vImageUrl, isClean } from '../../lib/validate';
 
 const UNITS = ['KG', 'BAG', 'PKT', 'CAT', 'PC', 'TIN'];
 
@@ -34,7 +35,25 @@ export function ProductForm({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const toast = useToast();
+
+  const set = (k: keyof typeof form) => (t: string) => {
+    setForm((f) => ({ ...f, [k]: t }));
+    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+  };
+
+  function validate(): boolean {
+    const e: Record<string, string | null> = {
+      name: vRequired(form.name, 'Product name'),
+      price: vPrice(form.price),
+      stock: vStock(form.stock),
+      image_url: vImageUrl(form.image_url),
+      category_id: form.category_id == null ? 'Please choose a category' : null,
+    };
+    setErrors(e);
+    return isClean(e);
+  }
 
   // Web file picker: open the native dialog, upload the chosen image to the
   // backend, then store the returned URL as the product image.
@@ -62,10 +81,7 @@ export function ProductForm({
 
   async function save() {
     setError('');
-    if (!form.name.trim()) {
-      setError('Name is required.');
-      return;
-    }
+    if (!validate()) return;
     setBusy(true);
     const body = {
       name: form.name.trim(),
@@ -105,7 +121,7 @@ export function ProductForm({
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 14 }}>
-          <Field label="Name" value={form.name} onChangeText={(t) => setForm({ ...form, name: t })} placeholder="Product name" />
+          <Field label="Name" value={form.name} onChangeText={set('name')} placeholder="Product name" error={errors.name} />
 
           <View style={{ gap: 6 }}>
             <Text style={styles.label}>Category</Text>
@@ -114,12 +130,13 @@ export function ProductForm({
                 <Pressable
                   key={c.id}
                   style={[styles.chip, form.category_id === c.id && styles.chipActive]}
-                  onPress={() => setForm({ ...form, category_id: c.id })}
+                  onPress={() => { setForm({ ...form, category_id: c.id }); setErrors((e) => ({ ...e, category_id: undefined })); }}
                 >
                   <Text style={[styles.chipText, form.category_id === c.id && { color: colors.white }]}>{c.name}</Text>
                 </Pressable>
               ))}
             </View>
+            {!!errors.category_id && <Text style={styles.fieldError}>{errors.category_id}</Text>}
           </View>
 
           <View style={{ gap: 6 }}>
@@ -134,8 +151,8 @@ export function ProductForm({
           </View>
 
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Field style={{ flex: 1 }} label="Price (AED)" value={form.price} onChangeText={(t) => setForm({ ...form, price: t })} placeholder="0.00" keyboardType="decimal-pad" />
-            <Field style={{ flex: 1 }} label="Stock" value={form.stock} onChangeText={(t) => setForm({ ...form, stock: t })} placeholder="100" keyboardType="number-pad" />
+            <Field style={{ flex: 1 }} label="Price (AED)" value={form.price} onChangeText={set('price')} placeholder="0.00" keyboardType="decimal-pad" error={errors.price} />
+            <Field style={{ flex: 1 }} label="Stock" value={form.stock} onChangeText={set('stock')} placeholder="100" keyboardType="number-pad" error={errors.stock} />
           </View>
 
           <View style={{ gap: 8 }}>
@@ -156,7 +173,7 @@ export function ProductForm({
                 <Text style={styles.hint}>JPG, PNG, GIF, WebP or SVG · up to 8MB</Text>
               </View>
             </View>
-            <Field label="…or paste an image URL" value={form.image_url} onChangeText={(t) => setForm({ ...form, image_url: t })} placeholder="https://…" />
+            <Field label="…or paste an image URL" value={form.image_url} onChangeText={set('image_url')} placeholder="https://…" error={errors.image_url} />
           </View>
           <Field label="Description" value={form.description} onChangeText={(t) => setForm({ ...form, description: t })} placeholder="Description" multiline />
 
@@ -217,5 +234,6 @@ const styles = StyleSheet.create({
   check: { color: colors.white, fontWeight: '900' },
   toggleText: { color: colors.text, fontWeight: '600' },
   error: { color: colors.red, fontSize: 13 },
+  fieldError: { color: colors.red, fontSize: 12, fontWeight: '600' },
   foot: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: colors.border },
 });

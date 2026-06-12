@@ -96,6 +96,8 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	args := []interface{}{}
 	where := "WHERE 1=1"
 
+	// Archived (soft-deleted) products never appear in the normal listings.
+	where += " AND p.archived_at IS NULL"
 	// Public callers only see active products; admin can pass ?all=1
 	if q.Get("all") != "1" {
 		where += " AND p.is_active = TRUE"
@@ -229,13 +231,69 @@ func (s *Server) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]string{"status": "updated"})
 }
 
+// handleDeleteProduct soft-deletes: the product is archived (recoverable),
+// not physically removed.
 func (s *Server) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	ct, err := s.pool.Exec(r.Context(), `UPDATE products SET archived_at = now(), updated_at = now() WHERE id=$1 AND archived_at IS NULL`, id)
+	if err != nil {
+		writeErr(w, 500, "archive failed")
+		return
+	}
+	if ct.RowsAffected() == 0 {
+		writeErr(w, 404, "product not found")
+		return
+	}
+	writeJSON(w, 200, map[string]string{"status": "archived"})
+}
+
+// handleRestoreProduct brings an archived product back to the live catalogue.
+func (s *Server) handleRestoreProduct(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	ct, err := s.pool.Exec(r.Context(), `UPDATE products SET archived_at = NULL, updated_at = now() WHERE id=$1`, id)
+	if err != nil {
+		writeErr(w, 500, "restore failed")
+		return
+	}
+	if ct.RowsAffected() == 0 {
+		writeErr(w, 404, "product not found")
+		return
+	}
+	writeJSON(w, 200, map[string]string{"status": "restored"})
+}
+
+// handlePurgeProduct permanently removes a product (only used from the archive).
+func (s *Server) handlePurgeProduct(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if _, err := s.pool.Exec(r.Context(), `DELETE FROM products WHERE id=$1`, id); err != nil {
 		writeErr(w, 500, "delete failed")
 		return
 	}
 	writeJSON(w, 200, map[string]string{"status": "deleted"})
+}
+
+// handleListArchivedProducts returns the soft-deleted products (admin only).
+func (s *Server) handleListArchivedProducts(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pool.Query(r.Context(),
+		`SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
+		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at
+		 FROM products p LEFT JOIN categories c ON c.id = p.category_id
+		 WHERE p.archived_at IS NOT NULL ORDER BY p.archived_at DESC`)
+	if err != nil {
+		writeErr(w, 500, "query failed")
+		return
+	}
+	defer rows.Close()
+	out := []models.Product{}
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			writeErr(w, 500, "scan failed")
+			return
+		}
+		out = append(out, p)
+	}
+	writeJSON(w, 200, out)
 }
 
 // scanner usable by both Query rows and QueryRow

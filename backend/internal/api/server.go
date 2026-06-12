@@ -72,9 +72,12 @@ func (s *Server) Router() http.Handler {
 			r.Put("/categories/{id}", s.handleUpdateCategory)
 			r.Delete("/categories/{id}", s.handleDeleteCategory)
 
+			r.Get("/products/archived", s.handleListArchivedProducts)
 			r.Post("/products", s.handleCreateProduct)
 			r.Put("/products/{id}", s.handleUpdateProduct)
-			r.Delete("/products/{id}", s.handleDeleteProduct)
+			r.Delete("/products/{id}", s.handleDeleteProduct)           // soft-delete (archive)
+			r.Patch("/products/{id}/restore", s.handleRestoreProduct)   // un-archive
+			r.Delete("/products/{id}/purge", s.handlePurgeProduct)      // permanent delete
 
 			r.Post("/uploads", s.handleUploadImage)
 

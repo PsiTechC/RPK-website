@@ -5,6 +5,7 @@ import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
 
 const TYPES = [
   { key: 'import', label: 'Import', desc: 'I want to buy & import from RPK' },
@@ -25,18 +26,32 @@ export default function ImportExport() {
     product_interest: '',
     message: '',
   });
+  const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<any>(null);
 
   const stacked = width < 900;
 
+  const set = (k: keyof typeof form) => (t: string) => {
+    setForm((f) => ({ ...f, [k]: t }));
+    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+  };
+
+  function validate(): boolean {
+    const e: Record<string, string | null> = {
+      company_name: vRequired(form.company_name, 'Company name'),
+      email: vEmail(form.email),
+      phone: vPhone(form.phone, false),
+      contact_person: form.contact_person.trim() ? vName(form.contact_person, 'Contact person') : null,
+    };
+    setErrors(e);
+    return isClean(e);
+  }
+
   async function submit() {
     setError('');
-    if (!form.company_name || !form.email) {
-      setError('Company name and email are required.');
-      return;
-    }
+    if (!validate()) return;
     setBusy(true);
     try {
       const res = await api.createRegistration(form, token);
@@ -93,7 +108,7 @@ export default function ImportExport() {
               </Card>
             ) : (
               <Card style={{ gap: 14 }}>
-                <Field label="Company name *" value={form.company_name} onChangeText={(t) => setForm({ ...form, company_name: t })} placeholder="Your company L.L.C" />
+                <Field label="Company name *" value={form.company_name} onChangeText={set('company_name')} placeholder="Your company L.L.C" error={errors.company_name} />
 
                 <View style={{ gap: 6 }}>
                   <Text style={styles.label}>Business type *</Text>
@@ -112,12 +127,12 @@ export default function ImportExport() {
                 </View>
 
                 <View style={[styles.twoCol, stacked && { flexDirection: 'column' }]}>
-                  <Field style={{ flex: 1 }} label="Country" value={form.country} onChangeText={(t) => setForm({ ...form, country: t })} placeholder="e.g. India" />
-                  <Field style={{ flex: 1 }} label="Contact person" value={form.contact_person} onChangeText={(t) => setForm({ ...form, contact_person: t })} placeholder="Full name" />
+                  <Field style={{ flex: 1 }} label="Country" value={form.country} onChangeText={set('country')} placeholder="e.g. India" />
+                  <Field style={{ flex: 1 }} label="Contact person" value={form.contact_person} onChangeText={set('contact_person')} placeholder="Full name" error={errors.contact_person} />
                 </View>
                 <View style={[styles.twoCol, stacked && { flexDirection: 'column' }]}>
-                  <Field style={{ flex: 1 }} label="Email *" value={form.email} onChangeText={(t) => setForm({ ...form, email: t })} placeholder="you@company.com" keyboardType="email-address" />
-                  <Field style={{ flex: 1 }} label="Phone" value={form.phone} onChangeText={(t) => setForm({ ...form, phone: t })} placeholder="+…" />
+                  <Field style={{ flex: 1 }} label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@company.com" keyboardType="email-address" error={errors.email} />
+                  <Field style={{ flex: 1 }} label="Phone" value={form.phone} onChangeText={set('phone')} placeholder="+…" keyboardType="phone-pad" error={errors.phone} />
                 </View>
                 <Field label="Products of interest" value={form.product_interest} onChangeText={(t) => setForm({ ...form, product_interest: t })} placeholder="e.g. Basmati rice, spices, oils" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Tell us about your business & requirements" multiline />

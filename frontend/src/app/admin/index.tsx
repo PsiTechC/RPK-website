@@ -8,8 +8,9 @@ import { Container, SectionTitle, Button, Card, Badge } from '../../components/u
 import { ProductForm } from '../../components/admin/ProductForm';
 import { ProductThumb } from '../../components/admin/ProductThumb';
 import { useToast } from '../../components/Toast';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-type Tab = 'dashboard' | 'products' | 'orders' | 'registrations';
+type Tab = 'dashboard' | 'products' | 'orders' | 'registrations' | 'archived';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
@@ -40,7 +41,7 @@ export default function Admin() {
       <Container style={{ marginTop: 22 }}>
         <SectionTitle title="Admin Dashboard" subtitle="Manage products, orders & registrations" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {(['dashboard', 'products', 'orders', 'registrations'] as Tab[]).map((t) => (
+          {(['dashboard', 'products', 'orders', 'registrations', 'archived'] as Tab[]).map((t) => (
             <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
               <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
             </Pressable>
@@ -52,6 +53,7 @@ export default function Admin() {
           {token && tab === 'products' && <Products token={token} />}
           {token && tab === 'orders' && <Orders token={token} />}
           {token && tab === 'registrations' && <Registrations token={token} />}
+          {token && tab === 'archived' && <Archived token={token} />}
         </View>
       </Container>
       <View style={{ height: 60 }} />
@@ -124,6 +126,7 @@ function Products({ token }: { token: string }) {
   const [editing, setEditing] = useState<Product | null | undefined>(undefined); // undefined=closed, null=new
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ProductView>('list');
+  const [confirming, setConfirming] = useState<Product | null>(null); // product pending delete
   const toast = useToast();
 
   async function load() {
@@ -137,11 +140,13 @@ function Products({ token }: { token: string }) {
     load().catch(() => setLoading(false));
   }, [token]);
 
-  async function remove(id: number) {
-    const name = products.find((p) => p.id === id)?.name;
+  async function confirmDelete() {
+    const p = confirming;
+    if (!p) return;
+    setConfirming(null);
     try {
-      await api.admin.deleteProduct(id, token);
-      toast(name ? `“${name}” deleted` : 'Product deleted', 'info');
+      await api.admin.deleteProduct(p.id, token);
+      toast(`“${p.name}” archived — restore it from the Archived tab`, 'info');
       load();
     } catch {
       toast('Could not delete product', 'error');
@@ -176,9 +181,9 @@ function Products({ token }: { token: string }) {
       {loading ? (
         <Text style={styles.muted}>Loading…</Text>
       ) : view === 'list' ? (
-        <ProductTable products={products} onEdit={setEditing} onDelete={remove} />
+        <ProductTable products={products} onEdit={setEditing} onDelete={setConfirming} />
       ) : (
-        <ProductGrid products={products} width={width} onEdit={setEditing} onDelete={remove} />
+        <ProductGrid products={products} width={width} onEdit={setEditing} onDelete={setConfirming} />
       )}
 
       {editing !== undefined && (
@@ -193,6 +198,16 @@ function Products({ token }: { token: string }) {
           }}
         />
       )}
+
+      {confirming && (
+        <ConfirmDialog
+          title="Delete this product?"
+          message={`“${confirming.name}” will be moved to the Archived tab and hidden from the store. You can restore it anytime.`}
+          confirmLabel="Delete product"
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
     </View>
   );
 }
@@ -205,7 +220,7 @@ function ProductTable({
 }: {
   products: Product[];
   onEdit: (p: Product) => void;
-  onDelete: (id: number) => void;
+  onDelete: (p: Product) => void;
 }) {
   const { width } = useWindowDimensions();
   // On roomy screens the table fills the container (flex columns absorb the
@@ -238,7 +253,7 @@ function ProductTable({
             </View>
             <View style={[styles.colActions, styles.actionCell]}>
               <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={styles.smallBtn} />
-              <Button label="Delete" variant="danger" onPress={() => onDelete(p.id)} style={styles.smallBtn} />
+              <Button label="Delete" variant="danger" onPress={() => onDelete(p)} style={styles.smallBtn} />
             </View>
           </View>
         ))}
@@ -259,7 +274,7 @@ function ProductGrid({
   products: Product[];
   width: number;
   onEdit: (p: Product) => void;
-  onDelete: (id: number) => void;
+  onDelete: (p: Product) => void;
 }) {
   const gap = 12;
   const cols = width < 620 ? 1 : width < 920 ? 2 : 3;
@@ -279,10 +294,89 @@ function ProductGrid({
           <Text style={styles.gridMeta}>{money(p.price, p.currency)} / {p.unit} · stock {p.stock}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={[styles.smallBtn, { flex: 1 }]} />
-            <Button label="Delete" variant="danger" onPress={() => onDelete(p.id)} style={[styles.smallBtn, { flex: 1 }]} />
+            <Button label="Delete" variant="danger" onPress={() => onDelete(p)} style={[styles.smallBtn, { flex: 1 }]} />
           </View>
         </Card>
       ))}
+    </View>
+  );
+}
+
+// ---------- Archived (soft-deleted) products ----------
+function Archived({ token }: { token: string }) {
+  const [items, setItems] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purging, setPurging] = useState<Product | null>(null);
+  const toast = useToast();
+
+  async function load() {
+    setLoading(true);
+    try {
+      setItems(await api.admin.archivedProducts(token));
+    } catch {
+      /* ignore */
+    }
+    setLoading(false);
+  }
+  useEffect(() => {
+    load().catch(() => setLoading(false));
+  }, [token]);
+
+  async function restore(p: Product) {
+    try {
+      await api.admin.restoreProduct(p.id, token);
+      toast(`“${p.name}” restored`, 'success');
+      load();
+    } catch {
+      toast('Could not restore product', 'error');
+    }
+  }
+  async function purge() {
+    const p = purging;
+    if (!p) return;
+    setPurging(null);
+    try {
+      await api.admin.purgeProduct(p.id, token);
+      toast(`“${p.name}” permanently deleted`, 'info');
+      load();
+    } catch {
+      toast('Could not delete product', 'error');
+    }
+  }
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <Text style={styles.h}>{items.length} archived product{items.length === 1 ? '' : 's'}</Text>
+      {items.length === 0 ? (
+        <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 36 }}>
+          <Text style={{ fontSize: 40 }}>🗃️</Text>
+          <Text style={styles.muted}>No archived products. Deleted products appear here and can be restored.</Text>
+        </Card>
+      ) : (
+        items.map((p) => (
+          <Card key={p.id} style={styles.archRow}>
+            <ProductThumb product={p} size={48} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>{p.name}</Text>
+              <Text style={styles.rowMeta}>{p.category_name || 'Uncategorised'} · {money(p.price, p.currency)} / {p.unit}</Text>
+            </View>
+            <Button label="↩ Restore" variant="navy" onPress={() => restore(p)} style={styles.smallBtn} />
+            <Button label="Delete forever" variant="danger" onPress={() => setPurging(p)} style={styles.smallBtn} />
+          </Card>
+        ))
+      )}
+
+      {purging && (
+        <ConfirmDialog
+          title="Permanently delete?"
+          message={`“${purging.name}” will be deleted forever. This cannot be undone.`}
+          confirmLabel="Delete forever"
+          onConfirm={purge}
+          onCancel={() => setPurging(null)}
+        />
+      )}
     </View>
   );
 }
@@ -435,6 +529,7 @@ const styles = StyleSheet.create({
   gridCard: { gap: 10, padding: 14, flexGrow: 1 },
   gridTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   gridMeta: { color: colors.muted, fontSize: 13 },
+  archRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, flexWrap: 'wrap' },
   rowTitle: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   rowMeta: { color: colors.muted, fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
   orderTotal: { fontWeight: '900', color: colors.navy, fontSize: 17 },

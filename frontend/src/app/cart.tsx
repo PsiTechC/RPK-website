@@ -7,6 +7,7 @@ import { colors, radius } from '../lib/theme';
 import { useApp, money } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
 
 export default function Cart() {
   const router = useRouter();
@@ -19,18 +20,32 @@ export default function Cart() {
     customer_phone: user?.phone || '',
     shipping_address: '',
   });
+  const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<any>(null);
 
   const stacked = width < 880;
 
+  const set = (k: keyof typeof form) => (t: string) => {
+    setForm((f) => ({ ...f, [k]: t }));
+    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+  };
+
+  function validate(): boolean {
+    const e: Record<string, string | null> = {
+      customer_name: vName(form.customer_name, 'Full name'),
+      customer_email: vEmail(form.customer_email),
+      customer_phone: vPhone(form.customer_phone, true),
+      shipping_address: vRequired(form.shipping_address, 'Shipping address'),
+    };
+    setErrors(e);
+    return isClean(e);
+  }
+
   async function checkout() {
     setError('');
-    if (!form.customer_name || !form.customer_email) {
-      setError('Please enter your name and email.');
-      return;
-    }
+    if (!validate()) return;
     setPlacing(true);
     try {
       const res = await api.createOrder(
@@ -133,10 +148,10 @@ export default function Cart() {
               </View>
 
               <View style={{ gap: 10, marginTop: 8 }}>
-                <Field label="Full name" value={form.customer_name} onChangeText={(t) => setForm({ ...form, customer_name: t })} placeholder="Your name" />
-                <Field label="Email" value={form.customer_email} onChangeText={(t) => setForm({ ...form, customer_email: t })} placeholder="you@email.com" keyboardType="email-address" />
-                <Field label="Phone" value={form.customer_phone} onChangeText={(t) => setForm({ ...form, customer_phone: t })} placeholder="+971 …" />
-                <Field label="Shipping address" value={form.shipping_address} onChangeText={(t) => setForm({ ...form, shipping_address: t })} placeholder="Delivery address" multiline />
+                <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
+                <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
+                <Field label="Phone" value={form.customer_phone} onChangeText={set('customer_phone')} placeholder="+971 …" keyboardType="phone-pad" error={errors.customer_phone} />
+                <Field label="Shipping address" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Delivery address" multiline error={errors.shipping_address} />
               </View>
 
               <Badge text="Mock payment — no card needed" tone="muted" />

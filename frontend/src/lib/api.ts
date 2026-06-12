@@ -160,8 +160,13 @@ export const api = {
     createProduct: (body: any, token: string) => request<any>('/api/admin/products', { method: 'POST', body, token }),
     updateProduct: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/products/${id}`, { method: 'PUT', body, token }),
-    deleteProduct: (id: number, token: string) =>
+    deleteProduct: (id: number, token: string) => // soft-delete → archive
       request<any>(`/api/admin/products/${id}`, { method: 'DELETE', token }),
+    archivedProducts: (token: string) => request<Product[]>('/api/admin/products/archived', { token }),
+    restoreProduct: (id: number, token: string) =>
+      request<any>(`/api/admin/products/${id}/restore`, { method: 'PATCH', token }),
+    purgeProduct: (id: number, token: string) =>
+      request<any>(`/api/admin/products/${id}/purge`, { method: 'DELETE', token }),
     // Upload an image file (web File/Blob) and get back a server-relative URL.
     uploadImage: async (file: any, token: string): Promise<{ url: string }> => {
       const fd = new FormData();
