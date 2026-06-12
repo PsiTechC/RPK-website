@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Secrets / env (keep the *.example templates)
+.env
+.env.*
+!.env.example
+!*.env.example
+
+# Go build output
+/backend/server
+backend/server
+*.exe
+
+# Expo / Metro / build artifacts
+.expo/
+**/.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.*
+yarn-error.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

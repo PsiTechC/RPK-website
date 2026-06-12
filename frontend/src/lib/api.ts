@@ -1,0 +1,151 @@
+// Tiny typed API client for the RPK Go backend.
+// Override the base URL at build/run time with EXPO_PUBLIC_API_URL.
+export const API_URL =
+  (process.env.EXPO_PUBLIC_API_URL as string) || 'http://localhost:8090';
+
+export type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  image_url: string;
+  sort_order: number;
+};
+
+export type Product = {
+  id: number;
+  name: string;
+  slug: string;
+  category_id: number | null;
+  category_name?: string;
+  unit: string;
+  price: number;
+  currency: string;
+  image_url: string;
+  description: string;
+  stock: number;
+  is_active: boolean;
+};
+
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'customer' | 'business' | 'admin';
+};
+
+export type OrderItem = {
+  id: number;
+  product_name: string;
+  unit: string;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+};
+
+export type Order = {
+  id: number;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  shipping_address: string;
+  status: string;
+  subtotal: number;
+  currency: string;
+  payment_status: string;
+  payment_ref: string;
+  created_at: string;
+  items?: OrderItem[];
+};
+
+export type Registration = {
+  id: number;
+  company_name: string;
+  business_type: string;
+  country: string;
+  contact_person: string;
+  phone: string;
+  email: string;
+  product_interest: string;
+  message: string;
+  status: string;
+  created_at: string;
+};
+
+async function request<T>(
+  path: string,
+  opts: { method?: string; body?: any; token?: string | null } = {}
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (opts.token) headers['Authorization'] = `Bearer ${opts.token}`;
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  });
+
+  const text = await res.text();
+  const data = text ? safeJSON(text) : null;
+  if (!res.ok) {
+    const msg = (data && (data.error || data.message)) || `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
+  return data as T;
+}
+
+function safeJSON(t: string) {
+  try {
+    return JSON.parse(t);
+  } catch {
+    return { raw: t };
+  }
+}
+
+export const api = {
+  // public
+  categories: () => request<Category[]>('/api/categories'),
+  products: (q?: { category?: string; q?: string }) => {
+    const params = new URLSearchParams();
+    if (q?.category) params.set('category', q.category);
+    if (q?.q) params.set('q', q.q);
+    const qs = params.toString();
+    return request<Product[]>(`/api/products${qs ? `?${qs}` : ''}`);
+  },
+  product: (id: number | string) => request<Product>(`/api/products/${id}`),
+
+  register: (body: any) => request<{ token: string; user: User }>('/api/auth/register', { method: 'POST', body }),
+  login: (body: { email: string; password: string }) =>
+    request<{ token: string; user: User }>('/api/auth/login', { method: 'POST', body }),
+  me: (token: string) => request<User>('/api/auth/me', { token }),
+
+  createOrder: (body: any, token?: string | null) =>
+    request<any>('/api/orders', { method: 'POST', body, token }),
+  myOrders: (token: string) => request<Order[]>('/api/my/orders', { token }),
+
+  createRegistration: (body: any, token?: string | null) =>
+    request<any>('/api/registrations', { method: 'POST', body, token }),
+  myRegistrations: (token: string) => request<Registration[]>('/api/my/registrations', { token }),
+
+  chat: (messages: { role: string; content: string }[]) =>
+    request<{ reply: string }>('/api/chat', { method: 'POST', body: { messages } }),
+
+  // admin
+  admin: {
+    stats: (token: string) => request<any>('/api/admin/stats', { token }),
+    allProducts: (token: string) => request<Product[]>('/api/products?all=1', { token }),
+    createProduct: (body: any, token: string) => request<any>('/api/admin/products', { method: 'POST', body, token }),
+    updateProduct: (id: number, body: any, token: string) =>
+      request<any>(`/api/admin/products/${id}`, { method: 'PUT', body, token }),
+    deleteProduct: (id: number, token: string) =>
+      request<any>(`/api/admin/products/${id}`, { method: 'DELETE', token }),
+    orders: (token: string) => request<Order[]>('/api/admin/orders', { token }),
+    updateOrder: (id: number, body: any, token: string) =>
+      request<any>(`/api/admin/orders/${id}`, { method: 'PATCH', body, token }),
+    registrations: (token: string) => request<Registration[]>('/api/admin/registrations', { token }),
+    updateRegistration: (id: number, body: any, token: string) =>
+      request<any>(`/api/admin/registrations/${id}`, { method: 'PATCH', body, token }),
+  },
+};

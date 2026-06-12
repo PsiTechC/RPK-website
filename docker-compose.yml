@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rpk_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rpk
+      POSTGRES_PASSWORD: rpk_password
+      POSTGRES_DB: rpk_food
+    ports:
+      - "5440:5432"
+    volumes:
+      - rpk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rpk -d rpk_food"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rpk_pgdata:
