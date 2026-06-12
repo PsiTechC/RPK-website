@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { api, Product } from '../../lib/api';
+import { api, Product, imageUri } from '../../lib/api';
 import { colors, radius } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
+import { useToast } from '../../components/Toast';
 import { visualByName, isPlaceholder } from '../../lib/foodVisuals';
 import { Footer } from '../../components/Footer';
 import { Container, Button, Badge } from '../../components/ui';
@@ -14,6 +15,7 @@ export default function ProductDetail() {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const { addToCart } = useApp();
+  const toast = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
@@ -49,12 +51,14 @@ export default function ProductDetail() {
 
         <View style={[styles.row, stacked && { flexDirection: 'column' }]}>
           <View style={[styles.imageBox, stacked ? { width: '100%' } : { width: '46%' }]}>
-            {isPlaceholder(product.image_url) ? (
+            {!isPlaceholder(product.image_url) ? (
+              <Image source={{ uri: imageUri(product.image_url) }} style={styles.image} contentFit="cover" transition={200} />
+            ) : visualByName(product.category_name).photo ? (
+              <Image source={{ uri: visualByName(product.category_name).photo }} style={styles.image} contentFit="cover" transition={200} />
+            ) : (
               <View style={[styles.emojiTile, { backgroundColor: visualByName(product.category_name).from }]}>
                 <Text style={{ fontSize: 110 }}>{visualByName(product.category_name).emoji}</Text>
               </View>
-            ) : (
-              <Image source={{ uri: product.image_url }} style={styles.image} contentFit="cover" transition={200} />
             )}
           </View>
 
@@ -88,6 +92,7 @@ export default function ProductDetail() {
                 onPress={() => {
                   addToCart(product, qty);
                   setAdded(true);
+                  toast(`“${product.name}” added to cart`, 'success');
                   setTimeout(() => setAdded(false), 1500);
                 }}
               />

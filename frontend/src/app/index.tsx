@@ -5,10 +5,10 @@ import { api, Category, Product } from '../lib/api';
 import { colors, radius, BRAND } from '../lib/theme';
 import { HeroVideo } from '../components/HeroVideo';
 import { ProductCard } from '../components/ProductCard';
-import { CategoryTile } from '../components/CategoryTile';
+import { CategoryCarousel } from '../components/CategoryCarousel';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button } from '../components/ui';
-import { FadeInUp, Reveal } from '../components/Motion';
+import { FadeInUp, Reveal, CountUp, LetterReveal } from '../components/Motion';
 
 const HEADER_H = 66;
 
@@ -31,10 +31,12 @@ export default function Home() {
 
   // Full-screen hero (fills the viewport below the header).
   const heroHeight = Math.max(520, height - HEADER_H);
-  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : 5;
+  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : width < 1500 ? 5 : 6;
   const gap = 16;
-  const contentW = Math.min(width, 1200) - 36;
+  const contentW = Math.min(width, 1600) - 36;
   const cardW = (contentW - gap * (cols - 1)) / cols;
+  // single-line category carousel: ~2.4 tiles visible at once so one sits centred
+  const carouselItemW = Math.min(320, Math.max(220, Math.round(contentW / (width < 560 ? 1.4 : 2.6))));
 
   // Group products by category, preserving category order.
   const grouped = useMemo(() => {
@@ -53,11 +55,14 @@ export default function Home() {
               <Text style={styles.pillText}>🌶️ Dubai · Worldwide Import & Export</Text>
             </View>
           </FadeInUp>
-          <FadeInUp delay={220}>
-            <Text style={[styles.heroTitle, { fontSize: width < 600 ? 32 : 52 }]}>
-              Quality Groceries & Food, Traded Worldwide
-            </Text>
-          </FadeInUp>
+          <View style={{ marginBottom: 14 }}>
+            <LetterReveal
+              text="Quality Groceries & Food, Traded Worldwide"
+              delay={200}
+              duration={1700}
+              style={[styles.heroTitle, { fontSize: width < 600 ? 32 : 52, marginBottom: 0 }]}
+            />
+          </View>
           <FadeInUp delay={340}>
             <Text style={styles.heroSub}>
               From premium basmati and bold spices to oils, pulses and beverages — sourced and supplied by{' '}
@@ -87,29 +92,8 @@ export default function Home() {
           {loading ? (
             <ActivityIndicator color={colors.red} />
           ) : (
-            <View style={[styles.grid, { gap }]}>
-              {categories.map((c) => (
-                <CategoryTile key={c.id} category={c} width={cardW} />
-              ))}
-            </View>
+            <CategoryCarousel categories={categories} itemW={carouselItemW} viewportW={contentW} gap={22} />
           )}
-        </Reveal>
-      </Container>
-
-      {/* IMPORT / EXPORT BANNER */}
-      <Container style={{ marginTop: 44 }}>
-        <Reveal>
-          <View style={[styles.banner, width < 760 && { flexDirection: 'column', alignItems: 'flex-start' }]}>
-            <View style={{ flex: 1, gap: 10 }}>
-              <Text style={styles.bannerKicker}>FOR INTERNATIONAL BUYERS & SELLERS</Text>
-              <Text style={styles.bannerTitle}>Import & Export with RPK</Text>
-              <Text style={styles.bannerText}>
-                Register your company to trade with us across borders. Our team reviews every application and
-                partners with importers and exporters worldwide — directly from Dubai.
-              </Text>
-            </View>
-            <Button label="Register your business →" variant="navy" onPress={() => router.push('/import-export')} />
-          </View>
         </Reveal>
       </Container>
 
@@ -149,7 +133,7 @@ export default function Home() {
 function Trust({ n, l }: { n: string; l: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text style={styles.trustNum}>{n}</Text>
+      <CountUp value={n} style={styles.trustNum} />
       <Text style={styles.trustLabel}>{l}</Text>
     </View>
   );

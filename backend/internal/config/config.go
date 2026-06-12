@@ -15,6 +15,7 @@ type Config struct {
 	AnthropicModel  string
 	CORSOrigins     []string
 	MigrationsDir   string
+	UploadsDir      string
 }
 
 func Load() Config {
@@ -29,6 +30,7 @@ func Load() Config {
 		AnthropicModel:  get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"),
 		CORSOrigins:     splitCSV(get("CORS_ORIGINS", "http://localhost:8081,http://localhost:19006,http://localhost:3000")),
 		MigrationsDir:   get("MIGRATIONS_DIR", "migrations"),
+		UploadsDir:      get("UPLOADS_DIR", "uploads"),
 	}
 }
 

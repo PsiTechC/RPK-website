@@ -38,6 +38,10 @@ func (s *Server) Router() http.Handler {
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 
+	// Serve admin-uploaded product images.
+	fileServer := http.FileServer(http.Dir(s.cfg.UploadsDir))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", fileServer))
+
 	r.Route("/api", func(r chi.Router) {
 		// Public
 		r.Post("/auth/register", s.handleRegister)
@@ -71,6 +75,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/products", s.handleCreateProduct)
 			r.Put("/products/{id}", s.handleUpdateProduct)
 			r.Delete("/products/{id}", s.handleDeleteProduct)
+
+			r.Post("/uploads", s.handleUploadImage)
 
 			r.Get("/orders", s.handleAdminListOrders)
 			r.Get("/orders/{id}", s.handleAdminGetOrder)

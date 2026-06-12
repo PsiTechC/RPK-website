@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
@@ -8,8 +8,9 @@ import { Container, Button, Field, Card } from '../components/ui';
 
 export default function Login() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ mode?: string }>();
   const { login, register } = useApp();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(params.mode === 'register' ? 'register' : 'login');
   const [role, setRole] = useState<'customer' | 'business'>('customer');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [error, setError] = useState('');

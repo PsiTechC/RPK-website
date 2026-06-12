@@ -3,16 +3,18 @@ import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { colors, radius, shadow } from '../lib/theme';
-import { Product } from '../lib/api';
+import { Product, imageUri } from '../lib/api';
 import { useApp, money } from '../lib/store';
 import { visualByName, isPlaceholder } from '../lib/foodVisuals';
 import { useHoverScale } from './Motion';
+import { useToast } from './Toast';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function ProductCard({ product, width = 220 }: { product: Product; width?: number }) {
   const router = useRouter();
   const { addToCart } = useApp();
+  const toast = useToast();
   const v = visualByName(product.category_name);
   const usePhoto = !isPlaceholder(product.image_url);
   const hover = useHoverScale(1.035);
@@ -26,9 +28,12 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
       onPressIn={hover.onPressIn}
       onPressOut={hover.onPressOut}
     >
-      <View style={[styles.imgWrap, { backgroundColor: usePhoto ? colors.cream : v.from }]}>
+      <View style={[styles.imgWrap, { backgroundColor: usePhoto || v.photo ? colors.cream : v.from }]}>
         {usePhoto ? (
-          <Image source={{ uri: product.image_url }} style={styles.img} contentFit="cover" transition={200} />
+          <Image source={{ uri: imageUri(product.image_url) }} style={styles.img} contentFit="cover" transition={200} />
+        ) : v.photo ? (
+          // No product image — show the category's real photo instead of the emoji.
+          <Image source={{ uri: v.photo }} style={styles.img} contentFit="cover" transition={200} />
         ) : (
           <>
             <View style={[styles.toShade, { backgroundColor: v.to }]} />
@@ -50,6 +55,7 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
               // @ts-ignore stop card navigation on web
               e.stopPropagation?.();
               addToCart(product);
+              toast(`“${product.name}” added to cart`, 'success');
             }}
           >
             <Text style={styles.addText}>+ Add</Text>

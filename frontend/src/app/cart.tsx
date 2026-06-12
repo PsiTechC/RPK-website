@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { api } from '../lib/api';
+import { api, imageUri } from '../lib/api';
 import { colors, radius } from '../lib/theme';
 import { useApp, money } from '../lib/store';
 import { Footer } from '../components/Footer';
@@ -94,7 +94,7 @@ export default function Cart() {
             <View style={{ flex: 1, gap: 12 }}>
               {cart.map((l) => (
                 <Card key={l.product.id} style={styles.line}>
-                  <Image source={{ uri: l.product.image_url }} style={styles.lineImg} contentFit="cover" />
+                  <Image source={{ uri: imageUri(l.product.image_url) }} style={styles.lineImg} contentFit="cover" />
                   <View style={{ flex: 1, gap: 4 }}>
                     <Text style={styles.lineName}>{l.product.name}</Text>
                     <Text style={styles.lineMeta}>

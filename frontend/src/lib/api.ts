@@ -1,7 +1,28 @@
 // Tiny typed API client for the RPK Go backend.
-// Override the base URL at build/run time with EXPO_PUBLIC_API_URL.
-export const API_URL =
-  (process.env.EXPO_PUBLIC_API_URL as string) || 'http://localhost:8090';
+// Base URL resolution:
+//   1. EXPO_PUBLIC_API_URL when explicitly set (any environment), else
+//   2. same-origin ("") in a production browser (served behind a reverse proxy
+//      that forwards /api and /uploads to the backend — see docker-compose), else
+//   3. http://localhost:8090 for local development.
+function resolveApiUrl(): string {
+  const env = process.env.EXPO_PUBLIC_API_URL;
+  if (env !== undefined && env !== '') return env;
+  if (typeof window !== 'undefined' && window.location && !/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) {
+    return ''; // same origin
+  }
+  return 'http://localhost:8090';
+}
+export const API_URL = resolveApiUrl();
+
+// Resolve a stored image_url for display. Absolute URLs (http/https/data) are
+// used as-is; server-relative upload paths ("/uploads/…") are prefixed with the
+// API origin so they load from the backend, not the web app.
+export function imageUri(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (/^(https?:|data:|blob:)/.test(url)) return url;
+  if (url.startsWith('/')) return `${API_URL}${url}`;
+  return url;
+}
 
 export type Category = {
   id: number;
@@ -141,6 +162,19 @@ export const api = {
       request<any>(`/api/admin/products/${id}`, { method: 'PUT', body, token }),
     deleteProduct: (id: number, token: string) =>
       request<any>(`/api/admin/products/${id}`, { method: 'DELETE', token }),
+    // Upload an image file (web File/Blob) and get back a server-relative URL.
+    uploadImage: async (file: any, token: string): Promise<{ url: string }> => {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API_URL}/api/admin/uploads`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((data && data.error) || `Upload failed (${res.status})`);
+      return data;
+    },
     orders: (token: string) => request<Order[]>('/api/admin/orders', { token }),
     updateOrder: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/orders/${id}`, { method: 'PATCH', body, token }),

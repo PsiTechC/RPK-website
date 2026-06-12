@@ -93,7 +93,6 @@ export function HeroVideo({ children, height }: { children: React.ReactNode; hei
         </Animated.View>
       ))}
 
-      <View style={styles.blobRed} />
       <View style={styles.overlay} />
 
       <View style={styles.content}>{children}</View>
@@ -112,7 +111,6 @@ export function HeroVideo({ children, height }: { children: React.ReactNode; hei
 const styles = StyleSheet.create({
   wrap: { width: '100%', overflow: 'hidden', backgroundColor: colors.navyDark },
   base: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.navyDark },
-  blobRed: { position: 'absolute', top: -90, right: -70, width: 320, height: 320, borderRadius: 320, backgroundColor: colors.red, opacity: 0.35 },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(18,10,10,0.55)' },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   dots: { position: 'absolute', bottom: 16, alignSelf: 'center', flexDirection: 'row', gap: 8 },

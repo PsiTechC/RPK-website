@@ -41,9 +41,9 @@ export default function Products() {
     return products.filter((p) => p.name.toLowerCase().includes(q));
   }, [products, search]);
 
-  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : 5;
+  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : width < 1500 ? 5 : 6;
   const gap = 16;
-  const contentW = Math.min(width, 1200) - 36;
+  const contentW = Math.min(width, 1600) - 36;
   const cardW = (contentW - gap * (cols - 1)) / cols;
 
   const activeName = active === 'all' ? 'All Products' : categories.find((c) => c.slug === active)?.name || 'Products';

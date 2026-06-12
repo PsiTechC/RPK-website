@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { api, Product, Category } from '../../lib/api';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { Image } from 'expo-image';
+import { api, Product, Category, imageUri } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { Button, Field } from '../ui';
+import { useToast } from '../Toast';
 
 const UNITS = ['KG', 'BAG', 'PKT', 'CAT', 'PC', 'TIN'];
 
@@ -30,7 +32,33 @@ export function ProductForm({
     is_active: product?.is_active ?? true,
   });
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const toast = useToast();
+
+  // Web file picker: open the native dialog, upload the chosen image to the
+  // backend, then store the returned URL as the product image.
+  function pickFile() {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      setError('');
+      setUploading(true);
+      try {
+        const { url } = await api.admin.uploadImage(file, token);
+        setForm((f) => ({ ...f, image_url: url }));
+      } catch (e: any) {
+        setError(e.message || 'Upload failed.');
+      } finally {
+        setUploading(false);
+      }
+    };
+    input.click();
+  }
 
   async function save() {
     setError('');
@@ -50,17 +78,23 @@ export function ProductForm({
       is_active: form.is_active,
     };
     try {
-      if (product) await api.admin.updateProduct(product.id, body, token);
-      else await api.admin.createProduct(body, token);
+      if (product) {
+        await api.admin.updateProduct(product.id, body, token);
+        toast(`“${body.name}” updated`, 'success');
+      } else {
+        await api.admin.createProduct(body, token);
+        toast(`“${body.name}” added`, 'success');
+      }
       onSaved();
     } catch (e: any) {
       setError(e.message || 'Save failed.');
+      toast('Could not save product', 'error');
     } finally {
       setBusy(false);
     }
   }
 
-  return (
+  const content = (
     <View style={styles.overlay}>
       <View style={styles.modal}>
         <View style={styles.head}>
@@ -70,7 +104,7 @@ export function ProductForm({
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 18, gap: 14 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 14 }}>
           <Field label="Name" value={form.name} onChangeText={(t) => setForm({ ...form, name: t })} placeholder="Product name" />
 
           <View style={{ gap: 6 }}>
@@ -104,7 +138,26 @@ export function ProductForm({
             <Field style={{ flex: 1 }} label="Stock" value={form.stock} onChangeText={(t) => setForm({ ...form, stock: t })} placeholder="100" keyboardType="number-pad" />
           </View>
 
-          <Field label="Image URL" value={form.image_url} onChangeText={(t) => setForm({ ...form, image_url: t })} placeholder="https://…" />
+          <View style={{ gap: 8 }}>
+            <Text style={styles.label}>Product image</Text>
+            <View style={styles.uploadRow}>
+              <View style={styles.preview}>
+                {form.image_url ? (
+                  <Image source={{ uri: imageUri(form.image_url) }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <Text style={styles.previewEmpty}>No{'\n'}image</Text>
+                )}
+              </View>
+              <View style={{ flex: 1, gap: 8 }}>
+                <Button label={uploading ? 'Uploading…' : '⬆ Choose file'} variant="navy" onPress={pickFile} disabled={uploading} style={{ paddingVertical: 9 }} />
+                {!!form.image_url && (
+                  <Button label="Remove image" variant="ghost" onPress={() => setForm({ ...form, image_url: '' })} style={{ paddingVertical: 9 }} />
+                )}
+                <Text style={styles.hint}>JPG, PNG, GIF, WebP or SVG · up to 8MB</Text>
+              </View>
+            </View>
+            <Field label="…or paste an image URL" value={form.image_url} onChangeText={(t) => setForm({ ...form, image_url: t })} placeholder="https://…" />
+          </View>
           <Field label="Description" value={form.description} onChangeText={(t) => setForm({ ...form, description: t })} placeholder="Description" multiline />
 
           <Pressable style={styles.toggle} onPress={() => setForm({ ...form, is_active: !form.is_active })}>
@@ -122,6 +175,14 @@ export function ProductForm({
       </View>
     </View>
   );
+
+  // Render through a portal on web so the fixed overlay escapes the admin
+  // page's scroll container and always centres in the viewport (no matter how
+  // far the product list is scrolled), while keeping the original card look.
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
 }
 
 const styles = StyleSheet.create({
@@ -135,7 +196,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    zIndex: 200,
+    zIndex: 1000,
   },
   modal: { width: '100%', maxWidth: 560, maxHeight: '88vh' as any, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', ...shadow.card },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: colors.navy },
@@ -146,6 +207,10 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#F1F2F5' },
   chipActive: { backgroundColor: colors.orange },
   chipText: { fontWeight: '700', color: colors.text, fontSize: 13 },
+  uploadRow: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
+  preview: { width: 92, height: 92, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cream, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  previewEmpty: { color: colors.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  hint: { color: colors.muted, fontSize: 12 },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   checkboxOn: { backgroundColor: colors.green, borderColor: colors.green },

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, radius, shadow } from '../lib/theme';
 
-export function Container({ children, style, max = 1200 }: { children: React.ReactNode; style?: ViewStyle; max?: number }) {
+export function Container({ children, style, max = 1600 }: { children: React.ReactNode; style?: ViewStyle; max?: number }) {
   return <View style={[{ width: '100%', maxWidth: max, alignSelf: 'center', paddingHorizontal: 18 }, style]}>{children}</View>;
 }
 

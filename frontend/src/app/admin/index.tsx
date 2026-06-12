@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api, Product, Order, Registration, Category } from '../../lib/api';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, shadow } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
 import { Container, SectionTitle, Button, Card, Badge } from '../../components/ui';
 import { ProductForm } from '../../components/admin/ProductForm';
+import { ProductThumb } from '../../components/admin/ProductThumb';
+import { useToast } from '../../components/Toast';
 
 type Tab = 'dashboard' | 'products' | 'orders' | 'registrations';
 
@@ -113,11 +115,16 @@ function Dashboard({ token }: { token: string }) {
 }
 
 // ---------- Products ----------
+type ProductView = 'list' | 'grid';
+
 function Products({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editing, setEditing] = useState<Product | null | undefined>(undefined); // undefined=closed, null=new
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<ProductView>('list');
+  const toast = useToast();
 
   async function load() {
     setLoading(true);
@@ -131,33 +138,47 @@ function Products({ token }: { token: string }) {
   }, [token]);
 
   async function remove(id: number) {
-    await api.admin.deleteProduct(id, token);
-    load();
+    const name = products.find((p) => p.id === id)?.name;
+    try {
+      await api.admin.deleteProduct(id, token);
+      toast(name ? `“${name}” deleted` : 'Product deleted', 'info');
+      load();
+    } catch {
+      toast('Could not delete product', 'error');
+    }
   }
 
   return (
     <View style={{ gap: 12 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View style={styles.toolbar}>
         <Text style={styles.h}>{products.length} products</Text>
-        <Button label="+ Add product" onPress={() => setEditing(null)} />
+        <View style={styles.toolbarRight}>
+          <View style={styles.viewToggle}>
+            <Pressable
+              style={[styles.viewBtn, view === 'list' && styles.viewBtnActive]}
+              onPress={() => setView('list')}
+              accessibilityLabel="List view"
+            >
+              <Text style={[styles.viewIcon, view === 'list' && styles.viewIconActive]}>☰</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.viewBtn, view === 'grid' && styles.viewBtnActive]}
+              onPress={() => setView('grid')}
+              accessibilityLabel="Grid view"
+            >
+              <Text style={[styles.viewIcon, view === 'grid' && styles.viewIconActive]}>▦</Text>
+            </Pressable>
+          </View>
+          <Button label="+ Add product" onPress={() => setEditing(null)} />
+        </View>
       </View>
 
       {loading ? (
         <Text style={styles.muted}>Loading…</Text>
+      ) : view === 'list' ? (
+        <ProductTable products={products} onEdit={setEditing} onDelete={remove} />
       ) : (
-        products.map((p) => (
-          <Card key={p.id} style={styles.adminRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{p.name}</Text>
-              <Text style={styles.rowMeta}>
-                {p.category_name || 'Uncategorised'} · {money(p.price, p.currency)} / {p.unit} · stock {p.stock}
-              </Text>
-            </View>
-            {!p.is_active && <Badge text="hidden" tone="muted" />}
-            <Button label="Edit" variant="ghost" onPress={() => setEditing(p)} style={{ paddingHorizontal: 14, paddingVertical: 8 }} />
-            <Button label="Delete" variant="danger" onPress={() => remove(p.id)} style={{ paddingHorizontal: 14, paddingVertical: 8 }} />
-          </Card>
-        ))
+        <ProductGrid products={products} width={width} onEdit={setEditing} onDelete={remove} />
       )}
 
       {editing !== undefined && (
@@ -172,6 +193,89 @@ function Products({ token }: { token: string }) {
           }}
         />
       )}
+    </View>
+  );
+}
+
+// Tabular (list) view — an image column plus all the product fields.
+function ProductTable({
+  products,
+  onEdit,
+  onDelete,
+}: {
+  products: Product[];
+  onEdit: (p: Product) => void;
+  onDelete: (id: number) => void;
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={styles.table}>
+        <View style={[styles.tr, styles.thead]}>
+          <Text style={[styles.th, styles.colImg]}>Image</Text>
+          <Text style={[styles.th, styles.colName]}>Name</Text>
+          <Text style={[styles.th, styles.colCat]}>Category</Text>
+          <Text style={[styles.th, styles.colPrice]}>Price</Text>
+          <Text style={[styles.th, styles.colUnit]}>Unit</Text>
+          <Text style={[styles.th, styles.colStock]}>Stock</Text>
+          <Text style={[styles.th, styles.colStatus]}>Status</Text>
+          <Text style={[styles.th, styles.colActions]}>Actions</Text>
+        </View>
+        {products.map((p, i) => (
+          <View key={p.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+            <View style={styles.colImg}><ProductThumb product={p} size={44} /></View>
+            <Text style={[styles.td, styles.colName, styles.tdStrong]} numberOfLines={2}>{p.name}</Text>
+            <Text style={[styles.td, styles.colCat]} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>
+            <Text style={[styles.td, styles.colPrice]}>{money(p.price, p.currency)}</Text>
+            <Text style={[styles.td, styles.colUnit]}>{p.unit}</Text>
+            <Text style={[styles.td, styles.colStock]}>{p.stock}</Text>
+            <View style={styles.colStatus}>
+              <Badge text={p.is_active ? 'active' : 'hidden'} tone={p.is_active ? 'green' : 'muted'} />
+            </View>
+            <View style={[styles.colActions, styles.actionCell]}>
+              <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={styles.smallBtn} />
+              <Button label="Delete" variant="danger" onPress={() => onDelete(p.id)} style={styles.smallBtn} />
+            </View>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+// Grid view — image-forward cards.
+function ProductGrid({
+  products,
+  width,
+  onEdit,
+  onDelete,
+}: {
+  products: Product[];
+  width: number;
+  onEdit: (p: Product) => void;
+  onDelete: (id: number) => void;
+}) {
+  const gap = 12;
+  const cols = width < 620 ? 1 : width < 920 ? 2 : 3;
+  const basis = cols === 1 ? '100%' : `calc(${100 / cols}% - ${(gap * (cols - 1)) / cols}px)`;
+  return (
+    <View style={styles.grid}>
+      {products.map((p) => (
+        <Card key={p.id} style={[styles.gridCard, { flexBasis: basis as any, maxWidth: basis as any }]}>
+          <View style={styles.gridTop}>
+            <ProductThumb product={p} size={64} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle} numberOfLines={2}>{p.name}</Text>
+              <Text style={styles.rowMeta} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>
+            </View>
+            {!p.is_active && <Badge text="hidden" tone="muted" />}
+          </View>
+          <Text style={styles.gridMeta}>{money(p.price, p.currency)} / {p.unit} · stock {p.stock}</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={[styles.smallBtn, { flex: 1 }]} />
+            <Button label="Delete" variant="danger" onPress={() => onDelete(p.id)} style={[styles.smallBtn, { flex: 1 }]} />
+          </View>
+        </Card>
+      ))}
     </View>
   );
 }
@@ -292,6 +396,36 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', backgroundColor: colors.orange, borderRadius: 999 },
   barVal: { width: 30, textAlign: 'right', fontWeight: '800', color: colors.navy },
   adminRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, flexWrap: 'wrap' },
+  toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  viewToggle: { flexDirection: 'row', backgroundColor: '#F1F2F5', borderRadius: radius.pill, padding: 3 },
+  viewBtn: { width: 38, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  viewBtnActive: { backgroundColor: colors.white, ...shadow.soft },
+  viewIcon: { fontSize: 16, color: colors.muted, fontWeight: '900' },
+  viewIconActive: { color: colors.orange },
+  // table
+  table: { minWidth: 760, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.white },
+  tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
+  trAlt: { backgroundColor: '#FCFCFD' },
+  th: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  td: { fontSize: 14, color: colors.text },
+  tdStrong: { fontWeight: '800', color: colors.ink },
+  colImg: { width: 52 },
+  colName: { flex: 2.2, minWidth: 150 },
+  colCat: { flex: 1.5, minWidth: 110, color: colors.muted },
+  colPrice: { width: 96 },
+  colUnit: { width: 60 },
+  colStock: { width: 60 },
+  colStatus: { width: 84 },
+  colActions: { width: 150 },
+  actionCell: { flexDirection: 'row', gap: 8 },
+  smallBtn: { paddingHorizontal: 12, paddingVertical: 7 },
+  // grid
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  gridCard: { gap: 10, padding: 14, flexGrow: 1 },
+  gridTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  gridMeta: { color: colors.muted, fontSize: 13 },
   rowTitle: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   rowMeta: { color: colors.muted, fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
   orderTotal: { fontWeight: '900', color: colors.navy, fontSize: 17 },

@@ -36,7 +36,7 @@ export function Footer() {
 const styles = StyleSheet.create({
   wrap: { backgroundColor: colors.navyDark, marginTop: 40 },
   inner: {
-    maxWidth: 1200,
+    maxWidth: 1600,
     width: '100%',
     alignSelf: 'center',
     flexDirection: 'row',

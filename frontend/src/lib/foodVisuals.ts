@@ -16,7 +16,7 @@ const MAP: Record<string, Visual> = {
   'sweeteners-honey': { emoji: '🍯', photo: U('1558642452-9d2a7deb7f62'), from: '#E8A93C', to: '#C07A12' },
   'cooking-oils-ghee': { emoji: '🫒', photo: U('1474979266404-7eaacbcd87c5'), from: '#B7A53A', to: '#7E6E18' },
   'sauces-condiments': { emoji: '🥫', photo: U('1472476443507-c7a5948772fc'), from: '#E2231A', to: '#A11410' },
-  salt: { emoji: '🧂', photo: '', from: '#9AA0A6', to: '#5F6368' },
+  salt: { emoji: '🧂', photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Seasalt.jpg/960px-Seasalt.jpg', from: '#9AA0A6', to: '#5F6368' },
   beverages: { emoji: '🥤', photo: U('1544145945-f90425340c7e'), from: '#D94A1F', to: '#9E2B10' },
   'pantry-others': { emoji: '🍝', photo: U('1551462147-37885acc36f1'), from: '#D98A2B', to: '#A35E12' },
 };
