@@ -54,7 +54,7 @@ export default function Products() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 26 }}>
         <SectionTitle title={activeName} subtitle={`${filtered.length} item${filtered.length === 1 ? '' : 's'}`} />
 

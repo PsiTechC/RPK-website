@@ -64,7 +64,7 @@ export default function ImportExport() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 26 }}>
         <SectionTitle title="Import & Export Registration" subtitle="Partner with RPK to trade food & groceries worldwide" />
 

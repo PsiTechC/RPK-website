@@ -43,7 +43,7 @@ export default function ProductDetail() {
     );
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 22 }}>
         <Pressable onPress={() => router.back()} style={{ marginBottom: 14 }}>
           <Text style={styles.back}>← Back</Text>

@@ -44,7 +44,7 @@ export default function Account() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 26 }}>
         <Card style={styles.profile}>
           <View style={styles.avatar}>

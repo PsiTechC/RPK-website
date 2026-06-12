@@ -56,7 +56,7 @@ export default function Login() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 40, maxWidth: 460 }}>
         <Card style={{ gap: 16 }}>
           <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Create your account'}</Text>

@@ -34,7 +34,9 @@ export function Footer() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { backgroundColor: colors.navyDark, marginTop: 40 },
+  // marginTop:'auto' pins the footer to the bottom of the scroll view so short
+  // pages don't leave a gap below it (works with contentContainerStyle flexGrow).
+  wrap: { backgroundColor: colors.navyDark, marginTop: 'auto' },
   inner: {
     maxWidth: 1600,
     width: '100%',

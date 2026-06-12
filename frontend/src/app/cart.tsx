@@ -67,7 +67,7 @@ export default function Cart() {
 
   if (done) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }}>
+      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
         <Container style={{ marginTop: 40, maxWidth: 640 }}>
           <Card style={{ alignItems: 'center', gap: 12, paddingVertical: 36 }}>
             <Text style={{ fontSize: 54 }}>✅</Text>
@@ -93,7 +93,7 @@ export default function Cart() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 26 }}>
         <SectionTitle title="Your Cart" subtitle={`${cart.length} line item${cart.length === 1 ? '' : 's'}`} />
 

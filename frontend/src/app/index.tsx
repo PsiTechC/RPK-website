@@ -49,7 +49,7 @@ export default function Home() {
   }, [categories, products]);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       {/* HERO */}
       <HeroVideo height={heroHeight}>
         <View style={{ maxWidth: 780, alignItems: 'center' }}>
