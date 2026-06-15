@@ -7,7 +7,7 @@ import { Button, Field } from '../ui';
 import { useToast } from '../Toast';
 import { vRequired, vPrice, vStock, vImageUrl, isClean } from '../../lib/validate';
 
-const UNITS = ['KG', 'BAG', 'PKT', 'CAT', 'PC', 'TIN'];
+const UNITS = ['KG', 'GM', 'LTR', 'ML', 'BAG', 'PKT', 'BOX', 'DOZEN', 'CAT', 'PC', 'TIN'];
 
 export function ProductForm({
   token,

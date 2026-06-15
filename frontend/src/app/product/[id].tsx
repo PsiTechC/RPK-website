@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Product, imageUri } from '../../lib/api';
 import { colors, radius } from '../../lib/theme';
-import { useApp, money } from '../../lib/store';
+import { useApp } from '../../lib/store';
 import { useToast } from '../../components/Toast';
 import { visualByName, isPlaceholder } from '../../lib/foodVisuals';
 import { Footer } from '../../components/Footer';
@@ -83,10 +83,6 @@ export default function ProductDetail() {
           <View style={{ flex: 1, gap: 14 }}>
             {!!product.category_name && <Badge text={product.category_name} tone="orange" />}
             <Text style={styles.name}>{product.name}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Text style={styles.price}>{money(product.price, product.currency)}</Text>
-              <Text style={styles.perUnit}>per {product.unit}</Text>
-            </View>
             <Badge text={product.stock > 0 ? 'In stock' : 'Out of stock'} tone={product.stock > 0 ? 'green' : 'red'} />
             <Text style={styles.desc}>{product.description}</Text>
 
@@ -101,12 +97,20 @@ export default function ProductDetail() {
                   <Text style={styles.stepText}>+</Text>
                 </Pressable>
               </View>
+              <View style={styles.unitChip}>
+                <Text style={styles.unitChipText}>{product.unit}</Text>
+              </View>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
               <Button
-                label={added ? '✓ Added to cart' : `Add to cart · ${money(product.price * qty, product.currency)}`}
-                variant={added ? 'navy' : 'primary'}
+                label="📞 Call to Inquiry"
+                variant="primary"
+                onPress={() => router.push(`/contact?product=${encodeURIComponent(product.name)}`)}
+              />
+              <Button
+                label={added ? '✓ Added to cart' : 'Add to cart'}
+                variant={added ? 'navy' : 'outline'}
                 onPress={() => {
                   addToCart(product, qty);
                   setAdded(true);
@@ -114,7 +118,7 @@ export default function ProductDetail() {
                   setTimeout(() => setAdded(false), 1500);
                 }}
               />
-              <Button label="Go to cart" variant="outline" onPress={() => router.push('/cart')} />
+              <Button label="Go to cart" variant="ghost" onPress={() => router.push('/cart')} />
             </View>
 
             <View style={styles.infoBox}>
@@ -152,8 +156,10 @@ const styles = StyleSheet.create({
   price: { fontSize: 26, fontWeight: '900', color: colors.orange },
   perUnit: { color: colors.muted, fontSize: 15 },
   desc: { color: colors.text, fontSize: 15, lineHeight: 24 },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 4 },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4, flexWrap: 'wrap' },
   qtyLabel: { fontWeight: '700', color: colors.text },
+  unitChip: { backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  unitChipText: { color: colors.orangeDark, fontWeight: '800', fontSize: 14 },
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 999, overflow: 'hidden' },
   stepBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.offWhite },
   stepText: { fontSize: 22, fontWeight: '800', color: colors.navy },
