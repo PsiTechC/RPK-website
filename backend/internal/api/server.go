@@ -54,6 +54,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/registrations", s.handleCreateRegistration) // import/export — open to public + logged-in
 		r.Post("/orders", s.handleCreateOrder)               // guest or customer checkout (mock payment)
 		r.Post("/chat", s.handleChat)                        // AI chatbot
+		r.Get("/stats", s.handlePublicStats)                 // homepage counters (products/categories/countries)
 
 		// Authenticated (any logged-in user)
 		r.Group(func(r chi.Router) {

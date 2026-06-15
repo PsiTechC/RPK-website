@@ -127,6 +127,7 @@ function safeJSON(t: string) {
 
 export const api = {
   // public
+  stats: () => request<{ products: number; categories: number; countries: number }>('/api/stats'),
   categories: () => request<Category[]>('/api/categories'),
   products: (q?: { category?: string; q?: string }) => {
     const params = new URLSearchParams();

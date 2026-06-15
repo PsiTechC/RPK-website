@@ -20,6 +20,7 @@ export default function Home() {
   const { width, height } = useWindowDimensions();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [countries, setCountries] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,6 +31,8 @@ export default function Home() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+    // partner-country count (distinct approved import/export countries)
+    api.stats().then((s) => setCountries(s.countries)).catch(() => {});
   }, []);
 
   // Full-screen hero (fills the viewport below the header).
@@ -83,7 +86,7 @@ export default function Home() {
             <View style={styles.trustRow}>
               <Trust n={`${products.length || '70'}+`} l="Products" />
               <Trust n={`${categories.length || '11'}`} l="Categories" />
-              <Trust n="15" l="Countries" />
+              <Trust n={`${countries || 15}`} l="Countries" />
             </View>
           </FadeInUp>
         </View>
