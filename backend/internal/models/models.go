@@ -55,10 +55,11 @@ type Registration struct {
 	ContactPerson   string    `json:"contact_person"`
 	Phone           string    `json:"phone"`
 	Email           string    `json:"email"`
-	ProductInterest string    `json:"product_interest"`
-	Message         string    `json:"message"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
+	ProductInterest string          `json:"product_interest"`
+	Message         string          `json:"message"`
+	Items           json.RawMessage `json:"items"`
+	Status          string          `json:"status"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 type OrderItem struct {

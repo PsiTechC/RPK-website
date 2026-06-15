@@ -464,6 +464,14 @@ function Registrations({ token }: { token: string }) {
               <Text style={styles.rowTitle}>{r.company_name}</Text>
               <Text style={styles.rowMeta}>{r.business_type} · {r.country || '—'} · {r.contact_person || '—'}</Text>
               <Text style={styles.rowMeta}>{r.email} · {r.phone || 'no phone'}</Text>
+              {Array.isArray(r.items) && r.items.length > 0 && (
+                <View style={{ marginTop: 4, gap: 2 }}>
+                  <Text style={[styles.rowMeta, { fontWeight: '800' }]}>Requirement:</Text>
+                  {r.items.map((it: any, idx: number) => (
+                    <Text key={idx} style={styles.rowMeta}>• {it.name} — {it.qty} {it.unit}</Text>
+                  ))}
+                </View>
+              )}
               {!!r.product_interest && <Text style={styles.rowMeta}>Interest: {r.product_interest}</Text>}
               {!!r.message && <Text style={styles.message}>“{r.message}”</Text>}
             </View>

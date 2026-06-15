@@ -117,3 +117,6 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS seller     TEXT  NOT NULL DEFAULT 
 
 -- Inquiry requirement items (product + qty list)
 ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]';
+
+-- Import/export registration requirement items
+ALTER TABLE import_export_registrations ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]';

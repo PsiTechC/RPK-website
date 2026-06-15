@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -10,14 +11,15 @@ import (
 )
 
 type registrationReq struct {
-	CompanyName     string `json:"company_name"`
-	BusinessType    string `json:"business_type"` // import / export / both
-	Country         string `json:"country"`
-	ContactPerson   string `json:"contact_person"`
-	Phone           string `json:"phone"`
-	Email           string `json:"email"`
-	ProductInterest string `json:"product_interest"`
-	Message         string `json:"message"`
+	CompanyName     string          `json:"company_name"`
+	BusinessType    string          `json:"business_type"` // import / export / both
+	Country         string          `json:"country"`
+	ContactPerson   string          `json:"contact_person"`
+	Phone           string          `json:"phone"`
+	Email           string          `json:"email"`
+	ProductInterest string          `json:"product_interest"`
+	Message         string          `json:"message"`
+	Items           json.RawMessage `json:"items"`
 }
 
 func (s *Server) handleCreateRegistration(w http.ResponseWriter, r *http.Request) {
@@ -43,10 +45,10 @@ func (s *Server) handleCreateRegistration(w http.ResponseWriter, r *http.Request
 	var id int64
 	err := s.pool.QueryRow(r.Context(),
 		`INSERT INTO import_export_registrations
-		 (user_id, company_name, business_type, country, contact_person, phone, email, product_interest, message)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+		 (user_id, company_name, business_type, country, contact_person, phone, email, product_interest, message, items)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) RETURNING id`,
 		userID, req.CompanyName, bt, req.Country, req.ContactPerson, req.Phone, req.Email,
-		req.ProductInterest, req.Message,
+		req.ProductInterest, req.Message, normHighlights(req.Items),
 	).Scan(&id)
 	if err != nil {
 		writeErr(w, 500, "could not submit registration")
@@ -83,7 +85,7 @@ func (s *Server) handleAdminListRegistrations(w http.ResponseWriter, r *http.Req
 func (s *Server) queryRegistrations(r *http.Request, where string, args ...interface{}) ([]models.Registration, error) {
 	rows, err := s.pool.Query(r.Context(),
 		`SELECT id, user_id, company_name, business_type, country, contact_person, phone, email,
-		        product_interest, message, status, created_at
+		        product_interest, message, items, status, created_at
 		 FROM import_export_registrations `+where+` ORDER BY created_at DESC`, args...)
 	if err != nil {
 		return nil, err
@@ -94,7 +96,7 @@ func (s *Server) queryRegistrations(r *http.Request, where string, args ...inter
 	for rows.Next() {
 		var g models.Registration
 		if err := rows.Scan(&g.ID, &g.UserID, &g.CompanyName, &g.BusinessType, &g.Country,
-			&g.ContactPerson, &g.Phone, &g.Email, &g.ProductInterest, &g.Message, &g.Status,
+			&g.ContactPerson, &g.Phone, &g.Email, &g.ProductInterest, &g.Message, &g.Items, &g.Status,
 			&g.CreatedAt); err != nil {
 			return nil, err
 		}

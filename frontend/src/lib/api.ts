@@ -105,6 +105,7 @@ export type Registration = {
   email: string;
   product_interest: string;
   message: string;
+  items?: { product_id: number; name: string; unit: string; qty: number }[];
   status: string;
   created_at: string;
 };

@@ -6,6 +6,7 @@ import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
 import { PhoneField } from '../components/PhoneField';
+import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
 import { parsePhone, Country } from '../lib/countries';
 import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
 
@@ -20,6 +21,7 @@ export default function ImportExport() {
   const { token, user } = useApp();
   const initPhone = parsePhone(user?.phone);
   const [country, setCountryObj] = useState<Country>(initPhone.country);
+  const [items, setItems] = useState<ReqItem[]>([]);
   const [form, setForm] = useState({
     company_name: '',
     business_type: 'import' as 'import' | 'export' | 'both',
@@ -64,8 +66,10 @@ export default function ImportExport() {
     if (!validate()) return;
     setBusy(true);
     try {
+      const summary = items.map((i) => `${i.name} ×${i.qty} ${i.unit}`).join(', ');
+      const productInterest = [summary, form.product_interest.trim()].filter(Boolean).join(' | ');
       const res = await api.createRegistration(
-        { ...form, phone: form.phone ? `${country.dial} ${form.phone}` : '' },
+        { ...form, product_interest: productInterest, items, phone: form.phone ? `${country.dial} ${form.phone}` : '' },
         token
       );
       setDone(res);
@@ -144,7 +148,8 @@ export default function ImportExport() {
                   <Field style={{ flex: 1 }} label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@company.com" keyboardType="email-address" error={errors.email} />
                 </View>
                 <PhoneField label={`Phone & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
-                <Field label="Products of interest" value={form.product_interest} onChangeText={(t) => setForm({ ...form, product_interest: t })} placeholder="e.g. Basmati rice, spices, oils" />
+                <RequirementBuilder items={items} onChange={setItems} />
+                <Field label="Other products / notes" value={form.product_interest} onChangeText={(t) => setForm({ ...form, product_interest: t })} placeholder="Anything not listed above…" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Tell us about your business & requirements" multiline />
 
                 {!!error && <Text style={styles.error}>{error}</Text>}
