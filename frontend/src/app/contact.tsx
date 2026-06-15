@@ -5,6 +5,9 @@ import { api } from '../lib/api';
 import { colors, radius, BRAND } from '../lib/theme';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { PhoneField } from '../components/PhoneField';
+import { DEFAULT_COUNTRY } from '../lib/countries';
+import { vName, vEmail, vPhone, isClean } from '../lib/validate';
 
 const PHONE_RAW = BRAND.phone.replace(/[^\d+]/g, ''); // +971583072132
 const WA = PHONE_RAW.replace('+', '');
@@ -28,19 +31,33 @@ export default function Contact() {
     product: params.product ? String(params.product) : '',
     message: '',
   });
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
+  const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
+  const set = (k: keyof typeof form) => (t: string) => {
+    setForm((f) => ({ ...f, [k]: t }));
+    setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+  };
+
   async function submit() {
     setError('');
-    if (!form.name.trim() || (!form.email.trim() && !form.phone.trim())) {
-      setError('Please enter your name and an email or phone number.');
+    const e: Record<string, string | null> = {
+      name: vName(form.name, 'Your name'),
+      email: form.email ? vEmail(form.email) : null,
+      phone: form.phone ? vPhone(form.phone) : null,
+    };
+    setErrors(e);
+    if (!isClean(e)) return;
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError('Please provide an email or phone number so we can reach you.');
       return;
     }
     setBusy(true);
     try {
-      await api.createInquiry(form);
+      await api.createInquiry({ ...form, phone: form.phone ? `${country.dial} ${form.phone}` : '' });
       setDone(true);
     } catch (e: any) {
       setError(e.message || 'Could not send your inquiry.');
@@ -98,12 +115,10 @@ export default function Contact() {
                     <Text style={styles.productPillText}>Product: {form.product}</Text>
                   </View>
                 )}
-                <Field label="Your name *" value={form.name} onChangeText={(t) => setForm({ ...form, name: t })} placeholder="Full name" />
-                <View style={[styles.twoCol, stacked && { flexDirection: 'column' }]}>
-                  <Field style={{ flex: 1 }} label="Email" value={form.email} onChangeText={(t) => setForm({ ...form, email: t })} placeholder="you@email.com" keyboardType="email-address" />
-                  <Field style={{ flex: 1 }} label="Phone" value={form.phone} onChangeText={(t) => setForm({ ...form, phone: t })} placeholder="+971 …" />
-                </View>
-                <Field label="Product / interest" value={form.product} onChangeText={(t) => setForm({ ...form, product: t })} placeholder="e.g. Basmati Rice 10KG, bulk spices…" />
+                <Field label="Your name *" value={form.name} onChangeText={set('name')} placeholder="Full name" error={errors.name} />
+                <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
+                <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
+                <Field label="Product / interest" value={form.product} onChangeText={set('product')} placeholder="e.g. Basmati Rice 10KG, bulk spices…" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Quantity needed, delivery location, any questions…" multiline />
                 {!!error && <Text style={styles.error}>{error}</Text>}
                 <Button label={busy ? 'Sending…' : 'Send inquiry'} onPress={submit} disabled={busy} />

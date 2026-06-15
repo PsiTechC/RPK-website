@@ -5,6 +5,8 @@ import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { PhoneField } from '../components/PhoneField';
+import { parsePhone, Country } from '../lib/countries';
 import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
 
 const TYPES = [
@@ -16,16 +18,24 @@ const TYPES = [
 export default function ImportExport() {
   const { width } = useWindowDimensions();
   const { token, user } = useApp();
+  const initPhone = parsePhone(user?.phone);
+  const [country, setCountryObj] = useState<Country>(initPhone.country);
   const [form, setForm] = useState({
     company_name: '',
     business_type: 'import' as 'import' | 'export' | 'both',
-    country: '',
+    country: initPhone.country.name,
     contact_person: user?.name || '',
-    phone: user?.phone || '',
+    phone: initPhone.local,
     email: user?.email || '',
     product_interest: '',
     message: '',
   });
+
+  // Selecting the dial-code country also fills the registration's country.
+  const selectCountry = (c: Country) => {
+    setCountryObj(c);
+    setForm((f) => ({ ...f, country: c.name }));
+  };
   const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -54,7 +64,10 @@ export default function ImportExport() {
     if (!validate()) return;
     setBusy(true);
     try {
-      const res = await api.createRegistration(form, token);
+      const res = await api.createRegistration(
+        { ...form, phone: form.phone ? `${country.dial} ${form.phone}` : '' },
+        token
+      );
       setDone(res);
     } catch (e: any) {
       setError(e.message || 'Submission failed.');
@@ -127,13 +140,10 @@ export default function ImportExport() {
                 </View>
 
                 <View style={[styles.twoCol, stacked && { flexDirection: 'column' }]}>
-                  <Field style={{ flex: 1 }} label="Country" value={form.country} onChangeText={set('country')} placeholder="e.g. India" />
                   <Field style={{ flex: 1 }} label="Contact person" value={form.contact_person} onChangeText={set('contact_person')} placeholder="Full name" error={errors.contact_person} />
-                </View>
-                <View style={[styles.twoCol, stacked && { flexDirection: 'column' }]}>
                   <Field style={{ flex: 1 }} label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@company.com" keyboardType="email-address" error={errors.email} />
-                  <Field style={{ flex: 1 }} label="Phone" value={form.phone} onChangeText={set('phone')} placeholder="+…" keyboardType="phone-pad" error={errors.phone} />
                 </View>
+                <PhoneField label={`Phone & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
                 <Field label="Products of interest" value={form.product_interest} onChangeText={(t) => setForm({ ...form, product_interest: t })} placeholder="e.g. Basmati rice, spices, oils" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Tell us about your business & requirements" multiline />
 

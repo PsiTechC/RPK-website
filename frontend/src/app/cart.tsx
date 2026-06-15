@@ -7,6 +7,8 @@ import { colors, radius } from '../lib/theme';
 import { useApp, money } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { PhoneField } from '../components/PhoneField';
+import { parsePhone } from '../lib/countries';
 import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
 
 export default function Cart() {
@@ -14,10 +16,11 @@ export default function Cart() {
   const { width } = useWindowDimensions();
   const { cart, cartTotal, setQty, removeFromCart, clearCart, user, token } = useApp();
 
+  const [country, setCountry] = useState(() => parsePhone(user?.phone).country);
   const [form, setForm] = useState({
     customer_name: user?.name || '',
     customer_email: user?.email || '',
-    customer_phone: user?.phone || '',
+    customer_phone: parsePhone(user?.phone).local,
     shipping_address: '',
   });
   const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
@@ -55,6 +58,7 @@ export default function Cart() {
       const res = await api.createOrder(
         {
           ...form,
+          customer_phone: form.customer_phone ? `${country.dial} ${form.customer_phone}` : '',
           items: cart.map((l) => ({ product_id: l.product.id, quantity: l.qty })),
           pay: true, // MOCK payment
         },
@@ -156,7 +160,7 @@ export default function Cart() {
                   <View style={{ gap: 10, marginTop: 8 }}>
                     <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
                     <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
-                    <Field label="Phone" value={form.customer_phone} onChangeText={set('customer_phone')} placeholder="+971 …" keyboardType="phone-pad" error={errors.customer_phone} />
+                    <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.customer_phone} onNumberChange={set('customer_phone')} error={errors.customer_phone} />
                     <Field label="Shipping address" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Delivery address" multiline error={errors.shipping_address} />
                   </View>
 

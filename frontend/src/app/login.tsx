@@ -5,6 +5,8 @@ import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, Button, Field, Card } from '../components/ui';
+import { PhoneField } from '../components/PhoneField';
+import { DEFAULT_COUNTRY } from '../lib/countries';
 import { vEmail, vName, vPassword, vPhone, vRequired, isClean } from '../lib/validate';
 
 export default function Login() {
@@ -13,6 +15,7 @@ export default function Login() {
   const { login, register } = useApp();
   const [mode, setMode] = useState<'login' | 'register'>(params.mode === 'register' ? 'register' : 'login');
   const [role, setRole] = useState<'customer' | 'business'>('customer');
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [error, setError] = useState('');
@@ -45,7 +48,8 @@ export default function Login() {
       if (mode === 'login') {
         await login(form.email, form.password);
       } else {
-        await register({ name: form.name, email: form.email, password: form.password, phone: form.phone, role });
+        const fullPhone = form.phone ? `${country.dial} ${form.phone}` : '';
+        await register({ name: form.name, email: form.email, password: form.password, phone: fullPhone, role });
       }
       router.replace('/account');
     } catch (e: any) {
@@ -76,7 +80,7 @@ export default function Login() {
           {mode === 'register' && (
             <>
               <Field label="Full name" value={form.name} onChangeText={set('name')} placeholder="Your name" error={errors.name} />
-              <Field label="Phone" value={form.phone} onChangeText={set('phone')} placeholder="+971 …" keyboardType="phone-pad" error={errors.phone} />
+              <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
               <View style={{ gap: 6 }}>
                 <Text style={styles.label}>Account type</Text>
                 <View style={styles.roleRow}>
