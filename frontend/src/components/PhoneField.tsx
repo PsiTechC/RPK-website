@@ -79,10 +79,16 @@ export function PhoneField({
 
         <TextInput
           value={number}
-          onChangeText={(t) => onNumberChange(t.replace(/[^\d ]/g, ''))}
+          onChangeText={(t) => {
+            // keep digits/spaces only and cap at 15 digits (E.164 max)
+            const cleaned = t.replace(/[^\d ]/g, '');
+            const digits = cleaned.replace(/\D/g, '');
+            onNumberChange(digits.length > 15 ? number : cleaned);
+          }}
           placeholder={placeholder}
           placeholderTextColor={colors.muted}
           keyboardType="phone-pad"
+          maxLength={17}
           style={[styles.input, !!error && styles.errBorder]}
         />
       </View>
