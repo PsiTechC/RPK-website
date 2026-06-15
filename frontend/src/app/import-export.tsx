@@ -159,6 +159,7 @@ export default function ImportExport() {
           </View>
         </View>
       </Container>
+      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );

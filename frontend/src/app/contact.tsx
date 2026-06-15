@@ -138,6 +138,7 @@ export default function Contact() {
           </View>
         </View>
       </Container>
+      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );

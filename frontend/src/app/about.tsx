@@ -95,6 +95,7 @@ export default function About() {
           </View>
         </Card>
       </Container>
+      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );
