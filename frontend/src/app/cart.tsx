@@ -45,6 +45,10 @@ export default function Cart() {
 
   async function checkout() {
     setError('');
+    if (!user) {
+      setError('Please log in or sign up to place your order.');
+      return;
+    }
     if (!validate()) return;
     setPlacing(true);
     try {
@@ -147,20 +151,30 @@ export default function Cart() {
                 <Text style={styles.totalV}>{money(cartTotal)}</Text>
               </View>
 
-              <View style={{ gap: 10, marginTop: 8 }}>
-                <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
-                <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
-                <Field label="Phone" value={form.customer_phone} onChangeText={set('customer_phone')} placeholder="+971 …" keyboardType="phone-pad" error={errors.customer_phone} />
-                <Field label="Shipping address" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Delivery address" multiline error={errors.shipping_address} />
-              </View>
+              {user ? (
+                <>
+                  <View style={{ gap: 10, marginTop: 8 }}>
+                    <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
+                    <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
+                    <Field label="Phone" value={form.customer_phone} onChangeText={set('customer_phone')} placeholder="+971 …" keyboardType="phone-pad" error={errors.customer_phone} />
+                    <Field label="Shipping address" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Delivery address" multiline error={errors.shipping_address} />
+                  </View>
 
-              <Badge text="Mock payment — no card needed" tone="muted" />
-              {!!error && <Text style={styles.error}>{error}</Text>}
-              <Button label={placing ? 'Processing…' : `Pay ${money(cartTotal)}`} onPress={checkout} disabled={placing} />
-              {!user && (
-                <Text style={styles.hint}>
-                  Checking out as guest. <Text style={{ color: colors.navy, fontWeight: '700' }} onPress={() => router.push('/login')}>Log in</Text> to track orders.
-                </Text>
+                  <Badge text="Mock payment — no card needed" tone="muted" />
+                  {!!error && <Text style={styles.error}>{error}</Text>}
+                  <Button label={placing ? 'Processing…' : `Pay ${money(cartTotal)}`} onPress={checkout} disabled={placing} />
+                </>
+              ) : (
+                <View style={styles.authGate}>
+                  <Text style={{ fontSize: 30 }}>🔒</Text>
+                  <Text style={styles.gateTitle}>Sign in to place your order</Text>
+                  <Text style={styles.gateText}>
+                    You need an account to confirm and track an order. Orders can't be placed without logging in.
+                  </Text>
+                  <Button label="Log in" variant="navy" onPress={() => router.push('/login')} style={{ alignSelf: 'stretch' }} />
+                  <Text style={styles.gateAlt}>User doesn't exist yet? Create one:</Text>
+                  <Button label="Sign up" onPress={() => router.push('/login?mode=register')} style={{ alignSelf: 'stretch' }} />
+                </View>
               )}
             </Card>
           </View>
@@ -201,6 +215,10 @@ const styles = StyleSheet.create({
   totalV: { color: colors.orange, fontWeight: '900', fontSize: 19 },
   error: { color: colors.red, fontSize: 13 },
   hint: { color: colors.muted, fontSize: 12, textAlign: 'center' },
+  authGate: { alignItems: 'center', gap: 10, marginTop: 8, paddingVertical: 8 },
+  gateTitle: { fontWeight: '900', fontSize: 17, color: colors.ink, textAlign: 'center' },
+  gateText: { color: colors.muted, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  gateAlt: { color: colors.muted, fontSize: 12, marginTop: 2 },
   successTitle: { fontSize: 26, fontWeight: '900', color: colors.ink },
   successText: { color: colors.text, textAlign: 'center', maxWidth: 420, lineHeight: 22 },
   receipt: { backgroundColor: colors.offWhite, borderRadius: radius.md, padding: 16, gap: 8, width: '100%', maxWidth: 360, marginTop: 8 },

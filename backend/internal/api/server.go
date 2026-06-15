@@ -52,7 +52,6 @@ func (s *Server) Router() http.Handler {
 		r.Get("/products/{id}", s.handleGetProduct)
 
 		r.Post("/registrations", s.handleCreateRegistration) // import/export — open to public + logged-in
-		r.Post("/orders", s.handleCreateOrder)               // guest or customer checkout (mock payment)
 		r.Post("/chat", s.handleChat)                        // AI chatbot
 		r.Get("/stats", s.handlePublicStats)                 // homepage counters (products/categories/countries)
 		r.Post("/inquiries", s.handleCreateInquiry)          // "Call to Inquiry" / contact form
@@ -61,6 +60,7 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.auth.Required)
 			r.Get("/auth/me", s.handleMe)
+			r.Post("/orders", s.handleCreateOrder) // checkout requires an account
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/registrations", s.handleMyRegistrations)
 		})
