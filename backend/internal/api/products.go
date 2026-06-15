@@ -125,7 +125,7 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
 		        p.highlights, p.nutrition, p.seller
 	        FROM products p LEFT JOIN categories c ON c.id = p.category_id ` +
-		where + ` ORDER BY p.name`
+		where + ` ORDER BY p.sort_order, p.name`
 
 	rows, err := s.pool.Query(r.Context(), sql, args...)
 	if err != nil {
@@ -319,6 +319,42 @@ func (s *Server) handleListArchivedProducts(w http.ResponseWriter, r *http.Reque
 		out = append(out, p)
 	}
 	writeJSON(w, 200, out)
+}
+
+// reorder helper: assign sort_order = position for the given ids, in one tx.
+func (s *Server) reorder(w http.ResponseWriter, r *http.Request, table string) {
+	var req struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeErr(w, 400, "invalid body")
+		return
+	}
+	tx, err := s.pool.Begin(r.Context())
+	if err != nil {
+		writeErr(w, 500, "could not start transaction")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	for i, id := range req.IDs {
+		if _, err := tx.Exec(r.Context(), `UPDATE `+table+` SET sort_order=$1 WHERE id=$2`, i, id); err != nil {
+			writeErr(w, 500, "reorder failed")
+			return
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeErr(w, 500, "could not commit")
+		return
+	}
+	writeJSON(w, 200, map[string]string{"status": "reordered"})
+}
+
+func (s *Server) handleReorderCategories(w http.ResponseWriter, r *http.Request) {
+	s.reorder(w, r, "categories")
+}
+
+func (s *Server) handleReorderProducts(w http.ResponseWriter, r *http.Request) {
+	s.reorder(w, r, "products")
 }
 
 // scanner usable by both Query rows and QueryRow

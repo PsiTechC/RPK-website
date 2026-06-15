@@ -10,7 +10,7 @@ import { ProductThumb } from '../../components/admin/ProductThumb';
 import { useToast } from '../../components/Toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-type Tab = 'dashboard' | 'products' | 'orders' | 'registrations' | 'inquiries' | 'archived';
+type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'registrations' | 'inquiries' | 'archived';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
@@ -41,7 +41,7 @@ export default function Admin() {
       <Container style={{ marginTop: 22 }}>
         <SectionTitle title="Admin Dashboard" subtitle="Manage products, orders & registrations" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {(['dashboard', 'products', 'orders', 'registrations', 'inquiries', 'archived'] as Tab[]).map((t) => (
+          {(['dashboard', 'products', 'arrange', 'orders', 'registrations', 'inquiries', 'archived'] as Tab[]).map((t) => (
             <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
               <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
             </Pressable>
@@ -51,6 +51,7 @@ export default function Admin() {
         <View style={{ marginTop: 18 }}>
           {token && tab === 'dashboard' && <Dashboard token={token} />}
           {token && tab === 'products' && <Products token={token} />}
+          {token && tab === 'arrange' && <Arrange token={token} />}
           {token && tab === 'orders' && <Orders token={token} />}
           {token && tab === 'registrations' && <Registrations token={token} />}
           {token && tab === 'inquiries' && <Inquiries token={token} />}
@@ -542,8 +543,117 @@ function Inquiries({ token }: { token: string }) {
   );
 }
 
+// Arrange — admin controls the display order of categories and of products
+// within each category (↑ / ↓). Saved instantly to the server.
+function Arrange({ token }: { token: string }) {
+  const [cats, setCats] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [activeCat, setActiveCat] = useState<string>('');
+  const [rows, setRows] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  async function load() {
+    setLoading(true);
+    const [c, p] = await Promise.all([api.categories(), api.admin.allProducts(token)]);
+    setCats(c);
+    setProducts(p);
+    setActiveCat((a) => a || (c[0]?.name ?? ''));
+    setLoading(false);
+  }
+  useEffect(() => {
+    load().catch(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => {
+    setRows(products.filter((p) => p.category_name === activeCat));
+  }, [activeCat, products]);
+
+  async function moveCat(i: number, dir: number) {
+    const j = i + dir;
+    if (j < 0 || j >= cats.length) return;
+    const arr = [...cats];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    setCats(arr);
+    try {
+      await api.admin.reorderCategories(arr.map((c) => c.id), token);
+      toast('Category order saved', 'success');
+    } catch {
+      toast('Could not save order', 'error');
+    }
+  }
+
+  async function moveProduct(i: number, dir: number) {
+    const j = i + dir;
+    if (j < 0 || j >= rows.length) return;
+    const arr = [...rows];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    setRows(arr);
+    try {
+      await api.admin.reorderProducts(arr.map((p) => p.id), token);
+      toast('Product order saved', 'success');
+    } catch {
+      toast('Could not save order', 'error');
+    }
+  }
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+
+  return (
+    <View style={{ gap: 24 }}>
+      {/* Category order */}
+      <View style={{ gap: 10 }}>
+        <Text style={styles.h}>Category order (how they appear on the site)</Text>
+        {cats.map((c, i) => (
+          <Card key={c.id} style={styles.arrRow}>
+            <Text style={styles.arrPos}>{i + 1}</Text>
+            <Text style={styles.arrName}>{c.name}</Text>
+            <View style={styles.arrBtns}>
+              <Pressable style={[styles.arrBtn, i === 0 && styles.arrBtnOff]} disabled={i === 0} onPress={() => moveCat(i, -1)}><Text style={styles.arrBtnText}>↑</Text></Pressable>
+              <Pressable style={[styles.arrBtn, i === cats.length - 1 && styles.arrBtnOff]} disabled={i === cats.length - 1} onPress={() => moveCat(i, 1)}><Text style={styles.arrBtnText}>↓</Text></Pressable>
+            </View>
+          </Card>
+        ))}
+      </View>
+
+      {/* Product order within a category */}
+      <View style={{ gap: 10 }}>
+        <Text style={styles.h}>Product order within a category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {cats.map((c) => (
+            <Pressable key={c.id} style={[styles.tab, activeCat === c.name && styles.tabActive]} onPress={() => setActiveCat(c.name)}>
+              <Text style={[styles.tabText, activeCat === c.name && styles.tabTextActive]}>{c.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        {rows.length === 0 ? (
+          <Text style={styles.muted}>No products in this category.</Text>
+        ) : (
+          rows.map((p, i) => (
+            <Card key={p.id} style={styles.arrRow}>
+              <Text style={styles.arrPos}>{i + 1}</Text>
+              <Text style={styles.arrName} numberOfLines={1}>{p.name}</Text>
+              <View style={styles.arrBtns}>
+                <Pressable style={[styles.arrBtn, i === 0 && styles.arrBtnOff]} disabled={i === 0} onPress={() => moveProduct(i, -1)}><Text style={styles.arrBtnText}>↑</Text></Pressable>
+                <Pressable style={[styles.arrBtn, i === rows.length - 1 && styles.arrBtnOff]} disabled={i === rows.length - 1} onPress={() => moveProduct(i, 1)}><Text style={styles.arrBtnText}>↓</Text></Pressable>
+              </View>
+            </Card>
+          ))
+        )}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   tabs: { gap: 8 },
+  arrRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 14 },
+  arrPos: { width: 26, color: colors.muted, fontWeight: '900', fontSize: 14 },
+  arrName: { flex: 1, color: colors.ink, fontWeight: '700', fontSize: 14 },
+  arrBtns: { flexDirection: 'row', gap: 6 },
+  arrBtn: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.offWhite },
+  arrBtnOff: { opacity: 0.35 },
+  arrBtnText: { fontSize: 18, fontWeight: '900', color: colors.navy },
   tab: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: '#F1F2F5' },
   tabActive: { backgroundColor: colors.orange },
   tabText: { fontWeight: '800', color: colors.muted, textTransform: 'capitalize' },

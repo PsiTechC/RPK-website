@@ -215,6 +215,8 @@ export const api = {
     registrations: (token: string) => request<Registration[]>('/api/admin/registrations', { token }),
     updateRegistration: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/registrations/${id}`, { method: 'PATCH', body, token }),
+    reorderCategories: (ids: number[], token: string) => request<any>('/api/admin/categories/reorder', { method: 'PATCH', body: { ids }, token }),
+    reorderProducts: (ids: number[], token: string) => request<any>('/api/admin/products/reorder', { method: 'PATCH', body: { ids }, token }),
     deleteReview: (id: number, token: string) => request<any>(`/api/admin/reviews/${id}`, { method: 'DELETE', token }),
     inquiries: (token: string) => request<any[]>('/api/admin/inquiries', { token }),
     updateInquiry: (id: number, body: any, token: string) =>

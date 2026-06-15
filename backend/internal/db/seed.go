@@ -168,6 +168,27 @@ var seedProducts = []seedProd{
 	{"Palada Nellara 50 x 200GM", "Pantry & Others", "PKT", 4},
 	{"Curd Chilly 50 x 100GM", "Pantry & Others", "PKT", 9},
 	{"Coconut Powder Indonesia 7KG", "Pantry & Others", "BAG", 40},
+
+	// --- From "List of Products" document ---
+	{"Turmeric Whole", "Spices & Masala", "KG", 8},
+	{"Turmeric", "Spices & Masala", "KG", 8},
+	{"Turmeric Powder", "Spices & Masala", "KG", 9},
+	{"Coriander Seeds", "Spices & Masala", "KG", 7},
+	{"Coriander Powder", "Spices & Masala", "KG", 9},
+	{"Cumin Seeds", "Spices & Masala", "KG", 12},
+	{"Clove", "Spices & Masala", "KG", 40},
+	{"Fennel", "Spices & Masala", "KG", 12},
+	{"Sesame Seeds", "Spices & Masala", "KG", 14},
+	{"Green Cardamom", "Spices & Masala", "KG", 90},
+	{"All Purpose Flour", "Flour & Atta", "KG", 5},
+	{"Sugar", "Sweeteners & Honey", "KG", 4},
+	{"Chick Peas", "Pulses & Lentils", "KG", 6},
+	{"Basmati Rice 1121 Sella", "Rice & Grains", "BAG", 120},
+	{"Basmati Rice 1121 Steam", "Rice & Grains", "BAG", 125},
+	{"Basmati Rice 1509 Sella", "Rice & Grains", "BAG", 110},
+	{"Basmati Rice 1509 Steam", "Rice & Grains", "BAG", 115},
+	{"Sona Masuri Rice", "Rice & Grains", "BAG", 70},
+	{"Jeerakasala Rice", "Rice & Grains", "BAG", 110},
 }
 
 // Seed inserts the admin user, categories and products. Idempotent: existing

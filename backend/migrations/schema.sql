@@ -120,3 +120,6 @@ ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]'
 
 -- Import/export registration requirement items
 ALTER TABLE import_export_registrations ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]';
+
+-- Admin-controlled display order for products (categories already have sort_order)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
