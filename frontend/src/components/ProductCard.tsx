@@ -8,6 +8,7 @@ import { useApp } from '../lib/store';
 import { visualByName, isPlaceholder } from '../lib/foodVisuals';
 import { useHoverScale } from './Motion';
 import { useToast } from './Toast';
+import { Stars } from './Stars';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -47,6 +48,11 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
       <View style={styles.body}>
         {!!product.category_name && <Text style={styles.cat} numberOfLines={1}>{product.category_name}</Text>}
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+        {product.review_count > 0 ? (
+          <Stars value={product.rating} size={14} count={product.review_count} />
+        ) : (
+          <Text style={styles.noRating}>No reviews yet</Text>
+        )}
         <View style={styles.actions}>
           <Pressable
             style={styles.inquiry}
@@ -86,6 +92,7 @@ const styles = StyleSheet.create({
   body: { padding: 12, gap: 4 },
   cat: { color: colors.orange, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   name: { color: colors.text, fontSize: 14, fontWeight: '700', minHeight: 38 },
+  noRating: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   actions: { gap: 8, marginTop: 8 },
   inquiry: { backgroundColor: colors.orange, paddingVertical: 9, borderRadius: 999, alignItems: 'center' },
   inquiryText: { color: colors.white, fontWeight: '800', fontSize: 13 },

@@ -46,6 +46,18 @@ export type Product = {
   description: string;
   stock: number;
   is_active: boolean;
+  rating: number;
+  review_count: number;
+};
+
+export type Review = {
+  id: number;
+  product_id: number;
+  user_id: number | null;
+  author_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
 };
 
 export type User = {
@@ -137,6 +149,9 @@ export const api = {
     return request<Product[]>(`/api/products${qs ? `?${qs}` : ''}`);
   },
   product: (id: number | string) => request<Product>(`/api/products/${id}`),
+  reviews: (id: number | string) => request<Review[]>(`/api/products/${id}/reviews`),
+  createReview: (id: number | string, body: { rating: number; comment: string }, token: string) =>
+    request<Review>(`/api/products/${id}/reviews`, { method: 'POST', body, token }),
 
   register: (body: any) => request<{ token: string; user: User }>('/api/auth/register', { method: 'POST', body }),
   login: (body: { email: string; password: string }) =>
@@ -190,6 +205,7 @@ export const api = {
     registrations: (token: string) => request<Registration[]>('/api/admin/registrations', { token }),
     updateRegistration: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/registrations/${id}`, { method: 'PATCH', body, token }),
+    deleteReview: (id: number, token: string) => request<any>(`/api/admin/reviews/${id}`, { method: 'DELETE', token }),
     inquiries: (token: string) => request<any[]>('/api/admin/inquiries', { token }),
     updateInquiry: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/inquiries/${id}`, { method: 'PATCH', body, token }),

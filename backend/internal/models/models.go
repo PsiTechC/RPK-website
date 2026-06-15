@@ -25,6 +25,8 @@ type Product struct {
 	Description  string    `json:"description"`
 	Stock        int       `json:"stock"`
 	IsActive     bool      `json:"is_active"`
+	Rating       float64   `json:"rating"`
+	ReviewCount  int       `json:"review_count"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

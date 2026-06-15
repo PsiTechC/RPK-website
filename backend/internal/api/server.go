@@ -50,6 +50,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/categories", s.handleListCategories)
 		r.Get("/products", s.handleListProducts)
 		r.Get("/products/{id}", s.handleGetProduct)
+		r.Get("/products/{id}/reviews", s.handleListReviews)
 
 		r.Post("/registrations", s.handleCreateRegistration) // import/export — open to public + logged-in
 		r.Post("/chat", s.handleChat)                        // AI chatbot
@@ -61,6 +62,7 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.auth.Required)
 			r.Get("/auth/me", s.handleMe)
 			r.Post("/orders", s.handleCreateOrder) // checkout requires an account
+			r.Post("/products/{id}/reviews", s.handleCreateReview) // post a review (login required)
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/registrations", s.handleMyRegistrations)
 		})
@@ -92,6 +94,8 @@ func (s *Server) Router() http.Handler {
 
 			r.Get("/inquiries", s.handleAdminListInquiries)
 			r.Patch("/inquiries/{id}", s.handleAdminUpdateInquiry)
+
+			r.Delete("/reviews/{id}", s.handleAdminDeleteReview)
 		})
 	})
 

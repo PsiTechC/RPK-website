@@ -97,3 +97,15 @@ CREATE TABLE IF NOT EXISTS inquiries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_inquiries_created ON inquiries(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id          BIGSERIAL PRIMARY KEY,
+    product_id  BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    user_id     BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    author_name TEXT NOT NULL DEFAULT '',
+    rating      INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment     TEXT NOT NULL DEFAULT '',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (product_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);

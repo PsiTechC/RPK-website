@@ -2,37 +2,69 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { api, Product, imageUri } from '../../lib/api';
+import { api, Product, Review, imageUri } from '../../lib/api';
 import { colors, radius } from '../../lib/theme';
 import { useApp } from '../../lib/store';
 import { useToast } from '../../components/Toast';
 import { visualByName, isPlaceholder } from '../../lib/foodVisuals';
 import { Footer } from '../../components/Footer';
 import { ProductCard } from '../../components/ProductCard';
-import { Container, SectionTitle, Button, Badge } from '../../components/ui';
+import { Stars } from '../../components/Stars';
+import { Container, SectionTitle, Button, Badge, Field, Card } from '../../components/ui';
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const { addToCart } = useApp();
+  const { addToCart, user, token } = useApp();
   const toast = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [similar, setSimilar] = useState<Product[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [myRating, setMyRating] = useState(0);
+  const [myComment, setMyComment] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [reviewErr, setReviewErr] = useState('');
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     setSimilar([]);
+    setReviews([]);
+    setMyRating(0);
+    setMyComment('');
     api
       .product(id)
       .then(setProduct)
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
+    api.reviews(id).then(setReviews).catch(() => {});
   }, [id]);
+
+  async function submitReview() {
+    setReviewErr('');
+    if (myRating < 1) {
+      setReviewErr('Please select a star rating.');
+      return;
+    }
+    if (!product || !token) return;
+    setPosting(true);
+    try {
+      await api.createReview(product.id, { rating: myRating, comment: myComment.trim() }, token);
+      const [fresh, p] = await Promise.all([api.reviews(product.id), api.product(product.id)]);
+      setReviews(fresh);
+      setProduct(p);
+      setMyComment('');
+      toast('Thanks for your review!', 'success');
+    } catch (e: any) {
+      setReviewErr(e.message || 'Could not save your review.');
+    } finally {
+      setPosting(false);
+    }
+  }
 
   // Other products from the same category (excluding this one).
   useEffect(() => {
@@ -83,6 +115,16 @@ export default function ProductDetail() {
           <View style={{ flex: 1, gap: 14 }}>
             {!!product.category_name && <Badge text={product.category_name} tone="orange" />}
             <Text style={styles.name}>{product.name}</Text>
+            {product.review_count > 0 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Stars value={product.rating} size={18} />
+                <Text style={styles.ratingText}>
+                  {product.rating.toFixed(1)} · {product.review_count} review{product.review_count === 1 ? '' : 's'}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.muted}>No reviews yet</Text>
+            )}
             <Badge text={product.stock > 0 ? 'In stock' : 'Out of stock'} tone={product.stock > 0 ? 'green' : 'red'} />
             <Text style={styles.desc}>{product.description}</Text>
 
@@ -129,6 +171,51 @@ export default function ProductDetail() {
         </View>
       </Container>
 
+      {/* Ratings & Reviews */}
+      <Container style={{ marginTop: 40 }}>
+        <SectionTitle
+          title="Ratings & Reviews"
+          subtitle={product.review_count > 0 ? `${product.rating.toFixed(1)} out of 5 · ${product.review_count} review${product.review_count === 1 ? '' : 's'}` : 'Be the first to review this product'}
+        />
+
+        <Card style={{ gap: 10, marginBottom: 16 }}>
+          {user ? (
+            <>
+              <Text style={styles.writeTitle}>Write a review</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={styles.qtyLabel}>Your rating</Text>
+                <Stars value={myRating} size={28} onRate={setMyRating} />
+              </View>
+              <Field label="Comment (optional)" value={myComment} onChangeText={setMyComment} placeholder="Share your experience with this product…" multiline />
+              {!!reviewErr && <Text style={styles.error}>{reviewErr}</Text>}
+              <Button label={posting ? 'Saving…' : 'Submit review'} onPress={submitReview} disabled={posting} style={{ alignSelf: 'flex-start' }} />
+            </>
+          ) : (
+            <View style={styles.loginRow}>
+              <Text style={styles.muted}>Log in to leave a rating and review.</Text>
+              <Button label="Log in" onPress={() => router.push('/login')} />
+            </View>
+          )}
+        </Card>
+
+        {reviews.length === 0 ? (
+          <Text style={styles.muted}>No reviews yet — your feedback helps other buyers.</Text>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {reviews.map((r) => (
+              <Card key={r.id} style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={styles.reviewAuthor}>{r.author_name || 'Customer'}</Text>
+                  <Stars value={r.rating} size={15} />
+                </View>
+                {!!r.comment && <Text style={styles.reviewComment}>{r.comment}</Text>}
+                <Text style={styles.reviewDate}>{new Date(r.created_at).toLocaleDateString()}</Text>
+              </Card>
+            ))}
+          </View>
+        )}
+      </Container>
+
       {similar.length > 0 && (
         <Container style={{ marginTop: 40 }}>
           <SectionTitle title="Similar Products" subtitle={`More from ${product.category_name}`} />
@@ -167,4 +254,13 @@ const styles = StyleSheet.create({
   infoBox: { backgroundColor: colors.cream, borderRadius: radius.md, padding: 14, gap: 6, marginTop: 8 },
   infoText: { color: colors.text, fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  ratingText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  muted: { color: colors.muted, fontSize: 14 },
+  writeTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
+  error: { color: colors.red, fontSize: 13 },
+  loginRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 },
+  reviewAuthor: { fontWeight: '800', color: colors.ink, fontSize: 15 },
+  reviewComment: { color: colors.text, fontSize: 14, lineHeight: 21 },
+  reviewDate: { color: colors.muted, fontSize: 12 },
 });
+

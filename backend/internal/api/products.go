@@ -118,7 +118,9 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sql := `SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
-	               p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at
+	               p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
+		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
+		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id)
 	        FROM products p LEFT JOIN categories c ON c.id = p.category_id ` +
 		where + ` ORDER BY p.name`
 
@@ -145,7 +147,9 @@ func (s *Server) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	row := s.pool.QueryRow(r.Context(),
 		`SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
-		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at
+		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
+		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
+		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id)
 		 FROM products p LEFT JOIN categories c ON c.id = p.category_id WHERE p.id=$1`, id)
 	p, err := scanProduct(row)
 	if err != nil {
@@ -276,7 +280,9 @@ func (s *Server) handlePurgeProduct(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListArchivedProducts(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pool.Query(r.Context(),
 		`SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
-		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at
+		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
+		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
+		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id)
 		 FROM products p LEFT JOIN categories c ON c.id = p.category_id
 		 WHERE p.archived_at IS NOT NULL ORDER BY p.archived_at DESC`)
 	if err != nil {
@@ -304,6 +310,7 @@ type rowScanner interface {
 func scanProduct(row rowScanner) (models.Product, error) {
 	var p models.Product
 	err := row.Scan(&p.ID, &p.Name, &p.Slug, &p.CategoryID, &p.CategoryName, &p.Unit, &p.Price,
-		&p.Currency, &p.ImageURL, &p.Description, &p.Stock, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		&p.Currency, &p.ImageURL, &p.Description, &p.Stock, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
+		&p.Rating, &p.ReviewCount)
 	return p, err
 }
