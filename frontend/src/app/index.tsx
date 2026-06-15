@@ -86,7 +86,7 @@ export default function Home() {
             <View style={styles.trustRow}>
               <Trust n={`${products.length || '70'}+`} l="Products" />
               <Trust n={`${categories.length || '11'}`} l="Categories" />
-              <Trust n={`${countries || 15}`} l="Countries" />
+              <Trust n={`${countries || 20}`} l="Countries" />
             </View>
           </FadeInUp>
         </View>
@@ -140,7 +140,7 @@ export default function Home() {
 function Trust({ n, l }: { n: string; l: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
-      <CountUp value={n} style={styles.trustNum} />
+      <CountUp value={n} duration={3200} style={styles.trustNum} />
       <Text style={styles.trustLabel}>{l}</Text>
     </View>
   );
