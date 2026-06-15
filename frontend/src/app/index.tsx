@@ -132,6 +132,7 @@ export default function Home() {
         ))
       )}
 
+      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );

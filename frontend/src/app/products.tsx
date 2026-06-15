@@ -88,6 +88,7 @@ export default function Products() {
           </View>
         )}
       </Container>
+      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );
