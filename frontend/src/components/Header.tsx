@@ -6,11 +6,11 @@ import { useApp } from '../lib/store';
 import { Logo } from './Logo';
 
 const NAV = [
-  { href: '/', label: 'Home' },
-  { href: '/products', label: 'Shop' },
-  { href: '/import-export', label: 'Import / Export' },
-  { href: '/about', label: 'About Us' },
-  { href: '/contact', label: 'Contact Us' },
+  { href: '/', label: 'Home', icon: '🏠' },
+  { href: '/products', label: 'Shop', icon: '🛍️' },
+  { href: '/import-export', label: 'Import / Export', icon: '🌍' },
+  { href: '/about', label: 'About Us', icon: 'ℹ️' },
+  { href: '/contact', label: 'Contact Us', icon: '✉️' },
 ] as const;
 
 export function Header() {
@@ -46,20 +46,12 @@ export function Header() {
           </Pressable>
         </Link>
 
-        {/* Center — nav (desktop) */}
+        {/* Center — nav (desktop, icon + hover tooltip) */}
         {!compact && (
           <View style={styles.nav}>
-            {NAV.map((n) => {
-              const active = pathname === n.href;
-              return (
-                <Link key={n.href} href={n.href as any} asChild>
-                  <Pressable style={styles.navItem}>
-                    <Text style={[styles.navText, active && styles.navTextActive]}>{n.label}</Text>
-                    {active && <View style={styles.activeBar} />}
-                  </Pressable>
-                </Link>
-              );
-            })}
+            {NAV.map((n) => (
+              <NavIcon key={n.href} icon={n.icon} label={n.label} active={pathname === n.href} onPress={() => go(n.href)} />
+            ))}
           </View>
         )}
 
@@ -139,7 +131,7 @@ export function Header() {
               const active = pathname === n.href;
               return (
                 <Pressable key={n.href} style={styles.mItem} onPress={() => go(n.href)}>
-                  <Text style={[styles.mItemText, active && styles.navTextActive]}>{n.label}</Text>
+                  <Text style={[styles.mItemText, active && styles.navTextActive]}>{n.icon}  {n.label}</Text>
                 </Pressable>
               );
             })}
@@ -174,6 +166,30 @@ export function Header() {
   );
 }
 
+function NavIcon({ icon, label, active, onPress }: { icon: string; label: string; active: boolean; onPress: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <View style={styles.navItemWrap}>
+      <Pressable
+        style={[styles.navIconBtn, (hovered || active) && styles.navIconBtnActive]}
+        onPress={onPress}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        accessibilityLabel={label}
+      >
+        <Text style={styles.navIcon}>{icon}</Text>
+        {active && <View style={styles.activeDot} />}
+      </Pressable>
+      {hovered && (
+        <View style={[styles.tooltip, { transform: [{ translateX: '-50%' as any }] }]} pointerEvents="none">
+          <View style={styles.tooltipArrow} />
+          <Text style={styles.tooltipText}>{label}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function DDItem({ icon, label, onPress, danger }: { icon: string; label: string; onPress: () => void; danger?: boolean }) {
   return (
     <Pressable style={({ hovered }: any) => [styles.ddItem, hovered && styles.ddItemHover]} onPress={onPress}>
@@ -197,11 +213,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoWrap: { flexShrink: 0, marginRight: 4 },
-  nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  navItem: { paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
-  navText: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   navTextActive: { color: colors.red },
-  activeBar: { height: 3, width: 22, backgroundColor: colors.red, borderRadius: 2, marginTop: 4 },
+  navItemWrap: { position: 'relative', alignItems: 'center' },
+  navIconBtn: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  navIconBtnActive: { backgroundColor: colors.cream },
+  navIcon: { fontSize: 22 },
+  activeDot: { position: 'absolute', bottom: 5, width: 5, height: 5, borderRadius: 999, backgroundColor: colors.red },
+  tooltip: {
+    position: 'absolute' as any, top: 52, left: '50%', backgroundColor: colors.ink,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, zIndex: 200, ...shadow.soft,
+  },
+  tooltipArrow: { position: 'absolute', top: -4, alignSelf: 'center', width: 9, height: 9, backgroundColor: colors.ink, transform: [{ rotate: '45deg' }] },
+  tooltipText: { color: colors.white, fontSize: 12, fontWeight: '800' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   cartBtn: { padding: 6 },
   cartIcon: { fontSize: 22 },
