@@ -109,3 +109,8 @@ CREATE TABLE IF NOT EXISTS reviews (
     UNIQUE (product_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
+
+-- Rich product detail fields (added later; idempotent)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS highlights JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS nutrition  TEXT  NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS seller     TEXT  NOT NULL DEFAULT '';

@@ -48,6 +48,9 @@ export type Product = {
   is_active: boolean;
   rating: number;
   review_count: number;
+  highlights: { label: string; value: string }[];
+  nutrition: string;
+  seller: string;
 };
 
 export type Review = {

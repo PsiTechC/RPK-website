@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Category struct {
 	ID          int64     `json:"id"`
@@ -23,12 +26,15 @@ type Product struct {
 	Currency     string    `json:"currency"`
 	ImageURL     string    `json:"image_url"`
 	Description  string    `json:"description"`
-	Stock        int       `json:"stock"`
-	IsActive     bool      `json:"is_active"`
-	Rating       float64   `json:"rating"`
-	ReviewCount  int       `json:"review_count"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	Stock        int             `json:"stock"`
+	IsActive     bool            `json:"is_active"`
+	Rating       float64         `json:"rating"`
+	ReviewCount  int             `json:"review_count"`
+	Highlights   json.RawMessage `json:"highlights"`
+	Nutrition    string          `json:"nutrition"`
+	Seller       string          `json:"seller"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 type User struct {

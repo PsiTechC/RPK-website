@@ -30,8 +30,15 @@ export function ProductForm({
     stock: String(product?.stock ?? '100'),
     image_url: product?.image_url || '',
     description: product?.description || '',
+    nutrition: product?.nutrition || '',
+    seller: product?.seller || '',
     is_active: product?.is_active ?? true,
   });
+  const [highlights, setHighlights] = useState<{ label: string; value: string }[]>(product?.highlights ?? []);
+  const addHl = () => setHighlights((h) => [...h, { label: '', value: '' }]);
+  const removeHl = (i: number) => setHighlights((h) => h.filter((_, idx) => idx !== i));
+  const updateHl = (i: number, k: 'label' | 'value', v: string) =>
+    setHighlights((h) => h.map((row, idx) => (idx === i ? { ...row, [k]: v } : row)));
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -91,6 +98,9 @@ export function ProductForm({
       stock: parseInt(form.stock, 10) || 0,
       image_url: form.image_url.trim(),
       description: form.description,
+      nutrition: form.nutrition,
+      seller: form.seller,
+      highlights: highlights.filter((h) => h.label.trim() || h.value.trim()),
       is_active: form.is_active,
     };
     try {
@@ -177,6 +187,24 @@ export function ProductForm({
           </View>
           <Field label="Description" value={form.description} onChangeText={(t) => setForm({ ...form, description: t })} placeholder="Description" multiline />
 
+          {/* Highlights — key/value detail rows */}
+          <View style={{ gap: 8 }}>
+            <Text style={styles.label}>Highlights (key details shown as a table)</Text>
+            {highlights.map((h, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+                <Field style={{ flex: 1 }} value={h.label} onChangeText={(t) => updateHl(i, 'label', t)} placeholder="Label (e.g. Pack Size)" />
+                <Field style={{ flex: 1 }} value={h.value} onChangeText={(t) => updateHl(i, 'value', t)} placeholder="Value (e.g. 5 kg)" />
+                <Pressable style={styles.hlDel} onPress={() => removeHl(i)}>
+                  <Text style={styles.hlDelText}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+            <Button label="+ Add highlight" variant="ghost" onPress={addHl} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14 }} />
+          </View>
+
+          <Field label="Nutritional information (one item per line)" value={form.nutrition} onChangeText={(t) => setForm({ ...form, nutrition: t })} placeholder={'Serving Size: 100g\nCalories: 350\nProtein: 7g'} multiline />
+          <Field label="Seller details" value={form.seller} onChangeText={(t) => setForm({ ...form, seller: t })} placeholder="Seller name, address, customer care…" multiline />
+
           <Pressable style={styles.toggle} onPress={() => setForm({ ...form, is_active: !form.is_active })}>
             <View style={[styles.checkbox, form.is_active && styles.checkboxOn]}>{form.is_active && <Text style={styles.check}>✓</Text>}</View>
             <Text style={styles.toggleText}>Active (visible in store)</Text>
@@ -220,6 +248,8 @@ const styles = StyleSheet.create({
   title: { color: colors.white, fontWeight: '900', fontSize: 17 },
   close: { color: colors.white, fontSize: 18, fontWeight: '700' },
   label: { color: colors.text, fontWeight: '700', fontSize: 13 },
+  hlDel: { width: 40, height: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  hlDelText: { color: colors.red, fontWeight: '900', fontSize: 15 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#F1F2F5' },
   chipActive: { backgroundColor: colors.orange },

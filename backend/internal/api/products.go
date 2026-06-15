@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rpkfood/backend/internal/models"
@@ -120,7 +122,8 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	sql := `SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
 	               p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
-		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id)
+		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
+		        p.highlights, p.nutrition, p.seller
 	        FROM products p LEFT JOIN categories c ON c.id = p.category_id ` +
 		where + ` ORDER BY p.name`
 
@@ -149,7 +152,8 @@ func (s *Server) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 		`SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
 		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
-		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id)
+		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
+		        p.highlights, p.nutrition, p.seller
 		 FROM products p LEFT JOIN categories c ON c.id = p.category_id WHERE p.id=$1`, id)
 	p, err := scanProduct(row)
 	if err != nil {
@@ -160,15 +164,27 @@ func (s *Server) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 type productReq struct {
-	Name        string  `json:"name"`
-	CategoryID  *int64  `json:"category_id"`
-	Unit        string  `json:"unit"`
-	Price       float64 `json:"price"`
-	Currency    string  `json:"currency"`
-	ImageURL    string  `json:"image_url"`
-	Description string  `json:"description"`
-	Stock       int     `json:"stock"`
-	IsActive    *bool   `json:"is_active"`
+	Name        string          `json:"name"`
+	CategoryID  *int64          `json:"category_id"`
+	Unit        string          `json:"unit"`
+	Price       float64         `json:"price"`
+	Currency    string          `json:"currency"`
+	ImageURL    string          `json:"image_url"`
+	Description string          `json:"description"`
+	Stock       int             `json:"stock"`
+	IsActive    *bool           `json:"is_active"`
+	Highlights  json.RawMessage `json:"highlights"`
+	Nutrition   string          `json:"nutrition"`
+	Seller      string          `json:"seller"`
+}
+
+// normHighlights returns a valid JSON array string for the jsonb column.
+func normHighlights(raw json.RawMessage) string {
+	s := strings.TrimSpace(string(raw))
+	if s == "" || s == "null" {
+		return "[]"
+	}
+	return s
 }
 
 func (s *Server) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -189,10 +205,10 @@ func (s *Server) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	var id int64
 	err := s.pool.QueryRow(r.Context(),
-		`INSERT INTO products (name, slug, category_id, unit, price, currency, image_url, description, stock, is_active)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+		`INSERT INTO products (name, slug, category_id, unit, price, currency, image_url, description, stock, is_active, highlights, nutrition, seller)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12,$13) RETURNING id`,
 		req.Name, slugify(req.Name), req.CategoryID, req.Unit, req.Price, req.Currency,
-		req.ImageURL, req.Description, req.Stock, active,
+		req.ImageURL, req.Description, req.Stock, active, normHighlights(req.Highlights), req.Nutrition, req.Seller,
 	).Scan(&id)
 	if err != nil {
 		writeErr(w, 500, "could not create product")
@@ -220,10 +236,12 @@ func (s *Server) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	ct, err := s.pool.Exec(r.Context(),
 		`UPDATE products SET name=$1, slug=$2, category_id=$3, unit=$4, price=$5, currency=$6,
-		        image_url=$7, description=$8, stock=$9, is_active=$10, updated_at=now()
-		 WHERE id=$11`,
+		        image_url=$7, description=$8, stock=$9, is_active=$10,
+		        highlights=$11::jsonb, nutrition=$12, seller=$13, updated_at=now()
+		 WHERE id=$14`,
 		req.Name, slugify(req.Name), req.CategoryID, req.Unit, req.Price, req.Currency,
-		req.ImageURL, req.Description, req.Stock, active, id)
+		req.ImageURL, req.Description, req.Stock, active,
+		normHighlights(req.Highlights), req.Nutrition, req.Seller, id)
 	if err != nil {
 		writeErr(w, 500, "update failed")
 		return
@@ -282,7 +300,8 @@ func (s *Server) handleListArchivedProducts(w http.ResponseWriter, r *http.Reque
 		`SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
 		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
-		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id)
+		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
+		        p.highlights, p.nutrition, p.seller
 		 FROM products p LEFT JOIN categories c ON c.id = p.category_id
 		 WHERE p.archived_at IS NOT NULL ORDER BY p.archived_at DESC`)
 	if err != nil {
@@ -311,6 +330,6 @@ func scanProduct(row rowScanner) (models.Product, error) {
 	var p models.Product
 	err := row.Scan(&p.ID, &p.Name, &p.Slug, &p.CategoryID, &p.CategoryName, &p.Unit, &p.Price,
 		&p.Currency, &p.ImageURL, &p.Description, &p.Stock, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
-		&p.Rating, &p.ReviewCount)
+		&p.Rating, &p.ReviewCount, &p.Highlights, &p.Nutrition, &p.Seller)
 	return p, err
 }

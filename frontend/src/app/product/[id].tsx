@@ -171,6 +171,48 @@ export default function ProductDetail() {
         </View>
       </Container>
 
+      {/* Highlights */}
+      {product.highlights?.length > 0 && (
+        <Container style={{ marginTop: 34 }}>
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <Text style={styles.detailHead}>Highlights</Text>
+            {product.highlights.map((h, i) => (
+              <View key={i} style={[styles.hlRow, i % 2 === 1 && { backgroundColor: colors.offWhite }]}>
+                <Text style={styles.hlLabel}>{h.label}</Text>
+                <Text style={styles.hlValue}>{h.value}</Text>
+              </View>
+            ))}
+          </Card>
+        </Container>
+      )}
+
+      {/* Nutritional Information */}
+      {!!product.nutrition?.trim() && (
+        <Container style={{ marginTop: 20 }}>
+          <Card>
+            <Text style={styles.detailHead}>Nutritional Information</Text>
+            <View style={{ gap: 7, marginTop: 10 }}>
+              {product.nutrition.split('\n').filter((l) => l.trim()).map((l, i) => (
+                <View key={i} style={styles.bulletRow}>
+                  <View style={styles.bullet} />
+                  <Text style={styles.bulletText}>{l.trim()}</Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+        </Container>
+      )}
+
+      {/* Seller Details */}
+      {!!product.seller?.trim() && (
+        <Container style={{ marginTop: 20 }}>
+          <Card>
+            <Text style={styles.detailHead}>Seller Details</Text>
+            <Text style={styles.sellerText}>{product.seller}</Text>
+          </Card>
+        </Container>
+      )}
+
       {/* Ratings & Reviews */}
       <Container style={{ marginTop: 40 }}>
         <SectionTitle
@@ -262,5 +304,14 @@ const styles = StyleSheet.create({
   reviewAuthor: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   reviewComment: { color: colors.text, fontSize: 14, lineHeight: 21 },
   reviewDate: { color: colors.muted, fontSize: 12 },
+  detailHead: { fontWeight: '900', fontSize: 17, color: colors.ink, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 4 },
+  hlRow: { flexDirection: 'row', paddingHorizontal: 18, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  hlLabel: { width: 150, color: colors.muted, fontWeight: '700', fontSize: 14 },
+  hlValue: { flex: 1, color: colors.ink, fontWeight: '600', fontSize: 14 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  bullet: { width: 6, height: 6, borderRadius: 999, backgroundColor: colors.red, marginTop: 7 },
+  bulletText: { flex: 1, color: colors.text, fontSize: 14, lineHeight: 21 },
+  sellerText: { color: colors.text, fontSize: 14, lineHeight: 22, marginTop: 8 },
 });
+
 
