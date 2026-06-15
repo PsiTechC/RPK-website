@@ -123,7 +123,7 @@ export default function Home() {
                 <Button label="View all" variant="ghost" onPress={() => router.push(`/products?category=${g.category.slug}`)} style={styles.viewAll} />
               </View>
               <View style={[styles.grid, { gap }]}>
-                {g.items.map((p) => (
+                {g.items.slice(0, 6).map((p) => (
                   <ProductCard key={p.id} product={p} width={cardW} />
                 ))}
               </View>
