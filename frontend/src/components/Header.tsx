@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { Link, usePathname, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Logo } from './Logo';
 
 const NAV = [
-  { href: '/', label: 'Home', icon: '🏠' },
-  { href: '/products', label: 'Shop', icon: '🛍️' },
-  { href: '/import-export', label: 'Import / Export', icon: '🌍' },
-  { href: '/about', label: 'About Us', icon: 'ℹ️' },
-  { href: '/contact', label: 'Contact Us', icon: '✉️' },
+  { href: '/', label: 'Home', icon: 'home-outline' },
+  { href: '/products', label: 'Shop', icon: 'bag-handle-outline' },
+  { href: '/import-export', label: 'Import / Export', icon: 'globe-outline' },
+  { href: '/about', label: 'About Us', icon: 'information-circle-outline' },
+  { href: '/contact', label: 'Contact Us', icon: 'mail-outline' },
 ] as const;
 
 export function Header() {
@@ -58,7 +59,7 @@ export function Header() {
         {/* Right — actions */}
         <View style={styles.actions}>
           <Pressable style={styles.cartBtn} onPress={() => go('/cart')}>
-            <Text style={styles.cartIcon}>🛒</Text>
+            <Ionicons name="cart-outline" size={25} color={colors.ink} />
             {cartCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{cartCount}</Text>
@@ -113,11 +114,11 @@ export function Header() {
             </View>
             <View style={styles.roleChip}><Text style={styles.roleChipText}>{user.role}</Text></View>
             <View style={styles.ddDivider} />
-            <DDItem icon="👤" label="My account" onPress={() => go('/account')} />
-            {user.role === 'admin' && <DDItem icon="🛠" label="Admin dashboard" onPress={() => go('/admin')} />}
-            <DDItem icon="🛒" label="My cart" onPress={() => go('/cart')} />
+            <DDItem icon="person-outline" label="My account" onPress={() => go('/account')} />
+            {user.role === 'admin' && <DDItem icon="construct-outline" label="Admin dashboard" onPress={() => go('/admin')} />}
+            <DDItem icon="cart-outline" label="My cart" onPress={() => go('/cart')} />
             <View style={styles.ddDivider} />
-            <DDItem icon="↩" label="Log out" danger onPress={doLogout} />
+            <DDItem icon="log-out-outline" label="Log out" danger onPress={doLogout} />
           </View>
         </>
       )}
@@ -130,8 +131,9 @@ export function Header() {
             {NAV.map((n) => {
               const active = pathname === n.href;
               return (
-                <Pressable key={n.href} style={styles.mItem} onPress={() => go(n.href)}>
-                  <Text style={[styles.mItemText, active && styles.navTextActive]}>{n.icon}  {n.label}</Text>
+                <Pressable key={n.href} style={[styles.mItem, styles.mItemRow]} onPress={() => go(n.href)}>
+                  <Ionicons name={n.icon as any} size={20} color={active ? colors.red : colors.text} />
+                  <Text style={[styles.mItemText, active && styles.navTextActive]}>{n.label}</Text>
                 </Pressable>
               );
             })}
@@ -145,9 +147,17 @@ export function Header() {
                     <Text style={styles.ddEmail} numberOfLines={1}>{user.email}</Text>
                   </View>
                 </View>
-                <Pressable style={styles.mItem} onPress={() => go('/account')}><Text style={styles.mItemText}>👤  My account</Text></Pressable>
-                {user.role === 'admin' && <Pressable style={styles.mItem} onPress={() => go('/admin')}><Text style={styles.mItemText}>🛠  Admin dashboard</Text></Pressable>}
-                <Pressable style={styles.mItem} onPress={doLogout}><Text style={[styles.mItemText, { color: colors.red }]}>↩  Log out</Text></Pressable>
+                <Pressable style={[styles.mItem, styles.mItemRow]} onPress={() => go('/account')}>
+                  <Ionicons name="person-outline" size={20} color={colors.text} /><Text style={styles.mItemText}>My account</Text>
+                </Pressable>
+                {user.role === 'admin' && (
+                  <Pressable style={[styles.mItem, styles.mItemRow]} onPress={() => go('/admin')}>
+                    <Ionicons name="construct-outline" size={20} color={colors.text} /><Text style={styles.mItemText}>Admin dashboard</Text>
+                  </Pressable>
+                )}
+                <Pressable style={[styles.mItem, styles.mItemRow]} onPress={doLogout}>
+                  <Ionicons name="log-out-outline" size={20} color={colors.red} /><Text style={[styles.mItemText, { color: colors.red }]}>Log out</Text>
+                </Pressable>
               </>
             ) : (
               <View style={styles.mAuth}>
@@ -168,17 +178,18 @@ export function Header() {
 
 function NavIcon({ icon, label, active, onPress }: { icon: string; label: string; active: boolean; onPress: () => void }) {
   const [hovered, setHovered] = useState(false);
+  const color = active ? colors.red : hovered ? colors.ink : colors.muted;
   return (
     <View style={styles.navItemWrap}>
       <Pressable
-        style={[styles.navIconBtn, (hovered || active) && styles.navIconBtnActive]}
+        style={[styles.navIconBtn, hovered && styles.navIconBtnHover]}
         onPress={onPress}
         onHoverIn={() => setHovered(true)}
         onHoverOut={() => setHovered(false)}
         accessibilityLabel={label}
       >
-        <Text style={styles.navIcon}>{icon}</Text>
-        {active && <View style={styles.activeDot} />}
+        <Ionicons name={icon as any} size={23} color={color} />
+        <View style={[styles.activeBar, !active && { opacity: 0 }]} />
       </Pressable>
       {hovered && (
         <View style={[styles.tooltip, { transform: [{ translateX: '-50%' as any }] }]} pointerEvents="none">
@@ -193,7 +204,7 @@ function NavIcon({ icon, label, active, onPress }: { icon: string; label: string
 function DDItem({ icon, label, onPress, danger }: { icon: string; label: string; onPress: () => void; danger?: boolean }) {
   return (
     <Pressable style={({ hovered }: any) => [styles.ddItem, hovered && styles.ddItemHover]} onPress={onPress}>
-      <Text style={styles.ddIcon}>{icon}</Text>
+      <Ionicons name={icon as any} size={17} color={danger ? colors.red : colors.muted} style={{ width: 20, textAlign: 'center' }} />
       <Text style={[styles.ddItemText, danger && { color: colors.red }]}>{label}</Text>
     </Pressable>
   );
@@ -216,10 +227,9 @@ const styles = StyleSheet.create({
   nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   navTextActive: { color: colors.red },
   navItemWrap: { position: 'relative', alignItems: 'center' },
-  navIconBtn: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  navIconBtnActive: { backgroundColor: colors.cream },
-  navIcon: { fontSize: 22 },
-  activeDot: { position: 'absolute', bottom: 5, width: 5, height: 5, borderRadius: 999, backgroundColor: colors.red },
+  navIconBtn: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 5, borderRadius: 12, alignItems: 'center' },
+  navIconBtnHover: { backgroundColor: colors.offWhite },
+  activeBar: { height: 3, width: 20, borderRadius: 2, backgroundColor: colors.red, marginTop: 5 },
   tooltip: {
     position: 'absolute' as any, top: 52, left: '50%', backgroundColor: colors.ink,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, zIndex: 200, ...shadow.soft,
@@ -278,6 +288,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 8, paddingHorizontal: 12, zIndex: 110, ...shadow.card,
   },
   mItem: { paddingVertical: 12, paddingHorizontal: 8 },
+  mItemRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   mItemText: { color: colors.text, fontWeight: '800', fontSize: 16 },
   mUser: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, paddingVertical: 8 },
   mAuth: { flexDirection: 'row', gap: 10, paddingVertical: 8, paddingHorizontal: 4 },
