@@ -86,7 +86,7 @@ export default function Home() {
             <View style={styles.trustRow}>
               <Trust n={`${products.length || '70'}+`} l="Products" />
               <Trust n={`${categories.length || '11'}`} l="Categories" />
-              <Trust n={`${countries || 20}`} l="Countries" />
+              <Trust n={`${Math.max(countries, 20)}`} l="Countries" />
             </View>
           </FadeInUp>
         </View>
