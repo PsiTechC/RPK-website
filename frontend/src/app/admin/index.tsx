@@ -509,6 +509,14 @@ function Inquiries({ token }: { token: string }) {
             <View style={{ flex: 1, minWidth: 200 }}>
               <Text style={styles.rowTitle}>{q.name}</Text>
               <Text style={styles.rowMeta}>{q.email || 'no email'} · {q.phone || 'no phone'}</Text>
+              {Array.isArray(q.items) && q.items.length > 0 && (
+                <View style={{ marginTop: 4, gap: 2 }}>
+                  <Text style={[styles.rowMeta, { fontWeight: '800' }]}>Requirement:</Text>
+                  {q.items.map((it: any, idx: number) => (
+                    <Text key={idx} style={styles.rowMeta}>• {it.name} — {it.qty} {it.unit}</Text>
+                  ))}
+                </View>
+              )}
               {!!q.product && <Text style={styles.rowMeta}>Product: {q.product}</Text>}
               {!!q.message && <Text style={styles.message}>“{q.message}”</Text>}
               <Text style={styles.rowMeta}>{new Date(q.created_at).toLocaleString()}</Text>

@@ -114,3 +114,6 @@ CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS highlights JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS nutrition  TEXT  NOT NULL DEFAULT '';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS seller     TEXT  NOT NULL DEFAULT '';
+
+-- Inquiry requirement items (product + qty list)
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]';

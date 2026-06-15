@@ -6,6 +6,7 @@ import { colors, radius, BRAND } from '../lib/theme';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
 import { PhoneField } from '../components/PhoneField';
+import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
 import { DEFAULT_COUNTRY } from '../lib/countries';
 import { vName, vEmail, vPhone, isClean } from '../lib/validate';
 
@@ -32,6 +33,7 @@ export default function Contact() {
     message: '',
   });
   const [country, setCountry] = useState(DEFAULT_COUNTRY);
+  const [items, setItems] = useState<ReqItem[]>([]);
   const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -57,7 +59,14 @@ export default function Contact() {
     }
     setBusy(true);
     try {
-      await api.createInquiry({ ...form, phone: form.phone ? `${country.dial} ${form.phone}` : '' });
+      const summary = items.map((i) => `${i.name} ×${i.qty} ${i.unit}`).join(', ');
+      const productField = [summary, form.product.trim()].filter(Boolean).join(' | ');
+      await api.createInquiry({
+        ...form,
+        product: productField,
+        phone: form.phone ? `${country.dial} ${form.phone}` : '',
+        items,
+      });
       setDone(true);
     } catch (e: any) {
       setError(e.message || 'Could not send your inquiry.');
@@ -118,7 +127,8 @@ export default function Contact() {
                 <Field label="Your name *" value={form.name} onChangeText={set('name')} placeholder="Full name" error={errors.name} />
                 <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
                 <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
-                <Field label="Product / interest" value={form.product} onChangeText={set('product')} placeholder="e.g. Basmati Rice 10KG, bulk spices…" />
+                <RequirementBuilder items={items} onChange={setItems} />
+                <Field label="Other products / notes" value={form.product} onChangeText={set('product')} placeholder="Anything not listed above…" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Quantity needed, delivery location, any questions…" multiline />
                 {!!error && <Text style={styles.error}>{error}</Text>}
                 <Button label={busy ? 'Sending…' : 'Send inquiry'} onPress={submit} disabled={busy} />

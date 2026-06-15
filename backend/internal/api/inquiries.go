@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,22 +11,24 @@ import (
 )
 
 type Inquiry struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Phone     string    `json:"phone"`
-	Product   string    `json:"product"`
-	Message   string    `json:"message"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int64           `json:"id"`
+	Name      string          `json:"name"`
+	Email     string          `json:"email"`
+	Phone     string          `json:"phone"`
+	Product   string          `json:"product"`
+	Message   string          `json:"message"`
+	Items     json.RawMessage `json:"items"`
+	Status    string          `json:"status"`
+	CreatedAt time.Time       `json:"created_at"`
 }
 
 type inquiryReq struct {
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Phone   string `json:"phone"`
-	Product string `json:"product"`
-	Message string `json:"message"`
+	Name    string          `json:"name"`
+	Email   string          `json:"email"`
+	Phone   string          `json:"phone"`
+	Product string          `json:"product"`
+	Message string          `json:"message"`
+	Items   json.RawMessage `json:"items"`
 }
 
 // handleCreateInquiry stores a "Call to Inquiry" / contact-form submission.
@@ -45,9 +48,9 @@ func (s *Server) handleCreateInquiry(w http.ResponseWriter, r *http.Request) {
 
 	var id int64
 	err := s.pool.QueryRow(r.Context(),
-		`INSERT INTO inquiries (name, email, phone, product, message)
-		 VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-		req.Name, req.Email, req.Phone, req.Product, req.Message,
+		`INSERT INTO inquiries (name, email, phone, product, message, items)
+		 VALUES ($1,$2,$3,$4,$5,$6::jsonb) RETURNING id`,
+		req.Name, req.Email, req.Phone, req.Product, req.Message, normHighlights(req.Items),
 	).Scan(&id)
 	if err != nil {
 		writeErr(w, 500, "could not submit inquiry")
@@ -58,7 +61,7 @@ func (s *Server) handleCreateInquiry(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminListInquiries(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pool.Query(r.Context(),
-		`SELECT id, name, email, phone, product, message, status, created_at
+		`SELECT id, name, email, phone, product, message, items, status, created_at
 		 FROM inquiries ORDER BY created_at DESC`)
 	if err != nil {
 		writeErr(w, 500, "query failed")
@@ -69,7 +72,7 @@ func (s *Server) handleAdminListInquiries(w http.ResponseWriter, r *http.Request
 	out := []Inquiry{}
 	for rows.Next() {
 		var q Inquiry
-		if err := rows.Scan(&q.ID, &q.Name, &q.Email, &q.Phone, &q.Product, &q.Message, &q.Status, &q.CreatedAt); err != nil {
+		if err := rows.Scan(&q.ID, &q.Name, &q.Email, &q.Phone, &q.Product, &q.Message, &q.Items, &q.Status, &q.CreatedAt); err != nil {
 			writeErr(w, 500, "scan failed")
 			return
 		}

@@ -172,8 +172,14 @@ export const api = {
   chat: (messages: { role: string; content: string }[]) =>
     request<{ reply: string }>('/api/chat', { method: 'POST', body: { messages } }),
 
-  createInquiry: (body: { name: string; email?: string; phone?: string; product?: string; message?: string }) =>
-    request<any>('/api/inquiries', { method: 'POST', body }),
+  createInquiry: (body: {
+    name: string;
+    email?: string;
+    phone?: string;
+    product?: string;
+    message?: string;
+    items?: { product_id: number; name: string; unit: string; qty: number }[];
+  }) => request<any>('/api/inquiries', { method: 'POST', body }),
 
   // admin
   admin: {
