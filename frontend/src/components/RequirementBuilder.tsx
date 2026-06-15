@@ -93,7 +93,12 @@ export function RequirementBuilder({ items, onChange }: { items: ReqItem[]; onCh
               <Text style={styles.itemName} numberOfLines={1}>{it.name}</Text>
               <View style={styles.stepper}>
                 <Pressable style={styles.stepBtn} onPress={() => setQty(it.product_id, it.qty - 1)}><Text style={styles.stepText}>−</Text></Pressable>
-                <Text style={styles.qty}>{it.qty}</Text>
+                <TextInput
+                  value={String(it.qty)}
+                  onChangeText={(t) => setQty(it.product_id, parseInt(t.replace(/[^\d]/g, '') || '1', 10))}
+                  keyboardType="number-pad"
+                  style={styles.qtyInput}
+                />
                 <Pressable style={styles.stepBtn} onPress={() => setQty(it.product_id, it.qty + 1)}><Text style={styles.stepText}>+</Text></Pressable>
               </View>
               <Text style={styles.itemUnit}>{it.unit}</Text>
@@ -128,7 +133,7 @@ const styles = StyleSheet.create({
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 999, backgroundColor: colors.white },
   stepBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: 18, fontWeight: '800', color: colors.navy },
-  qty: { width: 30, textAlign: 'center', fontWeight: '800', color: colors.ink },
+  qtyInput: { width: 40, height: 30, textAlign: 'center', fontWeight: '800', color: colors.ink, fontSize: 14, outlineStyle: 'none' as any },
   itemUnit: { color: colors.muted, fontWeight: '700', fontSize: 12, width: 40 },
   remove: { color: colors.red, fontWeight: '900', fontSize: 15 },
 });

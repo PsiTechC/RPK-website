@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { api, imageUri } from '../lib/api';
@@ -127,7 +127,12 @@ export default function Cart() {
                       <Pressable style={styles.stepBtn} onPress={() => setQty(l.product.id, l.qty - 1)}>
                         <Text style={styles.stepText}>−</Text>
                       </Pressable>
-                      <Text style={styles.qtyVal}>{l.qty}</Text>
+                      <TextInput
+                        value={String(l.qty)}
+                        onChangeText={(t) => setQty(l.product.id, parseInt(t.replace(/[^\d]/g, '') || '1', 10))}
+                        keyboardType="number-pad"
+                        style={styles.qtyInput}
+                      />
                       <Pressable style={styles.stepBtn} onPress={() => setQty(l.product.id, l.qty + 1)}>
                         <Text style={styles.stepText}>+</Text>
                       </Pressable>
@@ -210,6 +215,7 @@ const styles = StyleSheet.create({
   stepBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: 20, fontWeight: '800', color: colors.navy },
   qtyVal: { width: 36, textAlign: 'center', fontWeight: '800', color: colors.ink },
+  qtyInput: { width: 42, height: 34, textAlign: 'center', fontWeight: '800', color: colors.ink, fontSize: 14, outlineStyle: 'none' as any },
   checkout: { gap: 12 },
   checkoutTitle: { fontWeight: '900', fontSize: 18, color: colors.ink },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

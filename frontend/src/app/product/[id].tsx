@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Product, Review, imageUri } from '../../lib/api';
@@ -134,7 +134,12 @@ export default function ProductDetail() {
                 <Pressable style={styles.stepBtn} onPress={() => setQty((q) => Math.max(1, q - 1))}>
                   <Text style={styles.stepText}>−</Text>
                 </Pressable>
-                <Text style={styles.qtyVal}>{qty}</Text>
+                <TextInput
+                  value={String(qty)}
+                  onChangeText={(t) => setQty(parseInt(t.replace(/[^\d]/g, '') || '1', 10))}
+                  keyboardType="number-pad"
+                  style={styles.qtyInput}
+                />
                 <Pressable style={styles.stepBtn} onPress={() => setQty((q) => q + 1)}>
                   <Text style={styles.stepText}>+</Text>
                 </Pressable>
@@ -293,6 +298,7 @@ const styles = StyleSheet.create({
   stepBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.offWhite },
   stepText: { fontSize: 22, fontWeight: '800', color: colors.navy },
   qtyVal: { width: 44, textAlign: 'center', fontWeight: '800', fontSize: 16, color: colors.ink },
+  qtyInput: { width: 50, height: 40, textAlign: 'center', fontWeight: '800', fontSize: 16, color: colors.ink, outlineStyle: 'none' as any },
   infoBox: { backgroundColor: colors.cream, borderRadius: radius.md, padding: 14, gap: 6, marginTop: 8 },
   infoText: { color: colors.text, fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
