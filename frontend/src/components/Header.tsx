@@ -9,7 +9,8 @@ const NAV = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'Shop' },
   { href: '/import-export', label: 'Import / Export' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/about', label: 'About Us' },
+  { href: '/contact', label: 'Contact Us' },
 ] as const;
 
 export function Header() {
