@@ -45,7 +45,7 @@ export function RequirementBuilder({ items, onChange }: { items: ReqItem[]; onCh
   const remove = (pid: number) => onChange(items.filter((i) => i.product_id !== pid));
 
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 10, zIndex: open ? 1000 : 1, position: 'relative' }}>
       <Text style={styles.label}>Build your requirement (select products & quantities)</Text>
 
       {/* category filter chips */}
