@@ -10,7 +10,7 @@ import { ProductThumb } from '../../components/admin/ProductThumb';
 import { useToast } from '../../components/Toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
-type Tab = 'dashboard' | 'products' | 'orders' | 'registrations' | 'archived';
+type Tab = 'dashboard' | 'products' | 'orders' | 'registrations' | 'inquiries' | 'archived';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
@@ -41,7 +41,7 @@ export default function Admin() {
       <Container style={{ marginTop: 22 }}>
         <SectionTitle title="Admin Dashboard" subtitle="Manage products, orders & registrations" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {(['dashboard', 'products', 'orders', 'registrations', 'archived'] as Tab[]).map((t) => (
+          {(['dashboard', 'products', 'orders', 'registrations', 'inquiries', 'archived'] as Tab[]).map((t) => (
             <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
               <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
             </Pressable>
@@ -53,6 +53,7 @@ export default function Admin() {
           {token && tab === 'products' && <Products token={token} />}
           {token && tab === 'orders' && <Orders token={token} />}
           {token && tab === 'registrations' && <Registrations token={token} />}
+          {token && tab === 'inquiries' && <Inquiries token={token} />}
           {token && tab === 'archived' && <Archived token={token} />}
         </View>
       </Container>
@@ -472,6 +473,52 @@ function Registrations({ token }: { token: string }) {
             <Button label="Approve" variant="navy" onPress={() => setStatus(r.id, 'approved')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
             <Button label="Reject" variant="danger" onPress={() => setStatus(r.id, 'rejected')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
             <Button label="Pending" variant="ghost" onPress={() => setStatus(r.id, 'pending')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+          </View>
+        </Card>
+      ))}
+    </View>
+  );
+}
+
+function Inquiries({ token }: { token: string }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    setLoading(true);
+    setItems(await api.admin.inquiries(token));
+    setLoading(false);
+  }
+  useEffect(() => {
+    load().catch(() => setLoading(false));
+  }, [token]);
+
+  async function setStatus(id: number, status: string) {
+    await api.admin.updateInquiry(id, { status }, token);
+    load();
+  }
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+  if (items.length === 0) return <Text style={styles.muted}>No inquiries yet.</Text>;
+
+  return (
+    <View style={{ gap: 12 }}>
+      {items.map((q) => (
+        <Card key={q.id} style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <View style={{ flex: 1, minWidth: 200 }}>
+              <Text style={styles.rowTitle}>{q.name}</Text>
+              <Text style={styles.rowMeta}>{q.email || 'no email'} · {q.phone || 'no phone'}</Text>
+              {!!q.product && <Text style={styles.rowMeta}>Product: {q.product}</Text>}
+              {!!q.message && <Text style={styles.message}>“{q.message}”</Text>}
+              <Text style={styles.rowMeta}>{new Date(q.created_at).toLocaleString()}</Text>
+            </View>
+            <Badge text={q.status} tone={statusTone[q.status] || 'muted'} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label="Mark contacted" variant="navy" onPress={() => setStatus(q.id, 'contacted')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Close" variant="ghost" onPress={() => setStatus(q.id, 'closed')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="New" variant="ghost" onPress={() => setStatus(q.id, 'new')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
           </View>
         </Card>
       ))}

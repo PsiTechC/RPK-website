@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { colors, radius, shadow } from '../lib/theme';
 import { Product, imageUri } from '../lib/api';
-import { useApp, money } from '../lib/store';
+import { useApp } from '../lib/store';
 import { visualByName, isPlaceholder } from '../lib/foodVisuals';
 import { useHoverScale } from './Motion';
 import { useToast } from './Toast';
@@ -47,8 +47,17 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
       <View style={styles.body}>
         {!!product.category_name && <Text style={styles.cat} numberOfLines={1}>{product.category_name}</Text>}
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        <View style={styles.row}>
-          <Text style={styles.price}>{money(product.price, product.currency)}</Text>
+        <View style={styles.actions}>
+          <Pressable
+            style={styles.inquiry}
+            onPress={(e) => {
+              // @ts-ignore stop card navigation on web
+              e.stopPropagation?.();
+              router.push(`/contact?product=${encodeURIComponent(product.name)}`);
+            }}
+          >
+            <Text style={styles.inquiryText}>📞 Call to Inquiry</Text>
+          </Pressable>
           <Pressable
             style={styles.add}
             onPress={(e) => {
@@ -58,7 +67,7 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
               toast(`“${product.name}” added to cart`, 'success');
             }}
           >
-            <Text style={styles.addText}>+ Add</Text>
+            <Text style={styles.addText}>+ Add to cart</Text>
           </Pressable>
         </View>
       </View>
@@ -77,8 +86,9 @@ const styles = StyleSheet.create({
   body: { padding: 12, gap: 4 },
   cat: { color: colors.orange, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   name: { color: colors.text, fontSize: 14, fontWeight: '700', minHeight: 38 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
-  price: { color: colors.navy, fontWeight: '900', fontSize: 15 },
-  add: { backgroundColor: colors.orange, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
-  addText: { color: colors.white, fontWeight: '800', fontSize: 13 },
+  actions: { gap: 8, marginTop: 8 },
+  inquiry: { backgroundColor: colors.orange, paddingVertical: 9, borderRadius: 999, alignItems: 'center' },
+  inquiryText: { color: colors.white, fontWeight: '800', fontSize: 13 },
+  add: { borderWidth: 1.5, borderColor: colors.border, paddingVertical: 8, borderRadius: 999, alignItems: 'center' },
+  addText: { color: colors.ink, fontWeight: '700', fontSize: 13 },
 });

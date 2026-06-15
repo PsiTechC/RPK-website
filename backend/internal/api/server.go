@@ -55,6 +55,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/orders", s.handleCreateOrder)               // guest or customer checkout (mock payment)
 		r.Post("/chat", s.handleChat)                        // AI chatbot
 		r.Get("/stats", s.handlePublicStats)                 // homepage counters (products/categories/countries)
+		r.Post("/inquiries", s.handleCreateInquiry)          // "Call to Inquiry" / contact form
 
 		// Authenticated (any logged-in user)
 		r.Group(func(r chi.Router) {
@@ -88,6 +89,9 @@ func (s *Server) Router() http.Handler {
 
 			r.Get("/registrations", s.handleAdminListRegistrations)
 			r.Patch("/registrations/{id}", s.handleAdminUpdateRegistration)
+
+			r.Get("/inquiries", s.handleAdminListInquiries)
+			r.Patch("/inquiries/{id}", s.handleAdminUpdateInquiry)
 		})
 	})
 

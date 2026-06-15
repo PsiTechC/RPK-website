@@ -85,3 +85,15 @@ CREATE TABLE IF NOT EXISTS order_items (
     line_total   NUMERIC(12,2) NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+
+CREATE TABLE IF NOT EXISTS inquiries (
+    id         BIGSERIAL PRIMARY KEY,
+    name       TEXT NOT NULL DEFAULT '',
+    email      TEXT NOT NULL DEFAULT '',
+    phone      TEXT NOT NULL DEFAULT '',
+    product    TEXT NOT NULL DEFAULT '',
+    message    TEXT NOT NULL DEFAULT '',
+    status     TEXT NOT NULL DEFAULT 'new', -- new / contacted / closed
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_inquiries_created ON inquiries(created_at DESC);

@@ -154,6 +154,9 @@ export const api = {
   chat: (messages: { role: string; content: string }[]) =>
     request<{ reply: string }>('/api/chat', { method: 'POST', body: { messages } }),
 
+  createInquiry: (body: { name: string; email?: string; phone?: string; product?: string; message?: string }) =>
+    request<any>('/api/inquiries', { method: 'POST', body }),
+
   // admin
   admin: {
     stats: (token: string) => request<any>('/api/admin/stats', { token }),
@@ -187,5 +190,8 @@ export const api = {
     registrations: (token: string) => request<Registration[]>('/api/admin/registrations', { token }),
     updateRegistration: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/registrations/${id}`, { method: 'PATCH', body, token }),
+    inquiries: (token: string) => request<any[]>('/api/admin/inquiries', { token }),
+    updateInquiry: (id: number, body: any, token: string) =>
+      request<any>(`/api/admin/inquiries/${id}`, { method: 'PATCH', body, token }),
   },
 };
