@@ -8,7 +8,8 @@ import { useApp, money } from '../../lib/store';
 import { useToast } from '../../components/Toast';
 import { visualByName, isPlaceholder } from '../../lib/foodVisuals';
 import { Footer } from '../../components/Footer';
-import { Container, Button, Badge } from '../../components/ui';
+import { ProductCard } from '../../components/ProductCard';
+import { Container, SectionTitle, Button, Badge } from '../../components/ui';
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,10 +21,12 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [similar, setSimilar] = useState<Product[]>([]);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
+    setSimilar([]);
     api
       .product(id)
       .then(setProduct)
@@ -31,7 +34,22 @@ export default function ProductDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Other products from the same category (excluding this one).
+  useEffect(() => {
+    if (!product) return;
+    api
+      .products()
+      .then((all) =>
+        setSimilar(all.filter((p) => p.category_name === product.category_name && p.id !== product.id).slice(0, 6))
+      )
+      .catch(() => {});
+  }, [product?.id]);
+
   const stacked = width < 820;
+  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : 5;
+  const gap = 16;
+  const contentW = Math.min(width, 1200) - 36;
+  const cardW = (contentW - gap * (cols - 1)) / cols;
 
   if (loading) return <ActivityIndicator color={colors.orange} style={{ marginTop: 60 }} />;
   if (!product)
@@ -106,6 +124,19 @@ export default function ProductDetail() {
           </View>
         </View>
       </Container>
+
+      {similar.length > 0 && (
+        <Container style={{ marginTop: 40 }}>
+          <SectionTitle title="Similar Products" subtitle={`More from ${product.category_name}`} />
+          <View style={[styles.grid, { gap }]}>
+            {similar.map((p) => (
+              <ProductCard key={p.id} product={p} width={cardW} />
+            ))}
+          </View>
+        </Container>
+      )}
+
+      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );
@@ -129,4 +160,5 @@ const styles = StyleSheet.create({
   qtyVal: { width: 44, textAlign: 'center', fontWeight: '800', fontSize: 16, color: colors.ink },
   infoBox: { backgroundColor: colors.cream, borderRadius: radius.md, padding: 14, gap: 6, marginTop: 8 },
   infoText: { color: colors.text, fontSize: 13 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
 });
