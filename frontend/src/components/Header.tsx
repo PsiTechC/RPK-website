@@ -19,7 +19,7 @@ export function Header() {
   const router = useRouter();
   const { user, cartCount, logout } = useApp();
   const { width } = useWindowDimensions();
-  const compact = width < 860;
+  const compact = width < 1024;
 
   const [menuOpen, setMenuOpen] = useState(false); // mobile nav
   const [profileOpen, setProfileOpen] = useState(false); // account dropdown
@@ -47,11 +47,11 @@ export function Header() {
           </Pressable>
         </Link>
 
-        {/* Center — nav (desktop, icon + hover tooltip) */}
+        {/* Center — nav (desktop, icon + label pill) */}
         {!compact && (
           <View style={styles.nav}>
             {NAV.map((n) => (
-              <NavIcon key={n.href} icon={n.icon} label={n.label} active={pathname === n.href} onPress={() => go(n.href)} />
+              <NavItem key={n.href} icon={n.icon} label={n.label} active={pathname === n.href} onPress={() => go(n.href)} />
             ))}
           </View>
         )}
@@ -176,28 +176,22 @@ export function Header() {
   );
 }
 
-function NavIcon({ icon, label, active, onPress }: { icon: string; label: string; active: boolean; onPress: () => void }) {
+function NavItem({ icon, label, active, onPress }: { icon: string; label: string; active: boolean; onPress: () => void }) {
   const [hovered, setHovered] = useState(false);
   const color = active ? colors.red : hovered ? colors.ink : colors.muted;
+  // Use the filled icon variant on the active page for extra emphasis.
+  const iconName = active ? icon.replace('-outline', '') : icon;
   return (
-    <View style={styles.navItemWrap}>
-      <Pressable
-        style={[styles.navIconBtn, hovered && styles.navIconBtnHover]}
-        onPress={onPress}
-        onHoverIn={() => setHovered(true)}
-        onHoverOut={() => setHovered(false)}
-        accessibilityLabel={label}
-      >
-        <Ionicons name={icon as any} size={23} color={color} />
-        <View style={[styles.activeBar, !active && { opacity: 0 }]} />
-      </Pressable>
-      {hovered && (
-        <View style={[styles.tooltip, { transform: [{ translateX: '-50%' as any }] }]} pointerEvents="none">
-          <View style={styles.tooltipArrow} />
-          <Text style={styles.tooltipText}>{label}</Text>
-        </View>
-      )}
-    </View>
+    <Pressable
+      style={[styles.navItem, hovered && styles.navItemHover, active && styles.navItemActive]}
+      onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      accessibilityLabel={label}
+    >
+      <Ionicons name={iconName as any} size={18} color={color} />
+      <Text style={[styles.navItemText, { color }]} numberOfLines={1}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -224,18 +218,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoWrap: { flexShrink: 0, marginRight: 4 },
-  nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   navTextActive: { color: colors.red },
-  navItemWrap: { position: 'relative', alignItems: 'center' },
-  navIconBtn: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 5, borderRadius: 12, alignItems: 'center' },
-  navIconBtnHover: { backgroundColor: colors.offWhite },
-  activeBar: { height: 3, width: 20, borderRadius: 2, backgroundColor: colors.red, marginTop: 5 },
-  tooltip: {
-    position: 'absolute' as any, top: 52, left: '50%', backgroundColor: colors.ink,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, zIndex: 200, ...shadow.soft,
+  navItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
+    borderWidth: 1, borderColor: 'transparent',
   },
-  tooltipArrow: { position: 'absolute', top: -4, alignSelf: 'center', width: 9, height: 9, backgroundColor: colors.ink, transform: [{ rotate: '45deg' }] },
-  tooltipText: { color: colors.white, fontSize: 12, fontWeight: '800' },
+  navItemHover: { backgroundColor: colors.offWhite },
+  navItemActive: { backgroundColor: 'rgba(226,35,26,0.08)', borderColor: 'rgba(226,35,26,0.18)' },
+  navItemText: { fontWeight: '800', fontSize: 14.5, letterSpacing: 0.1 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   cartBtn: { padding: 6 },
   cartIcon: { fontSize: 22 },

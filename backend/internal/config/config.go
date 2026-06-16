@@ -24,11 +24,11 @@ func Load() Config {
 
 	return Config{
 		Port:            get("PORT", "8090"),
-		DatabaseURL:     get("DATABASE_URL", "postgres://rpk:rpk_password@localhost:5440/rpk_food?sslmode=disable"),
+		DatabaseURL:     get("DATABASE_URL", ""),
 		JWTSecret:       get("JWT_SECRET", "dev_insecure_secret_change_me"),
 		AnthropicAPIKey: get("ANTHROPIC_API_KEY", ""),
 		AnthropicModel:  get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"),
-		CORSOrigins:     splitCSV(get("CORS_ORIGINS", "http://localhost:8081,http://localhost:19006,http://localhost:3000")),
+		CORSOrigins:     splitCSV(get("CORS_ORIGINS", "")),
 		MigrationsDir:   get("MIGRATIONS_DIR", "migrations"),
 		UploadsDir:      get("UPLOADS_DIR", "uploads"),
 	}

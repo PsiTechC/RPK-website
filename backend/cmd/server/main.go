@@ -45,7 +45,7 @@ func main() {
 		WriteTimeout: 60 * time.Second, // chatbot calls can take a while
 	}
 
-	log.Printf("RPK Food API listening on http://localhost:%s", cfg.Port)
+	log.Printf("RPK Food API listening on :%s", cfg.Port)
 	log.Printf("Admin login: admin@rpkfood.ae / Admin@123")
 	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatalf("server: %v", err)

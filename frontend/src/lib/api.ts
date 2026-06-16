@@ -1,16 +1,13 @@
 // Tiny typed API client for the RPK Go backend.
 // Base URL resolution:
 //   1. EXPO_PUBLIC_API_URL when explicitly set (any environment), else
-//   2. same-origin ("") in a production browser (served behind a reverse proxy
-//      that forwards /api and /uploads to the backend — see docker-compose), else
-//   3. http://localhost:8090 for local development.
+//   2. same-origin ("") — the app is served behind a reverse proxy that forwards
+//      /api and /uploads to the backend (see docker-compose / nginx.conf).
+//      For local dev, set EXPO_PUBLIC_API_URL to your backend's URL.
 function resolveApiUrl(): string {
   const env = process.env.EXPO_PUBLIC_API_URL;
   if (env !== undefined && env !== '') return env;
-  if (typeof window !== 'undefined' && window.location && !/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) {
-    return ''; // same origin
-  }
-  return 'http://localhost:8090';
+  return ''; // same origin
 }
 export const API_URL = resolveApiUrl();
 

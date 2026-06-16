@@ -44,10 +44,10 @@ Either Docker:
 docker compose up -d postgres        # Postgres on host port 5440
 ```
 
-…or a local Postgres (what this repo was verified against):
+…or any reachable Postgres instance:
 
 ```bash
-createdb rpk_food                    # then point DATABASE_URL at localhost:5432
+createdb rpk_food                    # then point DATABASE_URL at your DB host
 ```
 
 ### 2. Backend
@@ -57,7 +57,7 @@ cd backend
 cp .env.example .env          # set DATABASE_URL + ANTHROPIC_API_KEY (chatbot)
 go mod tidy
 go run ./cmd/server
-# API on http://localhost:8090  (auto-migrates + seeds 11 categories / 76 products on first run)
+# API listens on $PORT (default 8090); auto-migrates + seeds 11 categories / 76 products on first run
 ```
 
 Default admin login (created by the seed):
@@ -68,7 +68,7 @@ Default admin login (created by the seed):
 ```bash
 cd frontend
 npm install
-EXPO_PUBLIC_API_URL=http://localhost:8090 npm run web
+EXPO_PUBLIC_API_URL=$API_URL npm run web   # set API_URL to your backend's base URL
 # Expo Router web app. Default port 8081; if busy it will offer another (e.g. 8085).
 ```
 
