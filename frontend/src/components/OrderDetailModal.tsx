@@ -10,6 +10,9 @@ const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
   delivered: 'green', cancelled: 'red', approved: 'green', rejected: 'red', paid: 'green', unpaid: 'muted',
 };
+const toneColor: Record<string, string> = {
+  orange: colors.orange, navy: colors.navy, green: colors.green, red: colors.red, muted: colors.muted,
+};
 
 /**
  * Full order details in a centered modal. Used by the admin Orders tab and the
@@ -86,11 +89,15 @@ export function OrderDetailModal({
             <View style={{ gap: 6 }}>
               <Text style={styles.section}>Update status</Text>
               <View style={styles.statusPicker}>
-                {ORDER_STATUSES.map((s) => (
-                  <Pressable key={s} style={[styles.statusChip, order.status === s && styles.statusChipActive]} onPress={() => onStatus(order.id, s)}>
-                    <Text style={[styles.statusChipText, order.status === s && { color: colors.white }]}>{s}</Text>
-                  </Pressable>
-                ))}
+                {ORDER_STATUSES.map((s) => {
+                  const active = order.status === s;
+                  const tc = toneColor[statusTone[s]] || colors.navy;
+                  return (
+                    <Pressable key={s} style={[styles.statusChip, active && { backgroundColor: tc, borderColor: tc }]} onPress={() => onStatus(order.id, s)}>
+                      <Text style={[styles.statusChipText, active && { color: colors.white }]}>{s}</Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -110,26 +117,25 @@ export function OrderDetailModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,28,66,0.45)', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 },
-  modal: { width: '100%', maxWidth: 600, maxHeight: '88vh' as any, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', ...shadow.card },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: colors.navy },
-  title: { color: colors.white, fontWeight: '900', fontSize: 17 },
-  close: { color: colors.white, fontSize: 18, fontWeight: '700' },
-  foot: { flexDirection: 'row', justifyContent: 'flex-end', padding: 14, borderTopWidth: 1, borderTopColor: colors.border },
-  section: { fontWeight: '900', fontSize: 13, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  overlay: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(24,21,18,0.5)', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 },
+  modal: { width: '100%', maxWidth: 600, maxHeight: '88vh' as any, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, ...shadow.card },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  title: { color: colors.ink, fontWeight: '900', fontSize: 17 },
+  close: { color: colors.muted, fontSize: 17, fontWeight: '800' },
+  foot: { flexDirection: 'row', justifyContent: 'flex-end', padding: 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.soft },
+  section: { fontWeight: '800', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
   strong: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   meta: { color: colors.muted, fontSize: 13 },
   table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden' },
-  tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
-  tfoot: { backgroundColor: '#FAFAFB' },
-  th: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 11, gap: 10, borderTopWidth: 1, borderTopColor: colors.line },
+  thead: { backgroundColor: colors.soft, borderTopWidth: 0 },
+  tfoot: { backgroundColor: colors.soft },
+  th: { fontSize: 11, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
   td: { fontSize: 14, color: colors.text },
   tdStrong: { fontWeight: '800', color: colors.ink },
   qty: { width: 50, textAlign: 'right' },
   price: { width: 90, textAlign: 'right' },
-  statusPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  statusChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F1F2F5' },
-  statusChipActive: { backgroundColor: colors.navy },
-  statusChipText: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'capitalize' },
+  statusPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statusChip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border },
+  statusChipText: { fontSize: 12, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
 });
