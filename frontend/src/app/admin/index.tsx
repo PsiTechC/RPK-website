@@ -813,9 +813,19 @@ function Customers({ token }: { token: string }) {
 }
 
 // ---------- Registrations ----------
+function regReqSummary(r: Registration): string {
+  if (Array.isArray(r.items) && r.items.length > 0) {
+    return r.items.map((it: any) => `${it.name} ×${it.qty}`).join(', ');
+  }
+  return r.product_interest || '—';
+}
+
 function Registrations({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
+  const fits = width >= 1024;
   const [regs, setRegs] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<Registration | null>(null);
 
   async function load() {
     setLoading(true);
@@ -828,6 +838,7 @@ function Registrations({ token }: { token: string }) {
 
   async function setStatus(id: number, status: string) {
     await api.admin.updateRegistration(id, { status }, token);
+    setDetail((d) => (d && d.id === id ? { ...d, status } : d));
     load();
   }
 
@@ -836,35 +847,105 @@ function Registrations({ token }: { token: string }) {
 
   return (
     <View style={{ gap: 12 }}>
-      {regs.map((r) => (
-        <Card key={r.id} style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <View style={{ flex: 1, minWidth: 200 }}>
-              <Text style={styles.rowTitle}>{r.company_name}</Text>
-              <Text style={styles.rowMeta}>{r.business_type} · {r.country || '—'} · {r.contact_person || '—'}</Text>
-              <Text style={styles.rowMeta}>{r.email} · {r.phone || 'no phone'}</Text>
-              {Array.isArray(r.items) && r.items.length > 0 && (
-                <View style={{ marginTop: 4, gap: 2 }}>
-                  <Text style={[styles.rowMeta, { fontWeight: '800' }]}>Requirement:</Text>
-                  {r.items.map((it: any, idx: number) => (
-                    <Text key={idx} style={styles.rowMeta}>• {it.name} — {it.qty} {it.unit}</Text>
-                  ))}
-                </View>
-              )}
-              {!!r.product_interest && <Text style={styles.rowMeta}>Interest: {r.product_interest}</Text>}
-              {!!r.message && <Text style={styles.message}>“{r.message}”</Text>}
+      <Text style={styles.h}>{regs.length} registration{regs.length === 1 ? '' : 's'}</Text>
+      <Tbl fits={fits}>
+        <View style={[styles.table, fits ? styles.tableFull : styles.regTable]}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, styles.gCompany]}>Company</Text>
+            <Text style={[styles.th, styles.gType]}>Type</Text>
+            <Text style={[styles.th, styles.gCountry]}>Country</Text>
+            <Text style={[styles.th, styles.gContact]}>Contact</Text>
+            <Text style={[styles.th, styles.gReq]}>Requirement</Text>
+            <Text style={[styles.th, styles.gStatus]}>Status</Text>
+            <Text style={[styles.th, styles.gView]}>View</Text>
+          </View>
+          {regs.map((r, i) => (
+            <View key={r.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+              <Text style={[styles.td, styles.tdStrong, styles.gCompany]} numberOfLines={1}>{r.company_name}</Text>
+              <Text style={[styles.td, styles.gType]}>{r.business_type}</Text>
+              <Text style={[styles.td, styles.gCountry]} numberOfLines={1}>{r.country || '—'}</Text>
+              <Text style={[styles.td, styles.gContact]} numberOfLines={1}>{r.contact_person || r.email || '—'}</Text>
+              <Text style={[styles.td, styles.gReq]} numberOfLines={1}>{regReqSummary(r)}</Text>
+              <View style={styles.gStatus}><Badge text={r.status} tone={statusTone[r.status] || 'muted'} /></View>
+              <View style={styles.gView}>
+                <Pressable style={styles.eyeBtn} onPress={() => setDetail(r)} accessibilityLabel={`View ${r.company_name}`}>
+                  <Ionicons name="eye-outline" size={18} color={colors.navy} />
+                </Pressable>
+              </View>
             </View>
-            <Badge text={r.status} tone={statusTone[r.status] || 'muted'} />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Button label="Approve" variant="navy" onPress={() => setStatus(r.id, 'approved')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
-            <Button label="Reject" variant="danger" onPress={() => setStatus(r.id, 'rejected')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
-            <Button label="Pending" variant="ghost" onPress={() => setStatus(r.id, 'pending')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
-          </View>
-        </Card>
-      ))}
+          ))}
+        </View>
+      </Tbl>
+
+      {detail && <RegistrationDetailModal reg={detail} onClose={() => setDetail(null)} onStatus={setStatus} />}
     </View>
   );
+}
+
+// Full registration details + approve/reject/pending controls.
+function RegistrationDetailModal({ reg: r, onClose, onStatus }: { reg: Registration; onClose: () => void; onStatus: (id: number, s: string) => void }) {
+  const content = (
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        <View style={styles.modalHead}>
+          <Text style={styles.modalTitle}>{r.company_name}</Text>
+          <Pressable onPress={onClose} hitSlop={10}><Text style={styles.modalClose}>✕</Text></Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 16 }}>
+          <View style={{ gap: 4 }}>
+            <Text style={styles.odSection}>Applicant</Text>
+            <Text style={styles.odStrong}>{r.company_name}</Text>
+            <Text style={styles.odMeta}>{r.business_type} · {r.country || '—'} · {r.contact_person || '—'}</Text>
+            <Text style={styles.odMeta}>{r.email} · {r.phone || 'no phone'}</Text>
+          </View>
+
+          {Array.isArray(r.items) && r.items.length > 0 && (
+            <View style={{ gap: 6 }}>
+              <Text style={styles.odSection}>Requirement</Text>
+              {r.items.map((it: any, idx: number) => (
+                <Text key={idx} style={styles.odMeta}>• {it.name} — {it.qty} {it.unit}</Text>
+              ))}
+            </View>
+          )}
+
+          {!!r.product_interest && (
+            <View style={{ gap: 4 }}>
+              <Text style={styles.odSection}>Interest</Text>
+              <Text style={styles.odMeta}>{r.product_interest}</Text>
+            </View>
+          )}
+
+          {!!r.message && (
+            <View style={{ gap: 4 }}>
+              <Text style={styles.odSection}>Message</Text>
+              <Text style={styles.message}>“{r.message}”</Text>
+            </View>
+          )}
+
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <Text style={styles.odSection}>Status</Text>
+            <Badge text={r.status} tone={statusTone[r.status] || 'muted'} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Button label="Approve" variant="navy" onPress={() => onStatus(r.id, 'approved')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Reject" variant="danger" onPress={() => onStatus(r.id, 'rejected')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Pending" variant="ghost" onPress={() => onStatus(r.id, 'pending')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFoot}>
+          <Button label="Close" variant="ghost" onPress={onClose} />
+        </View>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
 }
 
 function inquiryReqSummary(q: any): string {
@@ -1266,6 +1347,15 @@ const styles = StyleSheet.create({
   miniLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
   miniVal: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   // orders table columns
+  // registrations table columns
+  regTable: { minWidth: 1000 },
+  gCompany: { width: 170 },
+  gType: { width: 90, textTransform: 'capitalize' },
+  gCountry: { width: 150 },
+  gContact: { flex: 1, minWidth: 150 },
+  gReq: { flex: 1.2, minWidth: 180 },
+  gStatus: { width: 110 },
+  gView: { width: 56, alignItems: 'center' },
   // inquiries table columns
   inqTable: { minWidth: 980 },
   qName: { width: 150 },
