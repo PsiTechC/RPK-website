@@ -108,35 +108,38 @@ export default function Home() {
         </Reveal>
       </Container>
 
-      {/* ALL PRODUCTS — CATEGORY WISE */}
-      <Container style={{ marginTop: 44 }}>
-        <SectionTitle title="Our Products" subtitle="Everything we stock, organised by category" />
-      </Container>
-      {loading ? (
-        <ActivityIndicator color={colors.red} style={{ marginTop: 20 }} />
-      ) : (
-        grouped.map((g) => (
-          <Container key={g.category.id} style={{ marginTop: 26 }}>
-            <Reveal>
-              <View style={styles.catHead}>
-                <View style={styles.catHeadLeft}>
-                  <View style={styles.accentDot} />
-                  <Text style={styles.catHeadTitle}>{g.category.name}</Text>
-                  <Text style={styles.catHeadCount}>{g.items.length}</Text>
+      {/* ALL PRODUCTS — CATEGORY WISE (soft band gives depth) */}
+      <View style={styles.productsBand}>
+        <Container>
+          <Reveal>
+            <SectionTitle title="Our Products" subtitle="Everything we stock, organised by category" />
+          </Reveal>
+        </Container>
+        {loading ? (
+          <ActivityIndicator color={colors.red} style={{ marginTop: 20 }} />
+        ) : (
+          grouped.map((g) => (
+            <Container key={g.category.id} style={{ marginTop: 30 }}>
+              <Reveal>
+                <View style={styles.catHead}>
+                  <View style={styles.catHeadLeft}>
+                    <View style={styles.accentDot} />
+                    <Text style={styles.catHeadTitle}>{g.category.name}</Text>
+                    <Text style={styles.catHeadCount}>{g.items.length}</Text>
+                  </View>
+                  <Button label="View all" variant="ghost" onPress={() => router.push(`/products?category=${g.category.slug}`)} style={styles.viewAll} />
                 </View>
-                <Button label="View all" variant="ghost" onPress={() => router.push(`/products?category=${g.category.slug}`)} style={styles.viewAll} />
-              </View>
-              <View style={[styles.grid, { gap }]}>
-                {g.items.slice(0, 6).map((p) => (
-                  <ProductCard key={p.id} product={p} width={cardW} />
-                ))}
-              </View>
-            </Reveal>
-          </Container>
-        ))
-      )}
+                <View style={[styles.grid, { gap }]}>
+                  {g.items.slice(0, 6).map((p) => (
+                    <ProductCard key={p.id} product={p} width={cardW} />
+                  ))}
+                </View>
+              </Reveal>
+            </Container>
+          ))
+        )}
+      </View>
 
-      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );
@@ -180,6 +183,7 @@ const styles = StyleSheet.create({
   catHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   accentDot: { width: 10, height: 10, borderRadius: 999, backgroundColor: colors.red },
   catHeadTitle: { fontSize: 19, fontWeight: '900', color: colors.ink },
-  catHeadCount: { fontSize: 12, fontWeight: '800', color: colors.muted, backgroundColor: '#F1F2F5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  catHeadCount: { fontSize: 12, fontWeight: '800', color: colors.muted, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
   viewAll: { paddingHorizontal: 14, paddingVertical: 8 },
+  productsBand: { backgroundColor: colors.soft, paddingTop: 44, paddingBottom: 52, marginTop: 52, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line },
 });
