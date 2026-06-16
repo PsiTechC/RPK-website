@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
-import { api, Product, Order, Registration, Category } from '../../lib/api';
+import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { api, Product, Order, Registration, Category, User } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
 import { Container, SectionTitle, Button, Card, Badge } from '../../components/ui';
@@ -9,19 +10,65 @@ import { ProductForm } from '../../components/admin/ProductForm';
 import { ProductThumb } from '../../components/admin/ProductThumb';
 import { useToast } from '../../components/Toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { Donut } from '../../components/Donut';
+import { AreaChart } from '../../components/AreaChart';
+import { OrderDetailModal } from '../../components/OrderDetailModal';
 
-type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'registrations' | 'inquiries' | 'archived';
+// Per-tab icons for the pill bar.
+const TAB_ICONS: Record<Tab, keyof typeof Ionicons.glyphMap> = {
+  dashboard: 'grid-outline',
+  products: 'cube-outline',
+  arrange: 'swap-vertical-outline',
+  orders: 'receipt-outline',
+  customers: 'people-outline',
+  registrations: 'document-text-outline',
+  inquiries: 'chatbubbles-outline',
+  archived: 'archive-outline',
+};
 
+// TODO: wire to API — no historical/daily endpoints yet, so these are placeholders.
+const PLACEHOLDER_TRENDS: Record<string, { dir: 'up' | 'down'; pct: string }> = {
+  'Revenue (paid)': { dir: 'up', pct: '12%' },
+  'Total Orders': { dir: 'up', pct: '8%' },
+  'Pending Orders': { dir: 'down', pct: '3%' },
+  'Products': { dir: 'up', pct: '5%' },
+  'Customers': { dir: 'up', pct: '9%' },
+  'Registrations': { dir: 'up', pct: '6%' },
+  'Pending Reg.': { dir: 'down', pct: '2%' },
+  'Categories': { dir: 'up', pct: '0%' },
+};
+// TODO: wire to API — last 7 days of paid revenue. Placeholder shape only.
+const PLACEHOLDER_REVENUE_7D = [120, 240, 180, 360, 300, 520, 460];
+
+type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'archived';
+
+const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'archived'];
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
   delivered: 'green', cancelled: 'red', approved: 'green', rejected: 'red', paid: 'green', unpaid: 'muted',
 };
+const toneColor: Record<string, string> = {
+  orange: colors.orange, navy: colors.navy, green: colors.green, red: colors.red, muted: colors.muted,
+};
+
+// Full width on desktop; horizontal scroll on narrow screens so columns never squash.
+function Tbl({ fits, children }: { fits: boolean; children: React.ReactNode }) {
+  return fits ? <>{children}</> : <ScrollView horizontal showsHorizontalScrollIndicator={false}>{children}</ScrollView>;
+}
 
 export default function Admin() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const { user, token, ready } = useApp();
-  const [tab, setTab] = useState<Tab>('dashboard');
+  const [tab, setTab] = useState<Tab>(() =>
+    params.tab && ALL_TABS.includes(params.tab as Tab) ? (params.tab as Tab) : 'dashboard'
+  );
+
+  // Deep-link: switch tab when arriving via ?tab=… (e.g. from the navbar bell).
+  useEffect(() => {
+    if (params.tab && ALL_TABS.includes(params.tab as Tab)) setTab(params.tab as Tab);
+  }, [params.tab]);
 
   if (ready && (!user || user.role !== 'admin')) {
     return (
@@ -39,20 +86,27 @@ export default function Admin() {
   return (
     <ScrollView style={{ backgroundColor: colors.bg }}>
       <Container style={{ marginTop: 22 }}>
-        <SectionTitle title="Admin Dashboard" subtitle="Manage products, orders & registrations" />
+        <View style={styles.titleRow}>
+          <SectionTitle title="Admin Dashboard" subtitle="Manage products, orders & registrations" />
+          <Text style={styles.updated}>Updated just now · AED · Dubai</Text>
+        </View>
+        <View style={styles.tabBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {(['dashboard', 'products', 'arrange', 'orders', 'registrations', 'inquiries', 'archived'] as Tab[]).map((t) => (
+          {(['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'archived'] as Tab[]).map((t) => (
             <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
+              <Ionicons name={TAB_ICONS[t]} size={15} color={tab === t ? colors.white : colors.muted} />
               <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
             </Pressable>
           ))}
         </ScrollView>
+        </View>
 
         <View style={{ marginTop: 18 }}>
-          {token && tab === 'dashboard' && <Dashboard token={token} />}
+          {token && tab === 'dashboard' && <Dashboard token={token} onNavigate={setTab} />}
           {token && tab === 'products' && <Products token={token} />}
           {token && tab === 'arrange' && <Arrange token={token} />}
           {token && tab === 'orders' && <Orders token={token} />}
+          {token && tab === 'customers' && <Customers token={token} />}
           {token && tab === 'registrations' && <Registrations token={token} />}
           {token && tab === 'inquiries' && <Inquiries token={token} />}
           {token && tab === 'archived' && <Archived token={token} />}
@@ -64,57 +118,211 @@ export default function Admin() {
 }
 
 // ---------- Dashboard ----------
-function Dashboard({ token }: { token: string }) {
+type StatCardDef = {
+  label: string;
+  value: any;
+  tone: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  to?: Tab; // tab to open when the card is clicked
+  subtitle?: string; // small muted line under the label
+  emphasize?: boolean; // green ring (Revenue)
+};
+
+function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) => void }) {
   const [stats, setStats] = useState<any>(null);
+  const [recent, setRecent] = useState<Order[]>([]);
   useEffect(() => {
     api.admin.stats(token).then(setStats).catch(() => {});
+    api.admin.orders(token).then((o) => setRecent(o.slice(0, 5))).catch(() => {});
   }, [token]);
   if (!stats) return <Text style={styles.muted}>Loading…</Text>;
 
-  const cards = [
-    { label: 'Revenue (paid)', value: money(stats.total_revenue), tone: colors.green },
-    { label: 'Total Orders', value: stats.total_orders, tone: colors.navy },
-    { label: 'Pending Orders', value: stats.pending_orders, tone: colors.orange },
-    { label: 'Products', value: stats.total_products, tone: colors.navy },
-    { label: 'Customers', value: stats.total_customers, tone: colors.navy },
-    { label: 'Registrations', value: stats.total_registrations, tone: colors.orange },
-    { label: 'Pending Reg.', value: stats.pending_registrations, tone: colors.red },
-    { label: 'Categories', value: stats.total_categories, tone: colors.navy },
+  const cards: StatCardDef[] = [
+    { label: 'Revenue (paid)', value: money(stats.total_revenue), tone: colors.green, icon: 'cash-outline', to: 'orders', subtitle: 'Paid orders total', emphasize: true },
+    { label: 'Total Orders', value: stats.total_orders, tone: colors.navy, icon: 'receipt-outline', to: 'orders', subtitle: 'All orders' },
+    { label: 'Pending Orders', value: stats.pending_orders, tone: colors.red, icon: 'time-outline', to: 'orders', subtitle: 'Need attention' },
+    { label: 'Products', value: stats.total_products, tone: colors.navy, icon: 'cube-outline', to: 'products', subtitle: 'In catalogue' },
+    { label: 'Customers', value: stats.total_customers, tone: colors.navy, icon: 'people-outline', to: 'customers', subtitle: 'Registered users' },
+    { label: 'Registrations', value: stats.total_registrations, tone: colors.red, icon: 'document-text-outline', to: 'registrations', subtitle: 'Import / export' },
+    { label: 'Pending Reg.', value: stats.pending_registrations, tone: colors.red, icon: 'hourglass-outline', to: 'registrations', subtitle: 'Awaiting review' },
+    { label: 'Categories', value: stats.total_categories, tone: colors.navy, icon: 'pricetags-outline', to: 'arrange', subtitle: 'Product groups' },
   ];
 
   const byStatus: Record<string, number> = stats.orders_by_status || {};
-  const maxV = Math.max(1, ...Object.values(byStatus));
+  const statusEntries = Object.entries(byStatus).sort((a, b) => b[1] - a[1]);
+  const totalOrders = statusEntries.reduce((sum, [, v]) => sum + v, 0);
+  const segs = statusEntries.map(([k, v]) => ({ k, v, color: toneColor[statusTone[k]] || colors.orange }));
+
+  const activeProducts = Number(stats.active_products || 0);
+  const totalProducts = Number(stats.total_products || 0);
+  const pendingReg = Number(stats.pending_registrations || 0);
+  const totalReg = Number(stats.total_registrations || 0);
+  const pendingOrders = Number(stats.pending_orders || 0);
+
+  // Revenue trend (placeholder series — see PLACEHOLDER_REVENUE_7D / TODO above).
+  const rev7d = PLACEHOLDER_REVENUE_7D;
+  const revGrowth = rev7d.length >= 2 && rev7d[0] > 0
+    ? Math.round(((rev7d[rev7d.length - 1] - rev7d[0]) / rev7d[0]) * 100)
+    : 0;
 
   return (
     <View style={{ gap: 20 }}>
       <View style={styles.cardGrid}>
         {cards.map((c) => (
-          <Card key={c.label} style={styles.statCard}>
-            <Text style={[styles.statValue, { color: c.tone }]}>{c.value}</Text>
-            <Text style={styles.statLabel}>{c.label}</Text>
-          </Card>
+          <StatCard key={c.label} card={c} onNavigate={onNavigate} />
         ))}
       </View>
 
-      <Card>
-        <Text style={styles.h}>Orders by status</Text>
-        <View style={{ gap: 8, marginTop: 10 }}>
-          {Object.keys(byStatus).length === 0 ? (
-            <Text style={styles.muted}>No orders yet.</Text>
+      <View style={styles.dashRow}>
+        {/* Orders by status — pie chart + legend */}
+        <Card style={styles.dashCard}>
+          <Text style={styles.h}>Orders by status</Text>
+          {totalOrders === 0 ? (
+            <Text style={[styles.muted, { marginTop: 10 }]}>No orders yet.</Text>
           ) : (
-            Object.entries(byStatus).map(([k, v]) => (
-              <View key={k} style={styles.barRow}>
-                <Text style={styles.barLabel}>{k}</Text>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: `${(v / maxV) * 100}%` }]} />
+            <View style={styles.pieRow}>
+              <View style={styles.pieWrap}>
+                <Donut slices={segs.map((s) => ({ value: s.v, color: s.color }))} size={168} thickness={26} />
+                <View style={styles.pieHole} pointerEvents="none">
+                  <Text style={styles.pieTotal}>{totalOrders}</Text>
+                  <Text style={styles.pieTotalL}>orders</Text>
                 </View>
-                <Text style={styles.barVal}>{v}</Text>
               </View>
-            ))
+              <View style={styles.legend}>
+                {segs.map((s) => (
+                  <View key={s.k} style={styles.legendRow}>
+                    <View style={[styles.dot, { backgroundColor: s.color }]} />
+                    <Text style={styles.legendLabel} numberOfLines={1}>{s.k}</Text>
+                    <Text style={styles.legendVal}>{s.v} · {Math.round((s.v / totalOrders) * 100)}%</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
           )}
+        </Card>
+
+        {/* Revenue trend — 7-day area chart */}
+        <Card style={styles.dashCard}>
+          <View style={styles.cardHeadRow}>
+            <Text style={styles.h}>Revenue (7 days)</Text>
+            <View style={[styles.trendBadge, revGrowth >= 0 ? styles.trendUp : styles.trendDown]}>
+              <Ionicons name={revGrowth >= 0 ? 'arrow-up' : 'arrow-down'} size={12} color={revGrowth >= 0 ? colors.green : colors.red} />
+              <Text style={[styles.trendText, { color: revGrowth >= 0 ? colors.green : colors.red }]}>{Math.abs(revGrowth)}%</Text>
+            </View>
+          </View>
+          <Text style={[styles.statValue, { color: colors.green, fontSize: 24, marginTop: 4 }]}>{money(stats.total_revenue)}</Text>
+          <Text style={styles.statLabel}>Paid revenue · all time</Text>
+          <View style={{ marginTop: 14 }}>
+            <AreaChart data={rev7d} height={92} color={colors.green} />
+          </View>
+        </Card>
+
+        {/* Meaningful breakdowns */}
+        <Card style={styles.dashCard}>
+          <Text style={styles.h}>At a glance</Text>
+          <View style={{ gap: 14, marginTop: 12 }}>
+            <MiniBar label="Active products" value={activeProducts} total={totalProducts} color={colors.green} suffix={`${activeProducts}/${totalProducts}`} />
+            <MiniBar label="Pending orders" value={pendingOrders} total={totalOrders} color={colors.red} suffix={`${pendingOrders}/${totalOrders}`} />
+            <MiniBar label="Pending registrations" value={pendingReg} total={totalReg} color={colors.red} suffix={`${pendingReg}/${totalReg}`} />
+          </View>
+        </Card>
+      </View>
+
+      {/* Recent orders */}
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        <View style={styles.recentHead}>
+          <Text style={styles.h}>Recent orders</Text>
+          <Pressable onPress={() => onNavigate('orders')}>
+            <Text style={styles.viewAll}>View all →</Text>
+          </Pressable>
         </View>
+        {recent.length === 0 ? (
+          <Text style={[styles.muted, { padding: 18 }]}>No orders yet.</Text>
+        ) : (
+          <View>
+            <View style={[styles.tr, styles.thead]}>
+              <Text style={[styles.th, styles.rOrder]}>Order</Text>
+              <Text style={[styles.th, styles.rCust]}>Customer</Text>
+              <Text style={[styles.th, styles.rShip]}>Ship to</Text>
+              <Text style={[styles.th, styles.rDate]}>Placed</Text>
+              <Text style={[styles.th, styles.rTotal]}>Total (AED)</Text>
+              <Text style={[styles.th, styles.rStatus]}>Status</Text>
+            </View>
+            {recent.map((o, i) => (
+              <View key={o.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+                <Text style={[styles.td, styles.tdStrong, styles.rOrder]}>{o.id}</Text>
+                <Text style={[styles.td, styles.rCust]} numberOfLines={1}>{o.customer_name}</Text>
+                <Text style={[styles.td, styles.rShip]} numberOfLines={1}>{o.shipping_address || '—'}</Text>
+                <Text style={[styles.td, styles.rDate]}>{new Date(o.created_at).toLocaleDateString()}</Text>
+                <Text style={[styles.td, styles.tdStrong, styles.rTotal]}>{money(o.subtotal, o.currency)}</Text>
+                <View style={styles.rStatus}><Badge text={o.status} tone={statusTone[o.status] || 'muted'} /></View>
+              </View>
+            ))}
+          </View>
+        )}
       </Card>
     </View>
+  );
+}
+
+// A labelled progress bar for the dashboard "At a glance" panel.
+function MiniBar({ label, value, total, color, suffix }: { label: string; value: number; total: number; color: string; suffix: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <View style={{ gap: 6 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={styles.miniLabel}>{label}</Text>
+        <Text style={styles.miniVal}>{suffix}</Text>
+      </View>
+      <View style={styles.barTrack}>
+        <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: color }]} />
+      </View>
+    </View>
+  );
+}
+
+// A single dashboard stat. Clickable (with hover lift + chevron) when it has a
+// `to` tab; otherwise a plain informational card.
+function StatCard({ card, onNavigate }: { card: StatCardDef; onNavigate: (t: Tab) => void }) {
+  const [hover, setHover] = useState(false);
+  const clickable = !!card.to;
+
+  const trend = PLACEHOLDER_TRENDS[card.label];
+  const body = (
+    <>
+      <View style={styles.statTop}>
+        <View style={[styles.statIcon, { backgroundColor: card.tone + '1A' }]}>
+          <Ionicons name={card.icon} size={18} color={card.tone} />
+        </View>
+        {trend && (
+          <View style={[styles.trendBadge, trend.dir === 'up' ? styles.trendUp : styles.trendDown]}>
+            <Ionicons name={trend.dir === 'up' ? 'arrow-up' : 'arrow-down'} size={11} color={trend.dir === 'up' ? colors.green : colors.red} />
+            <Text style={[styles.trendText, { color: trend.dir === 'up' ? colors.green : colors.red }]}>{trend.pct}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.statValue, { color: card.tone }]}>{card.value}</Text>
+      <Text style={styles.statLabel}>{card.label}</Text>
+    </>
+  );
+
+  if (!clickable) return <View style={[styles.statCard, card.emphasize && styles.statCardRing]}>{body}</View>;
+
+  return (
+    <Pressable
+      onPress={() => onNavigate(card.to!)}
+      onHoverIn={() => setHover(true)}
+      onHoverOut={() => setHover(false)}
+      style={({ pressed }) => [
+        styles.statCard,
+        styles.statCardClickable,
+        card.emphasize && styles.statCardRing,
+        hover && { borderColor: card.tone, ...shadow.card, transform: [{ translateY: -2 }] },
+        pressed && { opacity: 0.92 },
+      ]}
+    >
+      {body}
+    </Pressable>
   );
 }
 
@@ -129,7 +337,20 @@ function Products({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ProductView>('list');
   const [confirming, setConfirming] = useState<Product | null>(null); // product pending delete
+  const [query, setQuery] = useState('');
+  const [selectedCat, setSelectedCat] = useState<string>('all'); // category sidebar filter
   const toast = useToast();
+  const stacked = width < 820;
+
+  const q = query.trim().toLowerCase();
+  const filtered = products.filter((p) => {
+    const inCat = selectedCat === 'all' || p.category_name === selectedCat;
+    const inSearch = !q || p.name.toLowerCase().includes(q) || (p.category_name || '').toLowerCase().includes(q);
+    return inCat && inSearch;
+  });
+
+  // Product count per category for the sidebar badges.
+  const countFor = (name: string) => products.filter((p) => p.category_name === name).length;
 
   async function load() {
     setLoading(true);
@@ -155,38 +376,87 @@ function Products({ token }: { token: string }) {
     }
   }
 
+  const catList = (
+    <>
+      <CatItem label="All products" count={products.length} active={selectedCat === 'all'} stacked={stacked} onPress={() => setSelectedCat('all')} />
+      {categories.map((c) => (
+        <CatItem key={c.id} label={c.name} count={countFor(c.name)} active={selectedCat === c.name} stacked={stacked} onPress={() => setSelectedCat(c.name)} />
+      ))}
+    </>
+  );
+
   return (
     <View style={{ gap: 12 }}>
-      <View style={styles.toolbar}>
-        <Text style={styles.h}>{products.length} products</Text>
-        <View style={styles.toolbarRight}>
-          <View style={styles.viewToggle}>
-            <Pressable
-              style={[styles.viewBtn, view === 'list' && styles.viewBtnActive]}
-              onPress={() => setView('list')}
-              accessibilityLabel="List view"
-            >
-              <Text style={[styles.viewIcon, view === 'list' && styles.viewIconActive]}>☰</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.viewBtn, view === 'grid' && styles.viewBtnActive]}
-              onPress={() => setView('grid')}
-              accessibilityLabel="Grid view"
-            >
-              <Text style={[styles.viewIcon, view === 'grid' && styles.viewIconActive]}>▦</Text>
-            </Pressable>
+      <View style={[styles.prodLayout, stacked && { flexDirection: 'column' }]}>
+        {/* Category sidebar — filters the product list */}
+        {stacked ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 2 }}>
+            {catList}
+          </ScrollView>
+        ) : (
+          <View style={[styles.catSidebar, Platform.OS === 'web' && styles.catSticky]}>
+            <Text style={styles.catSideTitle}>Categories</Text>
+            {catList}
           </View>
-          <Button label="+ Add product" onPress={() => setEditing(null)} />
+        )}
+
+        {/* Main content */}
+        <View style={{ flex: 1, gap: 12 }}>
+          <View style={styles.toolbar}>
+            <Text style={styles.h}>
+              {q || selectedCat !== 'all' ? `${filtered.length} of ${products.length} products` : `${products.length} products`}
+            </Text>
+            <View style={styles.toolbarRight}>
+              <View style={styles.viewToggle}>
+                <Pressable
+                  style={[styles.viewBtn, view === 'list' && styles.viewBtnActive]}
+                  onPress={() => setView('list')}
+                  accessibilityLabel="List view"
+                >
+                  <Text style={[styles.viewIcon, view === 'list' && styles.viewIconActive]}>☰</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.viewBtn, view === 'grid' && styles.viewBtnActive]}
+                  onPress={() => setView('grid')}
+                  accessibilityLabel="Grid view"
+                >
+                  <Text style={[styles.viewIcon, view === 'grid' && styles.viewIconActive]}>▦</Text>
+                </Pressable>
+              </View>
+              <Button label="+ Add product" onPress={() => setEditing(null)} />
+            </View>
+          </View>
+
+          {/* Search across name & category */}
+          <View style={styles.search}>
+            <Ionicons name="search" size={18} color={colors.muted} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search products by name or category…"
+              placeholderTextColor={colors.muted}
+              style={styles.searchInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={18} color={colors.muted} />
+              </Pressable>
+            )}
+          </View>
+
+          {loading ? (
+            <Text style={styles.muted}>Loading…</Text>
+          ) : filtered.length === 0 ? (
+            <Text style={styles.muted}>{q ? `No products match “${query}”.` : 'No products in this category.'}</Text>
+          ) : view === 'list' ? (
+            <ProductTable products={filtered} onEdit={setEditing} onDelete={setConfirming} />
+          ) : (
+            <ProductGrid products={filtered} width={width} onEdit={setEditing} onDelete={setConfirming} />
+          )}
         </View>
       </View>
-
-      {loading ? (
-        <Text style={styles.muted}>Loading…</Text>
-      ) : view === 'list' ? (
-        <ProductTable products={products} onEdit={setEditing} onDelete={setConfirming} />
-      ) : (
-        <ProductGrid products={products} width={width} onEdit={setEditing} onDelete={setConfirming} />
-      )}
 
       {editing !== undefined && (
         <ProductForm
@@ -211,6 +481,18 @@ function Products({ token }: { token: string }) {
         />
       )}
     </View>
+  );
+}
+
+// One row in the Products category sidebar (or a chip on narrow screens).
+function CatItem({ label, count, active, stacked, onPress }: { label: string; count: number; active: boolean; stacked: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[stacked ? styles.catChip : styles.catRow, active && (stacked ? styles.catChipActive : styles.catRowActive)]}>
+      <Text style={[styles.catText, active && styles.catTextActive]} numberOfLines={1}>{label}</Text>
+      <View style={[styles.catCount, active && styles.catCountActive]}>
+        <Text style={[styles.catCountText, active && { color: colors.white }]}>{count}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -339,7 +621,7 @@ function Archived({ token }: { token: string }) {
     setPurging(null);
     try {
       await api.admin.purgeProduct(p.id, token);
-      toast(`“${p.name}” permanently deleted`, 'info');
+      toast(`“${p.name}” deleted`, 'info');
       load();
     } catch {
       toast('Could not delete product', 'error');
@@ -365,16 +647,16 @@ function Archived({ token }: { token: string }) {
               <Text style={styles.rowMeta}>{p.category_name || 'Uncategorised'} · {money(p.price, p.currency)} / {p.unit}</Text>
             </View>
             <Button label="↩ Restore" variant="navy" onPress={() => restore(p)} style={styles.smallBtn} />
-            <Button label="Delete forever" variant="danger" onPress={() => setPurging(p)} style={styles.smallBtn} />
+            <Button label="Delete" variant="danger" onPress={() => setPurging(p)} style={styles.smallBtn} />
           </Card>
         ))
       )}
 
       {purging && (
         <ConfirmDialog
-          title="Permanently delete?"
-          message={`“${purging.name}” will be deleted forever. This cannot be undone.`}
-          confirmLabel="Delete forever"
+          title="Delete this product?"
+          message={`“${purging.name}” will be deleted. This cannot be undone.`}
+          confirmLabel="Delete"
           onConfirm={purge}
           onCancel={() => setPurging(null)}
         />
@@ -386,8 +668,10 @@ function Archived({ token }: { token: string }) {
 // ---------- Orders ----------
 function Orders({ token }: { token: string }) {
   const { width } = useWindowDimensions();
+  const fits = width >= 1024; // fill width on desktop; scroll on narrow screens
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<Order | null>(null);
 
   async function load() {
     setLoading(true);
@@ -400,7 +684,16 @@ function Orders({ token }: { token: string }) {
 
   async function setStatus(id: number, status: string) {
     await api.admin.updateOrder(id, { status }, token);
+    setDetail((d) => (d && d.id === id ? { ...d, status } : d));
     load();
+  }
+
+  async function view(id: number) {
+    try {
+      setDetail(await api.admin.getOrder(id, token));
+    } catch {
+      /* ignore */
+    }
   }
 
   if (loading) return <Text style={styles.muted}>Loading…</Text>;
@@ -408,28 +701,113 @@ function Orders({ token }: { token: string }) {
 
   return (
     <View style={{ gap: 12 }}>
-      {orders.map((o) => (
-        <Card key={o.id} style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <View>
-              <Text style={styles.rowTitle}>Order #{o.id} · {o.customer_name}</Text>
-              <Text style={styles.rowMeta}>{o.customer_email} · {o.customer_phone || 'no phone'}</Text>
-              <Text style={styles.rowMeta}>{new Date(o.created_at).toLocaleString()}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end', gap: 6 }}>
-              <Text style={styles.orderTotal}>{money(o.subtotal, o.currency)}</Text>
-              <Badge text={o.payment_status} tone={statusTone[o.payment_status] || 'muted'} />
-            </View>
+      <Text style={styles.h}>{orders.length} order{orders.length === 1 ? '' : 's'}</Text>
+      <Tbl fits={fits}>
+        <View style={[styles.table, fits ? styles.tableFull : styles.ordersTable]}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, styles.oOrder]}>Order</Text>
+            <Text style={[styles.th, styles.oName]}>Customer</Text>
+            <Text style={[styles.th, styles.oEmail]}>Email</Text>
+            <Text style={[styles.th, styles.oPhone]}>Phone</Text>
+            <Text style={[styles.th, styles.oShip]}>Ship to</Text>
+            <Text style={[styles.th, styles.oDate]}>Placed</Text>
+            <Text style={[styles.th, styles.oStatus]}>Status</Text>
+            <Text style={[styles.th, styles.oView]}>View</Text>
           </View>
-          <View style={styles.statusPicker}>
-            {ORDER_STATUSES.map((s) => (
-              <Pressable key={s} style={[styles.statusChip, o.status === s && styles.statusChipActive]} onPress={() => setStatus(o.id, s)}>
-                <Text style={[styles.statusChipText, o.status === s && { color: colors.white }]}>{s}</Text>
-              </Pressable>
-            ))}
+          {orders.map((o, i) => (
+            <View key={o.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+              <Text style={[styles.td, styles.tdStrong, styles.oOrder]}>{o.id}</Text>
+              <Text style={[styles.td, styles.oName]} numberOfLines={1}>{o.customer_name}</Text>
+              <Text style={[styles.td, styles.oEmail]} numberOfLines={1}>{o.customer_email}</Text>
+              <Text style={[styles.td, styles.oPhone]} numberOfLines={1}>{o.customer_phone || '—'}</Text>
+              <Text style={[styles.td, styles.oShip]} numberOfLines={1}>{o.shipping_address || '—'}</Text>
+              <Text style={[styles.td, styles.oDate]}>{new Date(o.created_at).toLocaleDateString()}</Text>
+              <View style={styles.oStatus}><Badge text={o.status} tone={statusTone[o.status] || 'muted'} /></View>
+              <View style={styles.oView}>
+                <Pressable style={styles.eyeBtn} onPress={() => view(o.id)} accessibilityLabel={`View order ${o.id}`}>
+                  <Ionicons name="eye-outline" size={18} color={colors.navy} />
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      </Tbl>
+
+      {detail && <OrderDetailModal order={detail} onClose={() => setDetail(null)} onStatus={setStatus} />}
+    </View>
+  );
+}
+
+// ---------- Customers ----------
+function Customers({ token }: { token: string }) {
+  const [items, setItems] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    api.admin.customers(token).then(setItems).catch(() => {}).finally(() => setLoading(false));
+  }, [token]);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? items.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          (u.phone || '').toLowerCase().includes(q)
+      )
+    : items;
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <Text style={styles.h}>
+        {q ? `${filtered.length} of ${items.length} customers` : `${items.length} customer${items.length === 1 ? '' : 's'}`}
+      </Text>
+
+      <View style={styles.search}>
+        <Ionicons name="search" size={18} color={colors.muted} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search customers by name, email or phone…"
+          placeholderTextColor={colors.muted}
+          style={styles.searchInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {query.length > 0 && (
+          <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+      </View>
+
+      {filtered.length === 0 ? (
+        <Text style={styles.muted}>{items.length === 0 ? 'No customers yet.' : `No customers match “${query}”.`}</Text>
+      ) : (
+        <View style={styles.table}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, styles.cuName]}>Name</Text>
+            <Text style={[styles.th, styles.cuEmail]}>Email</Text>
+            <Text style={[styles.th, styles.cuPhone]}>Phone</Text>
+            <Text style={[styles.th, styles.cuRole]}>Type</Text>
+            <Text style={[styles.th, styles.cuJoined]}>Joined</Text>
           </View>
-        </Card>
-      ))}
+          {filtered.map((u, i) => (
+            <View key={u.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+              <Text style={[styles.td, styles.tdStrong, styles.cuName]} numberOfLines={1}>{u.name}</Text>
+              <Text style={[styles.td, styles.cuEmail]} numberOfLines={1}>{u.email}</Text>
+              <Text style={[styles.td, styles.cuPhone]} numberOfLines={1}>{u.phone || '—'}</Text>
+              <View style={styles.cuRole}>
+                <Badge text={u.role} tone={u.role === 'business' ? 'navy' : 'muted'} />
+              </View>
+              <Text style={[styles.td, styles.cuJoined]}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -489,9 +867,19 @@ function Registrations({ token }: { token: string }) {
   );
 }
 
+function inquiryReqSummary(q: any): string {
+  if (Array.isArray(q.items) && q.items.length > 0) {
+    return q.items.map((it: any) => `${it.name} ×${it.qty}`).join(', ');
+  }
+  return q.product || '—';
+}
+
 function Inquiries({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
+  const fits = width >= 1024;
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<any | null>(null);
 
   async function load() {
     setLoading(true);
@@ -504,6 +892,7 @@ function Inquiries({ token }: { token: string }) {
 
   async function setStatus(id: number, status: string) {
     await api.admin.updateInquiry(id, { status }, token);
+    setDetail((d: any) => (d && d.id === id ? { ...d, status } : d));
     load();
   }
 
@@ -512,45 +901,141 @@ function Inquiries({ token }: { token: string }) {
 
   return (
     <View style={{ gap: 12 }}>
-      {items.map((q) => (
-        <Card key={q.id} style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <View style={{ flex: 1, minWidth: 200 }}>
-              <Text style={styles.rowTitle}>{q.name}</Text>
-              <Text style={styles.rowMeta}>{q.email || 'no email'} · {q.phone || 'no phone'}</Text>
-              {Array.isArray(q.items) && q.items.length > 0 && (
-                <View style={{ marginTop: 4, gap: 2 }}>
-                  <Text style={[styles.rowMeta, { fontWeight: '800' }]}>Requirement:</Text>
-                  {q.items.map((it: any, idx: number) => (
-                    <Text key={idx} style={styles.rowMeta}>• {it.name} — {it.qty} {it.unit}</Text>
-                  ))}
-                </View>
-              )}
-              {!!q.product && <Text style={styles.rowMeta}>Product: {q.product}</Text>}
-              {!!q.message && <Text style={styles.message}>“{q.message}”</Text>}
-              <Text style={styles.rowMeta}>{new Date(q.created_at).toLocaleString()}</Text>
+      <Text style={styles.h}>{items.length} inquir{items.length === 1 ? 'y' : 'ies'}</Text>
+      <Tbl fits={fits}>
+        <View style={[styles.table, fits ? styles.tableFull : styles.inqTable]}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, styles.qName]}>Name</Text>
+            <Text style={[styles.th, styles.qEmail]}>Email</Text>
+            <Text style={[styles.th, styles.qPhone]}>Phone</Text>
+            <Text style={[styles.th, styles.qReq]}>Requirement</Text>
+            <Text style={[styles.th, styles.qDate]}>Date</Text>
+            <Text style={[styles.th, styles.qStatus]}>Status</Text>
+            <Text style={[styles.th, styles.qView]}>View</Text>
+          </View>
+          {items.map((q, i) => (
+            <View key={q.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+              <Text style={[styles.td, styles.tdStrong, styles.qName]} numberOfLines={1}>{q.name}</Text>
+              <Text style={[styles.td, styles.qEmail]} numberOfLines={1}>{q.email || '—'}</Text>
+              <Text style={[styles.td, styles.qPhone]} numberOfLines={1}>{q.phone || '—'}</Text>
+              <Text style={[styles.td, styles.qReq]} numberOfLines={1}>{inquiryReqSummary(q)}</Text>
+              <Text style={[styles.td, styles.qDate]}>{new Date(q.created_at).toLocaleDateString()}</Text>
+              <View style={styles.qStatus}><Badge text={q.status} tone={statusTone[q.status] || 'muted'} /></View>
+              <View style={styles.qView}>
+                <Pressable style={styles.eyeBtn} onPress={() => setDetail(q)} accessibilityLabel={`View inquiry from ${q.name}`}>
+                  <Ionicons name="eye-outline" size={18} color={colors.navy} />
+                </Pressable>
+              </View>
             </View>
-            <Badge text={q.status} tone={statusTone[q.status] || 'muted'} />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Button label="Mark contacted" variant="navy" onPress={() => setStatus(q.id, 'contacted')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
-            <Button label="Close" variant="ghost" onPress={() => setStatus(q.id, 'closed')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
-            <Button label="New" variant="ghost" onPress={() => setStatus(q.id, 'new')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
-          </View>
-        </Card>
-      ))}
+          ))}
+        </View>
+      </Tbl>
+
+      {detail && <InquiryDetailModal inquiry={detail} onClose={() => setDetail(null)} onStatus={setStatus} />}
     </View>
   );
 }
 
-// Arrange — admin controls the display order of categories and of products
-// within each category (↑ / ↓). Saved instantly to the server.
+// Full inquiry details + status controls, opened from the table's view icon.
+function InquiryDetailModal({ inquiry: q, onClose, onStatus }: { inquiry: any; onClose: () => void; onStatus: (id: number, s: string) => void }) {
+  const content = (
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        <View style={styles.modalHead}>
+          <Text style={styles.modalTitle}>Inquiry · {q.name}</Text>
+          <Pressable onPress={onClose} hitSlop={10}><Text style={styles.modalClose}>✕</Text></Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 16 }}>
+          <View style={{ gap: 4 }}>
+            <Text style={styles.odSection}>Contact</Text>
+            <Text style={styles.odStrong}>{q.name}</Text>
+            <Text style={styles.odMeta}>{q.email || 'no email'} · {q.phone || 'no phone'}</Text>
+            <Text style={styles.odMeta}>{new Date(q.created_at).toLocaleString()}</Text>
+          </View>
+
+          {Array.isArray(q.items) && q.items.length > 0 && (
+            <View style={{ gap: 6 }}>
+              <Text style={styles.odSection}>Requirement</Text>
+              {q.items.map((it: any, idx: number) => (
+                <Text key={idx} style={styles.odMeta}>• {it.name} — {it.qty} {it.unit}</Text>
+              ))}
+            </View>
+          )}
+
+          {!!q.product && (
+            <View style={{ gap: 4 }}>
+              <Text style={styles.odSection}>Product</Text>
+              <Text style={styles.odMeta}>{q.product}</Text>
+            </View>
+          )}
+
+          {!!q.message && (
+            <View style={{ gap: 4 }}>
+              <Text style={styles.odSection}>Message</Text>
+              <Text style={styles.message}>“{q.message}”</Text>
+            </View>
+          )}
+
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <Text style={styles.odSection}>Status</Text>
+            <Badge text={q.status} tone={statusTone[q.status] || 'muted'} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Button label="Mark contacted" variant="navy" onPress={() => onStatus(q.id, 'contacted')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Close" variant="ghost" onPress={() => onStatus(q.id, 'closed')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="New" variant="ghost" onPress={() => onStatus(q.id, 'new')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFoot}>
+          <Button label="Close" variant="ghost" onPress={onClose} />
+        </View>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
+}
+
+// Editable position number — type a new position and commit on blur/enter.
+function PosInput({ pos, onCommit }: { pos: number; onCommit: (n: number) => void }) {
+  const [val, setVal] = useState(String(pos));
+  useEffect(() => {
+    setVal(String(pos));
+  }, [pos]);
+  const commit = () => {
+    const n = parseInt(val, 10);
+    if (!Number.isNaN(n) && n !== pos) onCommit(n);
+    else setVal(String(pos));
+  };
+  return (
+    <TextInput
+      value={val}
+      onChangeText={(t) => setVal(t.replace(/\D/g, ''))}
+      onBlur={commit}
+      onSubmitEditing={commit}
+      keyboardType="number-pad"
+      selectTextOnFocus
+      style={styles.posInput}
+      accessibilityLabel="Position"
+    />
+  );
+}
+
+// Arrange — admin sets the display order of categories and of products within a
+// category by typing a position number; the rest re-sequence automatically.
 function Arrange({ token }: { token: string }) {
   const [cats, setCats] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [activeCat, setActiveCat] = useState<string>('');
   const [rows, setRows] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removingCat, setRemovingCat] = useState<Category | null>(null);
   const toast = useToast();
 
   async function load() {
@@ -569,11 +1054,15 @@ function Arrange({ token }: { token: string }) {
     setRows(products.filter((p) => p.category_name === activeCat));
   }, [activeCat, products]);
 
-  async function moveCat(i: number, dir: number) {
-    const j = i + dir;
-    if (j < 0 || j >= cats.length) return;
+  // Move a category to a typed position (1-based); the rest re-sequence around it.
+  async function setCatPosition(fromIndex: number, toPos: number) {
+    let target = toPos - 1;
+    if (Number.isNaN(target)) return;
+    target = Math.max(0, Math.min(cats.length - 1, target));
+    if (target === fromIndex) return;
     const arr = [...cats];
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const [moved] = arr.splice(fromIndex, 1);
+    arr.splice(target, 0, moved);
     setCats(arr);
     try {
       await api.admin.reorderCategories(arr.map((c) => c.id), token);
@@ -583,17 +1072,36 @@ function Arrange({ token }: { token: string }) {
     }
   }
 
-  async function moveProduct(i: number, dir: number) {
-    const j = i + dir;
-    if (j < 0 || j >= rows.length) return;
+  async function setProductPosition(fromIndex: number, toPos: number) {
+    let target = toPos - 1;
+    if (Number.isNaN(target)) return;
+    target = Math.max(0, Math.min(rows.length - 1, target));
+    if (target === fromIndex) return;
     const arr = [...rows];
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const [moved] = arr.splice(fromIndex, 1);
+    arr.splice(target, 0, moved);
     setRows(arr);
     try {
       await api.admin.reorderProducts(arr.map((p) => p.id), token);
       toast('Product order saved', 'success');
     } catch {
       toast('Could not save order', 'error');
+    }
+  }
+
+  const catProductCount = (name: string) => products.filter((p) => p.category_name === name).length;
+
+  async function deleteCategory() {
+    const c = removingCat;
+    if (!c) return;
+    setRemovingCat(null);
+    try {
+      await api.admin.deleteCategory(c.id, token);
+      toast(`Category “${c.name}” removed`, 'info');
+      if (activeCat === c.name) setActiveCat('');
+      load();
+    } catch {
+      toast('Could not remove category', 'error');
     }
   }
 
@@ -604,13 +1112,15 @@ function Arrange({ token }: { token: string }) {
       {/* Category order */}
       <View style={{ gap: 10 }}>
         <Text style={styles.h}>Category order (how they appear on the site)</Text>
+        <Text style={styles.arrHint}>Type a position number to move a category — the others re-sequence automatically.</Text>
         {cats.map((c, i) => (
           <Card key={c.id} style={styles.arrRow}>
-            <Text style={styles.arrPos}>{i + 1}</Text>
+            <PosInput pos={i + 1} onCommit={(n) => setCatPosition(i, n)} />
             <Text style={styles.arrName}>{c.name}</Text>
             <View style={styles.arrBtns}>
-              <Pressable style={[styles.arrBtn, i === 0 && styles.arrBtnOff]} disabled={i === 0} onPress={() => moveCat(i, -1)}><Text style={styles.arrBtnText}>↑</Text></Pressable>
-              <Pressable style={[styles.arrBtn, i === cats.length - 1 && styles.arrBtnOff]} disabled={i === cats.length - 1} onPress={() => moveCat(i, 1)}><Text style={styles.arrBtnText}>↓</Text></Pressable>
+              <Pressable style={[styles.arrBtn, styles.arrDelBtn]} onPress={() => setRemovingCat(c)} accessibilityLabel={`Remove ${c.name}`}>
+                <Ionicons name="trash-outline" size={17} color={colors.red} />
+              </Pressable>
             </View>
           </Card>
         ))}
@@ -631,16 +1141,26 @@ function Arrange({ token }: { token: string }) {
         ) : (
           rows.map((p, i) => (
             <Card key={p.id} style={styles.arrRow}>
-              <Text style={styles.arrPos}>{i + 1}</Text>
+              <PosInput pos={i + 1} onCommit={(n) => setProductPosition(i, n)} />
               <Text style={styles.arrName} numberOfLines={1}>{p.name}</Text>
-              <View style={styles.arrBtns}>
-                <Pressable style={[styles.arrBtn, i === 0 && styles.arrBtnOff]} disabled={i === 0} onPress={() => moveProduct(i, -1)}><Text style={styles.arrBtnText}>↑</Text></Pressable>
-                <Pressable style={[styles.arrBtn, i === rows.length - 1 && styles.arrBtnOff]} disabled={i === rows.length - 1} onPress={() => moveProduct(i, 1)}><Text style={styles.arrBtnText}>↓</Text></Pressable>
-              </View>
             </Card>
           ))
         )}
       </View>
+
+      {removingCat && (
+        <ConfirmDialog
+          title={`Remove “${removingCat.name}”?`}
+          message={
+            catProductCount(removingCat.name) > 0
+              ? `This category has ${catProductCount(removingCat.name)} product(s). They won't be deleted — they'll become "Uncategorised". This cannot be undone.`
+              : 'This category will be removed. This cannot be undone.'
+          }
+          confirmLabel="Remove category"
+          onConfirm={deleteCategory}
+          onCancel={() => setRemovingCat(null)}
+        />
+      )}
     </View>
   );
 }
@@ -649,28 +1169,153 @@ const styles = StyleSheet.create({
   tabs: { gap: 8 },
   arrRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 14 },
   arrPos: { width: 26, color: colors.muted, fontWeight: '900', fontSize: 14 },
+  arrHint: { color: colors.muted, fontSize: 12, marginBottom: 2 },
+  posInput: { width: 46, height: 38, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.offWhite, textAlign: 'center', fontWeight: '900', fontSize: 15, color: colors.navy, outlineStyle: 'none' as any },
   arrName: { flex: 1, color: colors.ink, fontWeight: '700', fontSize: 14 },
   arrBtns: { flexDirection: 'row', gap: 6 },
   arrBtn: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.offWhite },
+  arrDelBtn: { borderColor: '#F3C8C5', backgroundColor: '#FFF5F4' },
   arrBtnOff: { opacity: 0.35 },
   arrBtnText: { fontSize: 18, fontWeight: '900', color: colors.navy },
-  tab: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: '#F1F2F5' },
+  tab: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: '#F1F2F5' },
   tabActive: { backgroundColor: colors.orange },
   tabText: { fontWeight: '800', color: colors.muted, textTransform: 'capitalize' },
   tabTextActive: { color: colors.white },
   muted: { color: colors.muted, fontSize: 14 },
   h: { fontWeight: '900', fontSize: 16, color: colors.ink },
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { minWidth: 150, flexGrow: 1, flexBasis: 150, gap: 4 },
+  statCard: {
+    minWidth: 150,
+    flexGrow: 1,
+    flexBasis: 150,
+    gap: 6,
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    ...shadow.soft,
+  },
+  statCardClickable: { cursor: 'pointer' as any },
+  statTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statIcon: { width: 38, height: 38, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   statValue: { fontSize: 26, fontWeight: '900' },
-  statLabel: { color: colors.muted, fontSize: 13 },
-  barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  barLabel: { width: 90, color: colors.text, fontSize: 13, textTransform: 'capitalize' },
-  barTrack: { flex: 1, height: 14, backgroundColor: '#EEF0F3', borderRadius: 999, overflow: 'hidden' },
-  barFill: { height: '100%', backgroundColor: colors.orange, borderRadius: 999 },
-  barVal: { width: 30, textAlign: 'right', fontWeight: '800', color: colors.navy },
+  statLabel: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  statHint: { color: colors.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
+  tableHead: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12 },
+  tfoot: { backgroundColor: '#FAFAFB' },
+  colNum: { width: 90, textAlign: 'right' },
+  // orders-by-status columns
+  cStatusCol: { width: 140 },
+  cBar: { flex: 1, justifyContent: 'center' },
+  cNum: { width: 90, textAlign: 'right' },
+  barTrack: { height: 8, backgroundColor: '#EEF0F3', borderRadius: 999, overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 999 },
+  // customers table columns
+  cuName: { width: 160 },
+  cuEmail: { flex: 1, minWidth: 180 },
+  cuPhone: { width: 150 },
+  cuRole: { width: 100 },
+  cuJoined: { width: 110 },
+  // notifications
+  notifRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  bellBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9, ...shadow.soft },
+  bellText: { fontWeight: '800', color: colors.ink, fontSize: 13 },
+  bellBadge: { minWidth: 20, paddingHorizontal: 6, height: 20, borderRadius: 999, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
+  bellBadgeText: { color: colors.white, fontSize: 11, fontWeight: '900' },
+  notifHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12 },
+  notifItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1, borderTopColor: colors.border },
+  notifIcon: { width: 34, height: 34, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  notifTitle: { fontWeight: '800', color: colors.ink, fontSize: 14 },
+  notifSub: { color: colors.muted, fontSize: 12, marginTop: 1, textTransform: 'capitalize' },
+  notifTime: { color: colors.muted, fontSize: 12, fontWeight: '600' },
+  // header / tabs / title
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 },
+  updated: { color: colors.muted, fontSize: 12, fontWeight: '600', marginTop: 6 },
+  tabBar: { backgroundColor: colors.white, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, padding: 6, marginTop: 4, ...shadow.soft },
+  // stat card extras
+  statSub: { color: colors.muted, fontSize: 11, fontWeight: '600', marginTop: 2 },
+  statCardRing: { borderColor: colors.green, borderWidth: 1.5, backgroundColor: '#F2FBF6' },
+  trendBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  trendUp: { backgroundColor: '#E7F7EE' },
+  trendDown: { backgroundColor: '#FDECEC' },
+  trendText: { fontSize: 11, fontWeight: '800' },
+  // dashboard pie + panels
+  cardHeadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dashRow: { flexDirection: 'row', gap: 14, flexWrap: 'wrap', alignItems: 'stretch' },
+  dashCard: { flex: 1, minWidth: 260 },
+  // recent orders
+  recentHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12 },
+  viewAll: { color: colors.red, fontWeight: '800', fontSize: 13 },
+  rOrder: { width: 64 },
+  rCust: { flex: 1, minWidth: 130 },
+  rShip: { flex: 1, minWidth: 140 },
+  rDate: { width: 100 },
+  rTotal: { width: 120, textAlign: 'right' },
+  rStatus: { width: 120, alignItems: 'flex-start' },
+  pieRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 12, flexWrap: 'wrap' },
+  pieWrap: { width: 168, height: 168, alignItems: 'center', justifyContent: 'center' },
+  pieHole: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  pieTotal: { fontSize: 26, fontWeight: '900', color: colors.ink },
+  pieTotalL: { fontSize: 12, color: colors.muted, fontWeight: '600' },
+  legend: { flex: 1, minWidth: 160, gap: 8 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot: { width: 12, height: 12, borderRadius: 999 },
+  legendLabel: { flex: 1, color: colors.text, fontSize: 13, fontWeight: '700', textTransform: 'capitalize' },
+  legendVal: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+  miniLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  miniVal: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+  // orders table columns
+  // inquiries table columns
+  inqTable: { minWidth: 980 },
+  qName: { width: 150 },
+  qEmail: { flex: 1, minWidth: 180 },
+  qPhone: { width: 150 },
+  qReq: { flex: 1.2, minWidth: 200 },
+  qDate: { width: 100 },
+  qStatus: { width: 110 },
+  qView: { width: 56, alignItems: 'center' },
+  ordersTable: { minWidth: 1040 },
+  oOrder: { width: 56 },
+  oName: { width: 150 },
+  oEmail: { flex: 1, minWidth: 190 },
+  oPhone: { width: 140 },
+  oShip: { flex: 1, minWidth: 180 },
+  oDate: { width: 100 },
+  oStatus: { width: 110 },
+  oView: { width: 56, alignItems: 'center' },
+  eyeBtn: { width: 36, height: 36, borderRadius: 999, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.offWhite },
+  // order detail modal
+  overlay: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,28,66,0.45)', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 },
+  modal: { width: '100%', maxWidth: 600, maxHeight: '88vh' as any, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', ...shadow.card },
+  modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: colors.navy },
+  modalTitle: { color: colors.white, fontWeight: '900', fontSize: 17 },
+  modalClose: { color: colors.white, fontSize: 18, fontWeight: '700' },
+  modalFoot: { flexDirection: 'row', justifyContent: 'flex-end', padding: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  odSection: { fontWeight: '900', fontSize: 13, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  odStrong: { fontWeight: '800', color: colors.ink, fontSize: 15 },
+  odMeta: { color: colors.muted, fontSize: 13 },
+  odQty: { width: 50, textAlign: 'right' },
+  odPrice: { width: 90, textAlign: 'right' },
   adminRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, flexWrap: 'wrap' },
+  // products category sidebar
+  prodLayout: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
+  catSidebar: { width: 220, backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 8, gap: 4 },
+  // Keep the category list in view while the product list scrolls (web).
+  catSticky: { position: 'sticky' as any, top: 12, maxHeight: '88vh' as any, overflowY: 'auto' as any },
+  catSideTitle: { fontWeight: '900', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 8, paddingTop: 6, paddingBottom: 4 },
+  catRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.sm },
+  catRowActive: { backgroundColor: colors.orange },
+  catChip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#F1F2F5' },
+  catChipActive: { backgroundColor: colors.orange },
+  catText: { flex: 1, color: colors.text, fontWeight: '700', fontSize: 13 },
+  catTextActive: { color: colors.white },
+  catCount: { minWidth: 24, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: '#EEF0F3', alignItems: 'center' },
+  catCountActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  catCountText: { fontSize: 11, fontWeight: '800', color: colors.muted },
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.white },
+  searchInput: { flex: 1, fontSize: 14, color: colors.text, outlineStyle: 'none' as any },
   toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   viewToggle: { flexDirection: 'row', backgroundColor: '#F1F2F5', borderRadius: radius.pill, padding: 3 },
   viewBtn: { width: 38, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },

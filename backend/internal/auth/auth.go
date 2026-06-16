@@ -76,6 +76,21 @@ func (s *Service) Required(next http.Handler) http.Handler {
 	})
 }
 
+// Optional attaches the user (uid/role) to the request context when a valid
+// token is present, but lets the request through either way. Use for endpoints
+// that are open to the public yet should associate the record with the
+// logged-in user when there is one (e.g. import/export registrations).
+func (s *Service) Optional(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if uid, role, err := s.fromRequest(r); err == nil {
+			ctx := context.WithValue(r.Context(), ctxUserID, uid)
+			ctx = context.WithValue(ctx, ctxRole, role)
+			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // AdminOnly requires a valid token whose role is admin.
 func (s *Service) AdminOnly(next http.Handler) http.Handler {
 	return s.Required(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

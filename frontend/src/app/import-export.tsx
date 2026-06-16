@@ -5,6 +5,7 @@ import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { ContactPanel } from '../components/ContactPanel';
 import { PhoneField } from '../components/PhoneField';
 import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
 import { parsePhone, Country } from '../lib/countries';
@@ -86,28 +87,13 @@ export default function ImportExport() {
         <SectionTitle title="Import & Export Registration" subtitle="Partner with RPK to trade food & groceries worldwide" />
 
         <View style={[styles.layout, stacked && { flexDirection: 'column' }]}>
-          {/* Info side */}
-          <View style={[{ gap: 14 }, stacked ? { width: '100%' } : { width: 340 }]}>
-            <Card style={{ gap: 12, backgroundColor: colors.cream, borderColor: colors.border }}>
-              <Text style={styles.infoTitle}>Why register?</Text>
-              {[
-                ['🌍', 'Trade across borders with a trusted Dubai-based supplier'],
-                ['📦', 'Access bulk & wholesale pricing on our full catalogue'],
-                ['🤝', 'Dedicated review of every import/export application'],
-                ['🚢', 'Logistics support for international shipments'],
-              ].map(([i, t]) => (
-                <View key={t} style={styles.benefit}>
-                  <Text style={{ fontSize: 18 }}>{i}</Text>
-                  <Text style={styles.benefitText}>{t}</Text>
-                </View>
-              ))}
-            </Card>
-            <Card style={{ gap: 6 }}>
-              <Text style={styles.infoTitle}>How it works</Text>
-              <Text style={styles.step}>1. Submit this form</Text>
-              <Text style={styles.step}>2. Our team reviews your application</Text>
-              <Text style={styles.step}>3. We approve and contact you to start trading</Text>
-            </Card>
+          {/* Contact side */}
+          <View style={stacked ? { width: '100%' } : { width: 340 }}>
+            <ContactPanel
+              product={form.product_interest}
+              heading="Partner with RPK"
+              description="Trade worldwide with a trusted Dubai-based supplier — bulk pricing, dedicated application review, and full logistics support."
+            />
           </View>
 
           {/* Form / success */}
@@ -117,7 +103,7 @@ export default function ImportExport() {
                 <Text style={{ fontSize: 50 }}>🎉</Text>
                 <Text style={styles.successTitle}>Application Received</Text>
                 <Text style={styles.successText}>
-                  Thank you! Your registration is <Text style={{ fontWeight: '800' }}>#{done.id}</Text> and is now{' '}
+                  Thank you! Your registration for <Text style={{ fontWeight: '800' }}>{form.company_name}</Text> is now{' '}
                   <Text style={{ fontWeight: '800', color: colors.orange }}>pending review</Text>. Our team will contact
                   you at <Text style={{ fontWeight: '700' }}>{form.email}</Text>.
                 </Text>
@@ -167,10 +153,6 @@ export default function ImportExport() {
 
 const styles = StyleSheet.create({
   layout: { flexDirection: 'row', gap: 22, alignItems: 'flex-start' },
-  infoTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
-  benefit: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  benefitText: { color: colors.text, fontSize: 13, flex: 1, lineHeight: 19 },
-  step: { color: colors.text, fontSize: 13 },
   label: { color: colors.text, fontWeight: '700', fontSize: 13 },
   typeRow: { flexDirection: 'row', gap: 10 },
   type: { flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, padding: 12 },

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndica
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Product, Review, imageUri } from '../../lib/api';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, shadow } from '../../lib/theme';
 import { useApp } from '../../lib/store';
 import { useToast } from '../../components/Toast';
 import { visualByName, isPlaceholder } from '../../lib/foodVisuals';
@@ -100,9 +100,9 @@ export default function ProductDetail() {
         </Pressable>
 
         <View style={[styles.row, stacked && { flexDirection: 'column' }]}>
-          <View style={[styles.imageBox, stacked ? { width: '100%' } : { width: '46%' }]}>
+          <View style={[styles.imageBox, stacked ? { width: '100%', maxWidth: 420, alignSelf: 'center' } : { width: 420 }]}>
             {!isPlaceholder(product.image_url) ? (
-              <Image source={{ uri: imageUri(product.image_url) }} style={styles.image} contentFit="cover" transition={200} />
+              <Image source={{ uri: imageUri(product.image_url) }} style={styles.image} contentFit="contain" transition={200} />
             ) : visualByName(product.category_name).photo ? (
               <Image source={{ uri: visualByName(product.category_name).photo }} style={styles.image} contentFit="cover" transition={200} />
             ) : (
@@ -112,7 +112,7 @@ export default function ProductDetail() {
             )}
           </View>
 
-          <View style={{ flex: 1, gap: 14 }}>
+          <View style={[styles.buyBox, { flex: 1 }]}>
             {!!product.category_name && <Badge text={product.category_name} tone="orange" />}
             <Text style={styles.name}>{product.name}</Text>
             {product.review_count > 0 ? (
@@ -151,7 +151,8 @@ export default function ProductDetail() {
 
             <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
               <Button
-                label="📞 Call to Inquiry"
+                label="Call to Inquiry"
+                icon="call"
                 variant="primary"
                 onPress={() => router.push(`/contact?product=${encodeURIComponent(product.name)}`)}
               />
@@ -176,45 +177,46 @@ export default function ProductDetail() {
         </View>
       </Container>
 
-      {/* Highlights */}
-      {product.highlights?.length > 0 && (
-        <Container style={{ marginTop: 34 }}>
-          <Card style={{ padding: 0, overflow: 'hidden' }}>
-            <Text style={styles.detailHead}>Highlights</Text>
-            {product.highlights.map((h, i) => (
-              <View key={i} style={[styles.hlRow, i % 2 === 1 && { backgroundColor: colors.offWhite }]}>
-                <Text style={styles.hlLabel}>{h.label}</Text>
-                <Text style={styles.hlValue}>{h.value}</Text>
-              </View>
-            ))}
-          </Card>
-        </Container>
-      )}
+      {/* Product details — full width below the hero */}
+      {(product.highlights?.length > 0 || !!product.nutrition?.trim() || !!product.seller?.trim()) && (
+        <Container style={{ marginTop: 22 }}>
+          <View style={[styles.detailsRow, stacked && { flexDirection: 'column' }]}>
+            {/* Highlights */}
+            {product.highlights?.length > 0 && (
+              <Card style={[styles.detailCard, { padding: 0, overflow: 'hidden' }]}>
+                <Text style={styles.detailHead}>Highlights</Text>
+                {product.highlights.map((h, i) => (
+                  <View key={i} style={[styles.hlRow, i % 2 === 1 && { backgroundColor: colors.offWhite }]}>
+                    <Text style={styles.hlLabel}>{h.label}</Text>
+                    <Text style={styles.hlValue}>{h.value}</Text>
+                  </View>
+                ))}
+              </Card>
+            )}
 
-      {/* Nutritional Information */}
-      {!!product.nutrition?.trim() && (
-        <Container style={{ marginTop: 20 }}>
-          <Card>
-            <Text style={styles.detailHead}>Nutritional Information</Text>
-            <View style={{ gap: 7, marginTop: 10 }}>
-              {product.nutrition.split('\n').filter((l) => l.trim()).map((l, i) => (
-                <View key={i} style={styles.bulletRow}>
-                  <View style={styles.bullet} />
-                  <Text style={styles.bulletText}>{l.trim()}</Text>
+            {/* Nutritional Information */}
+            {!!product.nutrition?.trim() && (
+              <Card style={styles.detailCard}>
+                <Text style={styles.detailHead2}>Nutritional Information</Text>
+                <View style={styles.nutriGrid}>
+                  {product.nutrition.split('\n').filter((l) => l.trim()).map((l, i) => (
+                    <View key={i} style={styles.bulletRow}>
+                      <View style={styles.bullet} />
+                      <Text style={styles.bulletText}>{l.trim()}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          </Card>
-        </Container>
-      )}
+              </Card>
+            )}
+          </View>
 
-      {/* Seller Details */}
-      {!!product.seller?.trim() && (
-        <Container style={{ marginTop: 20 }}>
-          <Card>
-            <Text style={styles.detailHead}>Seller Details</Text>
-            <Text style={styles.sellerText}>{product.seller}</Text>
-          </Card>
+          {/* Seller Details */}
+          {!!product.seller?.trim() && (
+            <Card style={{ marginTop: 14 }}>
+              <Text style={styles.detailHead2}>Seller Details</Text>
+              <Text style={styles.sellerText}>{product.seller}</Text>
+            </Card>
+          )}
         </Container>
       )}
 
@@ -282,9 +284,12 @@ export default function ProductDetail() {
 
 const styles = StyleSheet.create({
   back: { color: colors.navy, fontWeight: '700', fontSize: 15 },
-  row: { flexDirection: 'row', gap: 28 },
-  imageBox: { aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.border },
+  row: { flexDirection: 'row', gap: 28, alignItems: 'flex-start' },
+  imageBox: { aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start', padding: 16, ...shadow.soft },
   image: { width: '100%', height: '100%' },
+  buyBox: { gap: 14, backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 24, ...shadow.soft },
+  detailsRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' },
+  detailCard: { flex: 1, minWidth: 240 },
   emojiTile: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   name: { fontSize: 28, fontWeight: '900', color: colors.ink },
   price: { fontSize: 26, fontWeight: '900', color: colors.orange },
@@ -311,10 +316,12 @@ const styles = StyleSheet.create({
   reviewComment: { color: colors.text, fontSize: 14, lineHeight: 21 },
   reviewDate: { color: colors.muted, fontSize: 12 },
   detailHead: { fontWeight: '900', fontSize: 17, color: colors.ink, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 4 },
+  detailHead2: { fontWeight: '900', fontSize: 16, color: colors.ink },
+  nutriGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, rowGap: 8, marginTop: 10 },
   hlRow: { flexDirection: 'row', paddingHorizontal: 18, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border },
   hlLabel: { width: 150, color: colors.muted, fontWeight: '700', fontSize: 14 },
   hlValue: { flex: 1, color: colors.ink, fontWeight: '600', fontSize: 14 },
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flexBasis: '44%', flexGrow: 1, minWidth: 150 },
   bullet: { width: 6, height: 6, borderRadius: 999, backgroundColor: colors.red, marginTop: 7 },
   bulletText: { flex: 1, color: colors.text, fontSize: 14, lineHeight: 21 },
   sellerText: { color: colors.text, fontSize: 14, lineHeight: 22, marginTop: 8 },

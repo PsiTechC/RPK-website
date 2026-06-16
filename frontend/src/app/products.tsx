@@ -18,9 +18,19 @@ export default function Products() {
   const [active, setActive] = useState<string>(params.category || 'all');
   const [search, setSearch] = useState('');
 
+  // Names of categories that actually have products, so empty/removed
+  // categories don't show up as filter chips.
+  const [nonEmptyCats, setNonEmptyCats] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     api.categories().then(setCategories).catch(() => {});
+    api
+      .products()
+      .then((all) => setNonEmptyCats(new Set(all.map((p) => p.category_name).filter(Boolean) as string[])))
+      .catch(() => {});
   }, []);
+
+  const visibleCats = nonEmptyCats.size ? categories.filter((c) => nonEmptyCats.has(c.name)) : categories;
 
   useEffect(() => {
     setActive(params.category || 'all');
@@ -71,7 +81,7 @@ export default function Products() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <Chip label="All" active={active === 'all'} onPress={() => selectCat('all')} />
-          {categories.map((c) => (
+          {visibleCats.map((c) => (
             <Chip key={c.id} label={c.name} active={active === c.slug} onPress={() => selectCat(c.slug)} />
           ))}
         </ScrollView>

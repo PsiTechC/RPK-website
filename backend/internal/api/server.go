@@ -46,13 +46,17 @@ func (s *Server) Router() http.Handler {
 		// Public
 		r.Post("/auth/register", s.handleRegister)
 		r.Post("/auth/login", s.handleLogin)
+		r.Post("/auth/forgot-password", s.handleForgotPassword)
+		r.Post("/auth/reset-password", s.handleResetPassword)
 
 		r.Get("/categories", s.handleListCategories)
 		r.Get("/products", s.handleListProducts)
 		r.Get("/products/{id}", s.handleGetProduct)
 		r.Get("/products/{id}/reviews", s.handleListReviews)
 
-		r.Post("/registrations", s.handleCreateRegistration) // import/export — open to public + logged-in
+		// import/export — open to public, but link the user when logged in so it
+		// shows under "My Registrations" on their account.
+		r.With(s.auth.Optional).Post("/registrations", s.handleCreateRegistration)
 		r.Post("/chat", s.handleChat)                        // AI chatbot
 		r.Get("/stats", s.handlePublicStats)                 // homepage counters (products/categories/countries)
 		r.Post("/inquiries", s.handleCreateInquiry)          // "Call to Inquiry" / contact form
@@ -64,6 +68,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders", s.handleCreateOrder) // checkout requires an account
 			r.Post("/products/{id}/reviews", s.handleCreateReview) // post a review (login required)
 			r.Get("/my/orders", s.handleMyOrders)
+			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/registrations", s.handleMyRegistrations)
 		})
 
@@ -71,6 +76,7 @@ func (s *Server) Router() http.Handler {
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(s.auth.AdminOnly)
 			r.Get("/stats", s.handleAdminStats)
+			r.Get("/customers", s.handleAdminListCustomers)
 
 			r.Post("/categories", s.handleCreateCategory)
 			r.Patch("/categories/reorder", s.handleReorderCategories)

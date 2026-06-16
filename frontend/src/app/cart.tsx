@@ -29,6 +29,7 @@ export default function Cart() {
   const [done, setDone] = useState<any>(null);
 
   const stacked = width < 880;
+  const isAdmin = user?.role === 'admin'; // only the admin sees prices
 
   const set = (k: keyof typeof form) => (t: string) => {
     setForm((f) => ({ ...f, [k]: t }));
@@ -38,36 +39,36 @@ export default function Cart() {
   function validate(): boolean {
     const e: Record<string, string | null> = {
       customer_name: vName(form.customer_name, 'Full name'),
-      customer_email: vEmail(form.customer_email),
-      customer_phone: vPhone(form.customer_phone, true),
-      shipping_address: vRequired(form.shipping_address, 'Shipping address'),
+      customer_email: form.customer_email ? vEmail(form.customer_email) : null,
+      customer_phone: form.customer_phone ? vPhone(form.customer_phone, false) : null,
     };
     setErrors(e);
-    return isClean(e);
+    if (!isClean(e)) return false;
+    if (!form.customer_email.trim() && !form.customer_phone.trim()) {
+      setError('Please provide an email or phone number so we can reach you.');
+      return false;
+    }
+    return true;
   }
 
-  async function checkout() {
+  // Prices aren't shown to shoppers — instead of paying, they send an inquiry
+  // with the cart items so our team can follow up with a quote.
+  async function sendInquiry() {
     setError('');
-    if (!user) {
-      setError('Please log in or sign up to place your order.');
-      return;
-    }
     if (!validate()) return;
     setPlacing(true);
     try {
-      const res = await api.createOrder(
-        {
-          ...form,
-          customer_phone: form.customer_phone ? `${country.dial} ${form.customer_phone}` : '',
-          items: cart.map((l) => ({ product_id: l.product.id, quantity: l.qty })),
-          pay: true, // MOCK payment
-        },
-        token
-      );
-      setDone(res);
+      await api.createInquiry({
+        name: form.customer_name,
+        email: form.customer_email,
+        phone: form.customer_phone ? `${country.dial} ${form.customer_phone}` : '',
+        message: form.shipping_address,
+        items: cart.map((l) => ({ product_id: l.product.id, name: l.product.name, unit: l.product.unit, qty: l.qty })),
+      });
+      setDone(true);
       clearCart();
     } catch (e: any) {
-      setError(e.message || 'Checkout failed.');
+      setError(e.message || 'Could not send your inquiry.');
     } finally {
       setPlacing(false);
     }
@@ -79,19 +80,14 @@ export default function Cart() {
         <Container style={{ marginTop: 40, maxWidth: 640 }}>
           <Card style={{ alignItems: 'center', gap: 12, paddingVertical: 36 }}>
             <Text style={{ fontSize: 54 }}>✅</Text>
-            <Text style={styles.successTitle}>Order Confirmed!</Text>
+            <Text style={styles.successTitle}>Inquiry Sent!</Text>
             <Text style={styles.successText}>
-              Thank you for your order. Payment was processed via our mock gateway.
+              Thank you{form.customer_name ? `, ${form.customer_name.split(' ')[0]}` : ''}. Our team has received your
+              product inquiry and will contact you shortly with pricing and availability.
             </Text>
-            <View style={styles.receipt}>
-              <Row k="Order #" v={`#${done.order_id}`} />
-              <Row k="Total paid" v={money(done.subtotal, done.currency)} />
-              <Row k="Payment ref" v={done.payment_ref} />
-              <Row k="Status" v={done.status} />
-            </View>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               <Button label="Continue shopping" variant="primary" onPress={() => router.push('/products')} />
-              {user && <Button label="My orders" variant="outline" onPress={() => router.push('/account')} />}
+              <Button label="Contact us" variant="outline" onPress={() => router.push('/contact')} />
             </View>
           </Card>
         </Container>
@@ -121,7 +117,7 @@ export default function Cart() {
                   <View style={{ flex: 1, gap: 4 }}>
                     <Text style={styles.lineName}>{l.product.name}</Text>
                     <Text style={styles.lineMeta}>
-                      {money(l.product.price, l.product.currency)} / {l.product.unit}
+                      {isAdmin ? `${money(l.product.price, l.product.currency)} / ${l.product.unit}` : `Sold per ${l.product.unit}`}
                     </Text>
                     <View style={styles.stepper}>
                       <Pressable style={styles.stepBtn} onPress={() => setQty(l.product.id, l.qty - 1)}>
@@ -138,8 +134,8 @@ export default function Cart() {
                       </Pressable>
                     </View>
                   </View>
-                  <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                    <Text style={styles.lineTotal}>{money(l.product.price * l.qty, l.product.currency)}</Text>
+                  <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
+                    {isAdmin && <Text style={styles.lineTotal}>{money(l.product.price * l.qty, l.product.currency)}</Text>}
                     <Pressable onPress={() => removeFromCart(l.product.id)}>
                       <Text style={styles.remove}>Remove</Text>
                     </Pressable>
@@ -148,43 +144,30 @@ export default function Cart() {
               ))}
             </View>
 
-            {/* Checkout */}
+            {/* Inquiry / quote request */}
             <Card style={[styles.checkout, stacked ? { width: '100%' } : { width: 360 }]}>
-              <Text style={styles.checkoutTitle}>Checkout</Text>
-              <View style={styles.summaryRow}>
-                <Text style={styles.sumK}>Subtotal</Text>
-                <Text style={styles.sumV}>{money(cartTotal)}</Text>
-              </View>
-              <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }]}>
-                <Text style={styles.totalK}>Total</Text>
-                <Text style={styles.totalV}>{money(cartTotal)}</Text>
-              </View>
+              <Text style={styles.checkoutTitle}>Request a Quote</Text>
+              <Text style={styles.quoteNote}>
+                Tell us how to reach you and we'll send pricing & availability for the items in your cart.
+              </Text>
 
-              {user ? (
-                <>
-                  <View style={{ gap: 10, marginTop: 8 }}>
-                    <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
-                    <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
-                    <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.customer_phone} onNumberChange={set('customer_phone')} error={errors.customer_phone} />
-                    <Field label="Shipping address" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Delivery address" multiline error={errors.shipping_address} />
-                  </View>
-
-                  <Badge text="Mock payment — no card needed" tone="muted" />
-                  {!!error && <Text style={styles.error}>{error}</Text>}
-                  <Button label={placing ? 'Processing…' : `Pay ${money(cartTotal)}`} onPress={checkout} disabled={placing} />
-                </>
-              ) : (
-                <View style={styles.authGate}>
-                  <Text style={{ fontSize: 30 }}>🔒</Text>
-                  <Text style={styles.gateTitle}>Sign in to place your order</Text>
-                  <Text style={styles.gateText}>
-                    You need an account to confirm and track an order. Orders can't be placed without logging in.
-                  </Text>
-                  <Button label="Log in" variant="navy" onPress={() => router.push('/login')} style={{ alignSelf: 'stretch' }} />
-                  <Text style={styles.gateAlt}>User doesn't exist yet? Create one:</Text>
-                  <Button label="Sign up" onPress={() => router.push('/login?mode=register')} style={{ alignSelf: 'stretch' }} />
+              {isAdmin && (
+                <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }]}>
+                  <Text style={styles.totalK}>Total (admin only)</Text>
+                  <Text style={styles.totalV}>{money(cartTotal)}</Text>
                 </View>
               )}
+
+              <View style={{ gap: 10, marginTop: 8 }}>
+                <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
+                <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
+                <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.customer_phone} onNumberChange={set('customer_phone')} error={errors.customer_phone} />
+                <Field label="Message (optional)" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Quantity needed, delivery location, any questions…" multiline />
+              </View>
+
+              {!!error && <Text style={styles.error}>{error}</Text>}
+              <Button label={placing ? 'Sending…' : 'Call to Inquiry'} icon="call" onPress={sendInquiry} disabled={placing} />
+              <Text style={styles.hint}>We typically respond within a few hours on business days.</Text>
             </Card>
           </View>
         )}
@@ -218,6 +201,7 @@ const styles = StyleSheet.create({
   qtyInput: { width: 42, height: 34, textAlign: 'center', fontWeight: '800', color: colors.ink, fontSize: 14, outlineStyle: 'none' as any },
   checkout: { gap: 12 },
   checkoutTitle: { fontWeight: '900', fontSize: 18, color: colors.ink },
+  quoteNote: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sumK: { color: colors.muted, fontSize: 14 },
   sumV: { color: colors.text, fontSize: 14, fontWeight: '600' },

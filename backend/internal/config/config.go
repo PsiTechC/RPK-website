@@ -16,6 +16,13 @@ type Config struct {
 	CORSOrigins     []string
 	MigrationsDir   string
 	UploadsDir      string
+	// Email (password reset) + the public site URL used to build reset links.
+	SMTPHost   string
+	SMTPPort   string
+	SMTPUser   string
+	SMTPPass   string
+	SMTPFrom   string
+	AppBaseURL string
 }
 
 func Load() Config {
@@ -31,6 +38,12 @@ func Load() Config {
 		CORSOrigins:     splitCSV(get("CORS_ORIGINS", "")),
 		MigrationsDir:   get("MIGRATIONS_DIR", "migrations"),
 		UploadsDir:      get("UPLOADS_DIR", "uploads"),
+		SMTPHost:        get("SMTP_HOST", ""),
+		SMTPPort:        get("SMTP_PORT", "587"),
+		SMTPUser:        get("SMTP_USER", ""),
+		SMTPPass:        get("SMTP_PASS", ""),
+		SMTPFrom:        get("SMTP_FROM", ""),
+		AppBaseURL:      get("APP_BASE_URL", ""),
 	}
 }
 

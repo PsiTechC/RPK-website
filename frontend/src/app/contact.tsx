@@ -1,24 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { api } from '../lib/api';
-import { colors, radius, BRAND } from '../lib/theme';
+import { colors } from '../lib/theme';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
+import { ContactPanel } from '../components/ContactPanel';
 import { PhoneField } from '../components/PhoneField';
 import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
 import { DEFAULT_COUNTRY } from '../lib/countries';
 import { vName, vEmail, vPhone, isClean } from '../lib/validate';
-
-const PHONE_RAW = BRAND.phone.replace(/[^\d+]/g, ''); // +971583072132
-const WA = PHONE_RAW.replace('+', '');
-
-const METHODS = [
-  { icon: '📞', label: 'Call us', value: BRAND.phone, url: `tel:${PHONE_RAW}` },
-  { icon: '💬', label: 'WhatsApp', value: BRAND.phone, url: `https://wa.me/${WA}` },
-  { icon: '✉️', label: 'Email', value: BRAND.email, url: `mailto:${BRAND.email}` },
-  { icon: '📍', label: 'Visit us', value: BRAND.address, url: '' },
-];
 
 export default function Contact() {
   const { width } = useWindowDimensions();
@@ -75,13 +66,6 @@ export default function Contact() {
     }
   }
 
-  function openWhatsApp() {
-    const text = encodeURIComponent(
-      `Hello RPK, I'd like to inquire${form.product ? ` about "${form.product}"` : ''}.`
-    );
-    Linking.openURL(`https://wa.me/${WA}?text=${text}`);
-  }
-
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 26 }}>
@@ -89,19 +73,8 @@ export default function Contact() {
 
         <View style={[styles.layout, stacked && { flexDirection: 'column' }]}>
           {/* contact methods */}
-          <View style={[{ gap: 12 }, stacked ? { width: '100%' } : { width: 340 }]}>
-            {METHODS.map((m) => (
-              <Pressable key={m.label} onPress={() => m.url && Linking.openURL(m.url)} disabled={!m.url}>
-                <Card style={styles.method}>
-                  <Text style={{ fontSize: 24 }}>{m.icon}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.methodLabel}>{m.label}</Text>
-                    <Text style={styles.methodValue}>{m.value}</Text>
-                  </View>
-                </Card>
-              </Pressable>
-            ))}
-            <Button label="💬 Chat on WhatsApp" variant="navy" onPress={openWhatsApp} />
+          <View style={stacked ? { width: '100%' } : { width: 340 }}>
+            <ContactPanel product={form.product} />
           </View>
 
           {/* inquiry form / success */}
@@ -146,9 +119,6 @@ export default function Contact() {
 
 const styles = StyleSheet.create({
   layout: { flexDirection: 'row', gap: 22, alignItems: 'flex-start' },
-  method: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
-  methodLabel: { color: colors.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  methodValue: { color: colors.ink, fontSize: 15, fontWeight: '700', marginTop: 2 },
   formTitle: { fontWeight: '900', fontSize: 18, color: colors.ink },
   productPill: { alignSelf: 'flex-start', backgroundColor: colors.cream, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.border },
   productPillText: { color: colors.orangeDark, fontWeight: '800', fontSize: 13 },

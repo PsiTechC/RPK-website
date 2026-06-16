@@ -5,14 +5,14 @@ import { api, Product, Category, imageUri } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { Button, Field } from '../ui';
 import { useToast } from '../Toast';
-import { vRequired, vPrice, vStock, vImageUrl, isClean } from '../../lib/validate';
+import { vProductName, vPrice, vStock, vImageUrl, isClean } from '../../lib/validate';
 
 const UNITS = ['KG', 'GM', 'LTR', 'ML', 'BAG', 'PKT', 'BOX', 'DOZEN', 'CAT', 'PC', 'TIN'];
 
 export function ProductForm({
   token,
   product,
-  categories,
+  categories: initialCategories,
   onClose,
   onSaved,
 }: {
@@ -22,6 +22,12 @@ export function ProductForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  // Local copy so a category created inline appears immediately and stays
+  // selectable without closing the modal.
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCat, setNewCat] = useState('');
+  const [savingCat, setSavingCat] = useState(false);
   const [form, setForm] = useState({
     name: product?.name || '',
     category_id: product?.category_id ?? (categories[0]?.id ?? null),
@@ -50,9 +56,48 @@ export function ProductForm({
     setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
   };
 
+  // Price: digits + a single decimal point only. Stock: digits only.
+  const setPrice = (t: string) => {
+    const clean = t.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+    setForm((f) => ({ ...f, price: clean }));
+    setErrors((e) => (e.price ? { ...e, price: undefined } : e));
+  };
+  const setStock = (t: string) => {
+    const clean = t.replace(/\D/g, '');
+    setForm((f) => ({ ...f, stock: clean }));
+    setErrors((e) => (e.stock ? { ...e, stock: undefined } : e));
+  };
+
+  // Create a category inline, then select it for this product.
+  async function addCategory() {
+    const name = newCat.trim();
+    if (!name) return;
+    const existing = categories.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setForm((f) => ({ ...f, category_id: existing.id }));
+      setAddingCat(false);
+      setNewCat('');
+      return;
+    }
+    setSavingCat(true);
+    try {
+      const cat = await api.admin.createCategory({ name }, token);
+      setCategories((cs) => [...cs, cat]);
+      setForm((f) => ({ ...f, category_id: cat.id }));
+      setErrors((e) => ({ ...e, category_id: undefined }));
+      setAddingCat(false);
+      setNewCat('');
+      toast(`Category “${cat.name}” added`, 'success');
+    } catch (e: any) {
+      toast(e.message || 'Could not add category', 'error');
+    } finally {
+      setSavingCat(false);
+    }
+  }
+
   function validate(): boolean {
     const e: Record<string, string | null> = {
-      name: vRequired(form.name, 'Product name'),
+      name: vProductName(form.name),
       price: vPrice(form.price),
       stock: vStock(form.stock),
       image_url: vImageUrl(form.image_url),
@@ -145,7 +190,29 @@ export function ProductForm({
                   <Text style={[styles.chipText, form.category_id === c.id && { color: colors.white }]}>{c.name}</Text>
                 </Pressable>
               ))}
+              {/* + New category — reveals an inline name input */}
+              <Pressable style={[styles.chip, styles.chipAdd]} onPress={() => setAddingCat((v) => !v)}>
+                <Text style={[styles.chipText, { color: colors.orange }]}>{addingCat ? '✕ Cancel' : '+ New category'}</Text>
+              </Pressable>
             </View>
+
+            {addingCat && (
+              <View style={styles.newCatRow}>
+                <Field
+                  style={{ flex: 1 }}
+                  value={newCat}
+                  onChangeText={setNewCat}
+                  placeholder="New category name"
+                />
+                <Button
+                  label={savingCat ? 'Adding…' : 'Add'}
+                  onPress={addCategory}
+                  disabled={savingCat || !newCat.trim()}
+                  style={{ paddingVertical: 9, paddingHorizontal: 18 }}
+                />
+              </View>
+            )}
+
             {!!errors.category_id && <Text style={styles.fieldError}>{errors.category_id}</Text>}
           </View>
 
@@ -161,8 +228,8 @@ export function ProductForm({
           </View>
 
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Field style={{ flex: 1 }} label="Price (AED)" value={form.price} onChangeText={set('price')} placeholder="0.00" keyboardType="decimal-pad" error={errors.price} />
-            <Field style={{ flex: 1 }} label="Stock" value={form.stock} onChangeText={set('stock')} placeholder="100" keyboardType="number-pad" error={errors.stock} />
+            <Field style={{ flex: 1 }} label="Price (AED)" value={form.price} onChangeText={setPrice} placeholder="0.00" keyboardType="decimal-pad" error={errors.price} />
+            <Field style={{ flex: 1 }} label="Stock" value={form.stock} onChangeText={setStock} placeholder="100" keyboardType="number-pad" error={errors.stock} />
           </View>
 
           <View style={{ gap: 8 }}>
@@ -254,6 +321,8 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#F1F2F5' },
   chipActive: { backgroundColor: colors.orange },
   chipText: { fontWeight: '700', color: colors.text, fontSize: 13 },
+  chipAdd: { backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.orange, borderStyle: 'dashed' },
+  newCatRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 4 },
   uploadRow: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
   preview: { width: 92, height: 92, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cream, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   previewEmpty: { color: colors.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },

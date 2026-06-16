@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { colors, radius, shadow } from '../lib/theme';
@@ -62,7 +63,8 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
               router.push(`/contact?product=${encodeURIComponent(product.name)}`);
             }}
           >
-            <Text style={styles.inquiryText}>📞 Call to Inquiry</Text>
+            <Ionicons name="call" size={15} color={colors.white} />
+            <Text style={styles.inquiryText}>Call to Inquiry</Text>
           </Pressable>
           <Pressable
             style={styles.add}
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 14, fontWeight: '700', minHeight: 38 },
   noRating: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   actions: { gap: 8, marginTop: 8 },
-  inquiry: { backgroundColor: colors.orange, paddingVertical: 9, borderRadius: 999, alignItems: 'center' },
+  inquiry: { backgroundColor: colors.orange, paddingVertical: 9, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
   inquiryText: { color: colors.white, fontWeight: '800', fontSize: 13 },
   add: { borderWidth: 1.5, borderColor: colors.border, paddingVertical: 8, borderRadius: 999, alignItems: 'center' },
   addText: { color: colors.ink, fontWeight: '700', fontSize: 13 },

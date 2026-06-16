@@ -147,6 +147,38 @@ func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, orders)
 }
 
+// handleMyOrder returns one order (with line items) belonging to the logged-in
+// user — powers the "view details" modal on the account page.
+func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserIDFrom(r.Context())
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var o models.Order
+	err := s.pool.QueryRow(r.Context(),
+		`SELECT id, user_id, customer_name, customer_email, customer_phone, shipping_address,
+		        status, subtotal, currency, payment_status, payment_ref, created_at, updated_at
+		 FROM orders WHERE id=$1 AND user_id=$2`, id, uid,
+	).Scan(&o.ID, &o.UserID, &o.CustomerName, &o.CustomerEmail, &o.CustomerPhone, &o.ShippingAddress,
+		&o.Status, &o.Subtotal, &o.Currency, &o.PaymentStatus, &o.PaymentRef, &o.CreatedAt, &o.UpdatedAt)
+	if err != nil {
+		writeErr(w, 404, "order not found")
+		return
+	}
+	rows, err := s.pool.Query(r.Context(),
+		`SELECT id, order_id, product_id, product_name, unit, unit_price, quantity, line_total
+		 FROM order_items WHERE order_id=$1`, id)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var it models.OrderItem
+			if err := rows.Scan(&it.ID, &it.OrderID, &it.ProductID, &it.ProductName, &it.Unit,
+				&it.UnitPrice, &it.Quantity, &it.LineTotal); err == nil {
+				o.Items = append(o.Items, it)
+			}
+		}
+	}
+	writeJSON(w, 200, o)
+}
+
 func (s *Server) handleAdminListOrders(w http.ResponseWriter, r *http.Request) {
 	where := ""
 	args := []interface{}{}

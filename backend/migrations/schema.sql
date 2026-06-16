@@ -123,3 +123,14 @@ ALTER TABLE import_export_registrations ADD COLUMN IF NOT EXISTS items JSONB NOT
 
 -- Admin-controlled display order for products (categories already have sort_order)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+
+-- Password reset tokens (forgot-password flow)
+CREATE TABLE IF NOT EXISTS password_resets (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  TEXT NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used        BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);

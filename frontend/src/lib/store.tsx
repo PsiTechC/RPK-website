@@ -39,8 +39,8 @@ type AppState = {
   cartCount: number;
   cartTotal: number;
   ready: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (body: { name: string; email: string; password: string; phone?: string; role?: string }) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (body: { name: string; email: string; password: string; phone?: string; role?: string }) => Promise<User>;
   logout: () => void;
   addToCart: (p: Product, qty?: number) => void;
   setQty: (productId: number, qty: number) => void;
@@ -104,10 +104,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       async login(email, password) {
         const r = await api.login({ email, password });
         applyAuth(r.token, r.user);
+        return r.user;
       },
       async register(body) {
         const r = await api.register(body);
         applyAuth(r.token, r.user);
+        return r.user;
       },
       logout() {
         storage.del('rpk_token');

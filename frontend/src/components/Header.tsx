@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Logo } from './Logo';
+import { NotificationBell } from './NotificationBell';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home-outline' },
@@ -58,6 +59,7 @@ export function Header() {
 
         {/* Right — actions */}
         <View style={styles.actions}>
+          <NotificationBell />
           <Pressable style={styles.cartBtn} onPress={() => go('/cart')}>
             <Ionicons name="cart-outline" size={25} color={colors.ink} />
             {cartCount > 0 && (
@@ -114,7 +116,7 @@ export function Header() {
             </View>
             <View style={styles.roleChip}><Text style={styles.roleChipText}>{user.role}</Text></View>
             <View style={styles.ddDivider} />
-            <DDItem icon="person-outline" label="My account" onPress={() => go('/account')} />
+            {user.role !== 'admin' && <DDItem icon="person-outline" label="My account" onPress={() => go('/account')} />}
             {user.role === 'admin' && <DDItem icon="construct-outline" label="Admin dashboard" onPress={() => go('/admin')} />}
             <DDItem icon="cart-outline" label="My cart" onPress={() => go('/cart')} />
             <View style={styles.ddDivider} />
@@ -147,9 +149,11 @@ export function Header() {
                     <Text style={styles.ddEmail} numberOfLines={1}>{user.email}</Text>
                   </View>
                 </View>
-                <Pressable style={[styles.mItem, styles.mItemRow]} onPress={() => go('/account')}>
-                  <Ionicons name="person-outline" size={20} color={colors.text} /><Text style={styles.mItemText}>My account</Text>
-                </Pressable>
+                {user.role !== 'admin' && (
+                  <Pressable style={[styles.mItem, styles.mItemRow]} onPress={() => go('/account')}>
+                    <Ionicons name="person-outline" size={20} color={colors.text} /><Text style={styles.mItemText}>My account</Text>
+                  </Pressable>
+                )}
                 {user.role === 'admin' && (
                   <Pressable style={[styles.mItem, styles.mItemRow]} onPress={() => go('/admin')}>
                     <Ionicons name="construct-outline" size={20} color={colors.text} /><Text style={styles.mItemText}>Admin dashboard</Text>

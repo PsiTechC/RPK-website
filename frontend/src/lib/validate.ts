@@ -20,6 +20,16 @@ export function vEmail(v: string): string | null {
   return EMAIL_RE.test(t) ? null : 'Enter a valid email address';
 }
 
+// Product name: must contain letters (digits allowed within, e.g. "Rice 1121"),
+// but a purely numeric name like "65678" is rejected.
+export function vProductName(v: string): string | null {
+  const t = (v || '').trim();
+  if (!t) return 'Product name is required';
+  if (t.length < 2) return 'Product name must be at least 2 characters';
+  if (!/\p{L}/u.test(t)) return 'Product name must include letters, not just numbers';
+  return null;
+}
+
 // Phone: accepts digits with optional + and spaces/dashes/parens; 7–15 digits.
 export function vPhone(v: string, required = false): string | null {
   const t = (v || '').trim();

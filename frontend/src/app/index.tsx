@@ -51,6 +51,10 @@ export default function Home() {
       .filter((g) => g.items.length > 0);
   }, [categories, products]);
 
+  // Only categories that actually have products show on the storefront, so an
+  // emptied/removed category disappears from "Shop by Category" too.
+  const activeCategories = useMemo(() => grouped.map((g) => g.category), [grouped]);
+
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       {/* HERO */}
@@ -85,7 +89,7 @@ export default function Home() {
           <FadeInUp delay={600}>
             <View style={styles.trustRow}>
               <Trust n={`${products.length || '70'}+`} l="Products" />
-              <Trust n={`${categories.length || '11'}`} l="Categories" />
+              <Trust n={`${activeCategories.length || categories.length || '11'}`} l="Categories" />
               <Trust n={`${Math.max(countries, 20)}`} l="Countries" />
             </View>
           </FadeInUp>
@@ -99,7 +103,7 @@ export default function Home() {
           {loading ? (
             <ActivityIndicator color={colors.red} />
           ) : (
-            <CategoryCarousel categories={categories} itemW={carouselItemW} viewportW={contentW} gap={22} />
+            <CategoryCarousel categories={activeCategories} itemW={carouselItemW} viewportW={contentW} gap={22} />
           )}
         </Reveal>
       </Container>

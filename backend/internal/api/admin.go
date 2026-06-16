@@ -1,6 +1,32 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/rpkfood/backend/internal/models"
+)
+
+// handleAdminListCustomers returns all non-admin users for the Customers tab.
+func (s *Server) handleAdminListCustomers(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pool.Query(r.Context(),
+		`SELECT id, name, email, phone, role, created_at FROM users WHERE role <> 'admin' ORDER BY created_at DESC`)
+	if err != nil {
+		writeErr(w, 500, "query failed")
+		return
+	}
+	defer rows.Close()
+
+	out := []models.User{}
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.Role, &u.CreatedAt); err != nil {
+			writeErr(w, 500, "scan failed")
+			return
+		}
+		out = append(out, u)
+	}
+	writeJSON(w, 200, out)
+}
 
 // handleAdminStats powers the admin dashboard cards & charts.
 func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {

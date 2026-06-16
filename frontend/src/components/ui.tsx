@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
 
 export function Container({ children, style, max = 1600 }: { children: React.ReactNode; style?: ViewStyle; max?: number }) {
@@ -27,12 +28,14 @@ export function Button({
   variant = 'primary',
   style,
   disabled,
+  icon,
 }: {
   label: string;
   onPress?: () => void;
   variant?: 'primary' | 'navy' | 'outline' | 'danger' | 'ghost';
   style?: ViewStyle;
   disabled?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const v = btnVariants[variant];
   return (
@@ -41,6 +44,7 @@ export function Button({
       disabled={disabled}
       style={({ pressed }) => [styles.btn, v.btn, disabled && { opacity: 0.5 }, pressed && { opacity: 0.85 }, style]}
     >
+      {!!icon && <Ionicons name={icon} size={16} color={v.text.color as string} />}
       <Text style={[styles.btnText, v.text]}>{label}</Text>
     </Pressable>
   );
@@ -67,19 +71,38 @@ export function Field({
   style?: ViewStyle;
   error?: string | null;
 }) {
+  const [show, setShow] = useState(false);
+  const isSecure = !!secureTextEntry;
   return (
     <View style={[{ gap: 6 }, style]}>
       {!!label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.muted}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        style={[styles.input, multiline && { height: 96, textAlignVertical: 'top', paddingTop: 10 }, !!error && styles.inputError]}
-      />
+      <View style={styles.inputWrap}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.muted}
+          secureTextEntry={isSecure && !show}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          style={[
+            styles.input,
+            multiline && { height: 96, textAlignVertical: 'top', paddingTop: 10 },
+            isSecure && { paddingRight: 46 },
+            !!error && styles.inputError,
+          ]}
+        />
+        {isSecure && (
+          <Pressable
+            style={styles.eye}
+            onPress={() => setShow((s) => !s)}
+            hitSlop={8}
+            accessibilityLabel={show ? 'Hide password' : 'Show password'}
+          >
+            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.muted} />
+          </Pressable>
+        )}
+      </View>
       {!!error && <Text style={styles.fieldError}>{error}</Text>}
     </View>
   );
@@ -119,7 +142,7 @@ const styles = StyleSheet.create({
   accent: { width: 5, height: 22, borderRadius: 3, backgroundColor: colors.orange },
   title: { fontSize: 22, fontWeight: '900', color: colors.ink },
   subtitle: { color: colors.muted, marginTop: 4, fontSize: 14 },
-  btn: { paddingHorizontal: 18, paddingVertical: 12, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  btn: { paddingHorizontal: 18, paddingVertical: 12, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { fontWeight: '800', fontSize: 15 },
   label: { color: colors.text, fontWeight: '700', fontSize: 13 },
   input: {
@@ -135,5 +158,7 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: colors.red, backgroundColor: '#FFF7F6' },
   fieldError: { color: colors.red, fontSize: 12, fontWeight: '600' },
+  inputWrap: { position: 'relative', justifyContent: 'center' },
+  eye: { position: 'absolute', right: 6, top: 0, bottom: 0, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 18, ...shadow.soft },
 });

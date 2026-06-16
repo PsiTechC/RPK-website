@@ -59,7 +59,10 @@ func (s *Server) handleCreateRegistration(w http.ResponseWriter, r *http.Request
 
 func (s *Server) handleMyRegistrations(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserIDFrom(r.Context())
-	regs, err := s.queryRegistrations(r, `WHERE user_id=$1`, uid)
+	// Show registrations linked to this user, OR submitted with their email
+	// (covers ones created while logged out / before user_id linking existed).
+	regs, err := s.queryRegistrations(r,
+		`WHERE user_id=$1 OR lower(email) = (SELECT lower(email) FROM users WHERE id=$1)`, uid)
 	if err != nil {
 		writeErr(w, 500, "query failed")
 		return

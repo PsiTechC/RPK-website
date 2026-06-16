@@ -66,6 +66,7 @@ export type User = {
   email: string;
   phone: string;
   role: 'customer' | 'business' | 'admin';
+  created_at?: string;
 };
 
 export type OrderItem = {
@@ -158,10 +159,14 @@ export const api = {
   login: (body: { email: string; password: string }) =>
     request<{ token: string; user: User }>('/api/auth/login', { method: 'POST', body }),
   me: (token: string) => request<User>('/api/auth/me', { token }),
+  forgotPassword: (email: string) => request<{ status: string }>('/api/auth/forgot-password', { method: 'POST', body: { email } }),
+  resetPassword: (token: string, password: string) =>
+    request<{ status: string }>('/api/auth/reset-password', { method: 'POST', body: { token, password } }),
 
   createOrder: (body: any, token?: string | null) =>
     request<any>('/api/orders', { method: 'POST', body, token }),
   myOrders: (token: string) => request<Order[]>('/api/my/orders', { token }),
+  myOrder: (id: number, token: string) => request<Order>(`/api/my/orders/${id}`, { token }),
 
   createRegistration: (body: any, token?: string | null) =>
     request<any>('/api/registrations', { method: 'POST', body, token }),
@@ -182,6 +187,7 @@ export const api = {
   // admin
   admin: {
     stats: (token: string) => request<any>('/api/admin/stats', { token }),
+    customers: (token: string) => request<User[]>('/api/admin/customers', { token }),
     allProducts: (token: string) => request<Product[]>('/api/products?all=1', { token }),
     createProduct: (body: any, token: string) => request<any>('/api/admin/products', { method: 'POST', body, token }),
     updateProduct: (id: number, body: any, token: string) =>
@@ -207,11 +213,14 @@ export const api = {
       return data;
     },
     orders: (token: string) => request<Order[]>('/api/admin/orders', { token }),
+    getOrder: (id: number, token: string) => request<Order>(`/api/admin/orders/${id}`, { token }),
     updateOrder: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/orders/${id}`, { method: 'PATCH', body, token }),
     registrations: (token: string) => request<Registration[]>('/api/admin/registrations', { token }),
     updateRegistration: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/registrations/${id}`, { method: 'PATCH', body, token }),
+    createCategory: (body: { name: string }, token: string) => request<Category>('/api/admin/categories', { method: 'POST', body, token }),
+    deleteCategory: (id: number, token: string) => request<any>(`/api/admin/categories/${id}`, { method: 'DELETE', token }),
     reorderCategories: (ids: number[], token: string) => request<any>('/api/admin/categories/reorder', { method: 'PATCH', body: { ids }, token }),
     reorderProducts: (ids: number[], token: string) => request<any>('/api/admin/products/reorder', { method: 'PATCH', body: { ids }, token }),
     deleteReview: (id: number, token: string) => request<any>(`/api/admin/reviews/${id}`, { method: 'DELETE', token }),

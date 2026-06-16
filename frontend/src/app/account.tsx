@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { api, Order, Registration } from '../lib/api';
+import { api, Order } from '../lib/api';
 import { colors, radius } from '../lib/theme';
 import { useApp, money } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Card, Badge } from '../components/ui';
+import { OrderDetailModal } from '../components/OrderDetailModal';
 
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
@@ -13,20 +15,34 @@ const statusTone: Record<string, any> = {
   paid: 'green', unpaid: 'muted',
 };
 
+// Full width on desktop; horizontal scroll on narrow screens so columns never squash.
+function Tbl({ fits, children }: { fits: boolean; children: React.ReactNode }) {
+  return fits ? <>{children}</> : <ScrollView horizontal showsHorizontalScrollIndicator={false}>{children}</ScrollView>;
+}
+
 export default function Account() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const fits = width >= 720; // below this, tables scroll horizontally
   const { user, token, ready, logout } = useApp();
+  const isAdmin = user?.role === 'admin'; // only the admin sees amounts
   const [orders, setOrders] = useState<Order[]>([]);
-  const [regs, setRegs] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<Order | null>(null);
+
+  async function viewOrder(id: number) {
+    if (!token) return;
+    try {
+      setDetail(await api.myOrder(id, token));
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
-    Promise.all([api.myOrders(token), api.myRegistrations(token)])
-      .then(([o, r]) => {
-        setOrders(o);
-        setRegs(r);
-      })
+    api.myOrders(token)
+      .then(setOrders)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [token]);
@@ -65,43 +81,38 @@ export default function Account() {
         ) : orders.length === 0 ? (
           <Text style={styles.empty}>No orders yet.</Text>
         ) : (
-          <View style={{ gap: 10 }}>
-            {orders.map((o) => (
-              <Card key={o.id} style={styles.rowCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>Order #{o.id}</Text>
-                  <Text style={styles.rowMeta}>{new Date(o.created_at).toLocaleDateString()} · {money(o.subtotal, o.currency)}</Text>
+          <Tbl fits={fits}>
+            <View style={[styles.table, fits ? styles.tableFull : styles.tableMin]}>
+              <View style={[styles.tr, styles.thead]}>
+                <Text style={[styles.th, styles.cOrder]}>Order</Text>
+                <Text style={[styles.th, styles.cDate]}>Placed</Text>
+                <Text style={[styles.th, styles.cShip]}>Ship to</Text>
+                {isAdmin && <Text style={[styles.th, styles.cAmt]}>Amount</Text>}
+                <Text style={[styles.th, styles.cStatus]}>Status</Text>
+                <Text style={[styles.th, styles.cStatus]}>Payment</Text>
+                <Text style={[styles.th, styles.cView]}>View</Text>
+              </View>
+              {orders.map((o, i) => (
+                <View key={o.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+                  <Text style={[styles.td, styles.tdStrong, styles.cOrder]}>{o.id}</Text>
+                  <Text style={[styles.td, styles.cDate]}>{new Date(o.created_at).toLocaleDateString()}</Text>
+                  <Text style={[styles.td, styles.cShip]} numberOfLines={1}>{o.shipping_address || '—'}</Text>
+                  {isAdmin && <Text style={[styles.td, styles.cAmt]}>{money(o.subtotal, o.currency)}</Text>}
+                  <View style={styles.cStatus}><Badge text={o.status} tone={statusTone[o.status] || 'muted'} /></View>
+                  <View style={styles.cStatus}><Badge text={o.payment_status} tone={statusTone[o.payment_status] || 'muted'} /></View>
+                  <View style={styles.cView}>
+                    <Pressable style={styles.eyeBtn} onPress={() => viewOrder(o.id)} accessibilityLabel={`View order ${o.id}`}>
+                      <Ionicons name="eye-outline" size={18} color={colors.navy} />
+                    </Pressable>
+                  </View>
                 </View>
-                <View style={{ gap: 6, alignItems: 'flex-end' }}>
-                  <Badge text={o.status} tone={statusTone[o.status] || 'muted'} />
-                  <Badge text={o.payment_status} tone={statusTone[o.payment_status] || 'muted'} />
-                </View>
-              </Card>
-            ))}
-          </View>
+              ))}
+            </View>
+          </Tbl>
         )}
 
-        <View style={{ height: 26 }} />
-        <SectionTitle
-          title="My Import/Export Registrations"
-          subtitle={`${regs.length} application${regs.length === 1 ? '' : 's'}`}
-          action={<Button label="New registration" variant="outline" onPress={() => router.push('/import-export')} />}
-        />
-        {regs.length === 0 ? (
-          <Text style={styles.empty}>No registrations yet.</Text>
-        ) : (
-          <View style={{ gap: 10 }}>
-            {regs.map((r) => (
-              <Card key={r.id} style={styles.rowCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>{r.company_name}</Text>
-                  <Text style={styles.rowMeta}>{r.business_type} · {r.country || '—'} · #{r.id}</Text>
-                </View>
-                <Badge text={r.status} tone={statusTone[r.status] || 'muted'} />
-              </Card>
-            ))}
-          </View>
-        )}
+        {detail && <OrderDetailModal order={detail} onClose={() => setDetail(null)} showPrices={isAdmin} />}
+
       </Container>
       <Footer />
     </ScrollView>
@@ -114,8 +125,28 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.white, fontWeight: '900', fontSize: 24 },
   name: { fontSize: 20, fontWeight: '900', color: colors.ink },
   email: { color: colors.muted, marginBottom: 6 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  rowTitle: { fontWeight: '800', color: colors.ink, fontSize: 15 },
-  rowMeta: { color: colors.muted, fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
   empty: { color: colors.muted, fontSize: 14 },
+  // table
+  table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.white },
+  tableFull: { width: '100%' },
+  tableMin: { minWidth: 820 },
+  tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
+  trAlt: { backgroundColor: '#FCFCFD' },
+  th: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  td: { fontSize: 14, color: colors.text },
+  tdStrong: { fontWeight: '800', color: colors.ink },
+  // order columns
+  cOrder: { width: 70 },
+  cDate: { width: 110 },
+  cShip: { flex: 1, minWidth: 160 },
+  cAmt: { width: 130 },
+  cStatus: { width: 118 },
+  // registration columns
+  cApp: { width: 70 },
+  cCompany: { flex: 1, minWidth: 150 },
+  cType: { width: 110, textTransform: 'capitalize' },
+  cCountry: { width: 130 },
+  cView: { width: 56, alignItems: 'center' },
+  eyeBtn: { width: 36, height: 36, borderRadius: 999, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.offWhite },
 });

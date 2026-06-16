@@ -45,13 +45,15 @@ export default function Login() {
     if (!validate()) return;
     setBusy(true);
     try {
+      let signedIn;
       if (mode === 'login') {
-        await login(form.email, form.password);
+        signedIn = await login(form.email, form.password);
       } else {
         const fullPhone = form.phone ? `${country.dial} ${form.phone}` : '';
-        await register({ name: form.name, email: form.email, password: form.password, phone: fullPhone, role });
+        signedIn = await register({ name: form.name, email: form.email, password: form.password, phone: fullPhone, role });
       }
-      router.replace('/account');
+      // Admins land on the dashboard; everyone else on the home page.
+      router.replace(signedIn.role === 'admin' ? '/admin' : '/');
     } catch (e: any) {
       setError(e.message || 'Something went wrong.');
     } finally {
@@ -94,6 +96,12 @@ export default function Login() {
           <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
           <Field label="Password" value={form.password} onChangeText={set('password')} placeholder="••••••" secureTextEntry error={errors.password} />
 
+          {mode === 'login' && (
+            <Text style={styles.forgot} onPress={() => router.push('/forgot-password')}>
+              Forgot password?
+            </Text>
+          )}
+
           {!!error && <Text style={styles.error}>{error}</Text>}
           <Button label={busy ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'} onPress={submit} disabled={busy} />
 
@@ -134,6 +142,7 @@ const styles = StyleSheet.create({
   roleLabel: { fontWeight: '800', color: colors.text },
   roleDesc: { color: colors.muted, fontSize: 12, marginTop: 2 },
   error: { color: colors.red, fontSize: 13 },
+  forgot: { color: colors.navy, fontWeight: '700', fontSize: 13, textAlign: 'right', marginTop: -4 },
   alt: { textAlign: 'center', color: colors.muted, fontSize: 13 },
   altLink: { color: colors.navy, fontWeight: '800' },
 });
