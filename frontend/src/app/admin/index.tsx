@@ -8,6 +8,7 @@ import { useApp, money } from '../../lib/store';
 import { Container, SectionTitle, Button, Card, Badge } from '../../components/ui';
 import { ProductForm } from '../../components/admin/ProductForm';
 import { ProductThumb } from '../../components/admin/ProductThumb';
+import { Logo } from '../../components/Logo';
 import { useToast } from '../../components/Toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Donut } from '../../components/Donut';
@@ -57,10 +58,23 @@ function Tbl({ fits, children }: { fits: boolean; children: React.ReactNode }) {
   return fits ? <>{children}</> : <ScrollView horizontal showsHorizontalScrollIndicator={false}>{children}</ScrollView>;
 }
 
+const TAB_LABELS: Record<Tab, string> = {
+  dashboard: 'Dashboard',
+  products: 'Products',
+  arrange: 'Arrange',
+  orders: 'Orders',
+  customers: 'Customers',
+  registrations: 'Registrations',
+  inquiries: 'Inquiries',
+  archived: 'Archived',
+};
+
 export default function Admin() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string }>();
-  const { user, token, ready } = useApp();
+  const { user, token, ready, logout } = useApp();
+  const { width } = useWindowDimensions();
+  const compact = width < 900;
   const [tab, setTab] = useState<Tab>(() =>
     params.tab && ALL_TABS.includes(params.tab as Tab) ? (params.tab as Tab) : 'dashboard'
   );
@@ -84,36 +98,62 @@ export default function Admin() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }}>
-      <Container style={{ marginTop: 22 }}>
-        <View style={styles.titleRow}>
-          <SectionTitle title="Admin Dashboard" subtitle="Manage products, orders & registrations" />
-          <Text style={styles.updated}>Updated just now · AED · Dubai</Text>
-        </View>
-        <View style={styles.tabBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {(['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'archived'] as Tab[]).map((t) => (
-            <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
-              <Ionicons name={TAB_ICONS[t]} size={15} color={tab === t ? colors.white : colors.muted} />
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
-            </Pressable>
-          ))}
+    <View style={styles.shell}>
+      {/* Sidebar */}
+      <View style={[styles.sidebar, { width: compact ? 64 : 232 }]}>
+        <Pressable style={styles.brand} onPress={() => router.push('/')}>
+          <Logo size={compact ? 26 : 30} />
+        </Pressable>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 6, gap: 2 }} showsVerticalScrollIndicator={false}>
+          {ALL_TABS.map((t) => {
+            const active = tab === t;
+            return (
+              <Pressable key={t} style={[styles.navItem, compact && styles.navItemCompact, active && styles.navItemActive]} onPress={() => setTab(t)}>
+                {active && <View style={styles.navActiveBar} />}
+                <Ionicons name={TAB_ICONS[t]} size={20} color={active ? colors.red : colors.muted} />
+                {!compact && <Text style={[styles.navLabel, active && styles.navLabelActive]}>{TAB_LABELS[t]}</Text>}
+              </Pressable>
+            );
+          })}
         </ScrollView>
+        <View style={styles.sideFooter}>
+          <Pressable style={[styles.navItem, compact && styles.navItemCompact]} onPress={() => router.push('/')}>
+            <Ionicons name="open-outline" size={20} color={colors.muted} />
+            {!compact && <Text style={styles.navLabel}>View site</Text>}
+          </Pressable>
+          <Pressable style={[styles.navItem, compact && styles.navItemCompact]} onPress={() => { logout(); router.replace('/'); }}>
+            <Ionicons name="log-out-outline" size={20} color={colors.red} />
+            {!compact && <Text style={[styles.navLabel, { color: colors.red }]}>Log out</Text>}
+          </Pressable>
         </View>
+      </View>
 
-        <View style={{ marginTop: 18 }}>
-          {token && tab === 'dashboard' && <Dashboard token={token} onNavigate={setTab} />}
-          {token && tab === 'products' && <Products token={token} />}
-          {token && tab === 'arrange' && <Arrange token={token} />}
-          {token && tab === 'orders' && <Orders token={token} />}
-          {token && tab === 'customers' && <Customers token={token} />}
-          {token && tab === 'registrations' && <Registrations token={token} />}
-          {token && tab === 'inquiries' && <Inquiries token={token} />}
-          {token && tab === 'archived' && <Archived token={token} />}
+      {/* Main */}
+      <View style={styles.main}>
+        <View style={styles.topbar}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pageTitle}>{TAB_LABELS[tab]}</Text>
+            <Text style={styles.pageSub}>RPK admin · manage your store</Text>
+          </View>
+          <View style={styles.topRight}>
+            {!compact && <Text style={styles.updated}>Updated just now · AED · Dubai</Text>}
+            <View style={styles.adminAvatar}><Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text></View>
+          </View>
         </View>
-      </Container>
-      <View style={{ height: 60 }} />
-    </ScrollView>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: compact ? 16 : 28, paddingBottom: 64 }}>
+          <View style={{ width: '100%', maxWidth: 1280, alignSelf: 'center' }}>
+            {token && tab === 'dashboard' && <Dashboard token={token} onNavigate={setTab} />}
+            {token && tab === 'products' && <Products token={token} />}
+            {token && tab === 'arrange' && <Arrange token={token} />}
+            {token && tab === 'orders' && <Orders token={token} />}
+            {token && tab === 'customers' && <Customers token={token} />}
+            {token && tab === 'registrations' && <Registrations token={token} />}
+            {token && tab === 'inquiries' && <Inquiries token={token} />}
+            {token && tab === 'archived' && <Archived token={token} />}
+          </View>
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
@@ -1247,6 +1287,24 @@ function Arrange({ token }: { token: string }) {
 }
 
 const styles = StyleSheet.create({
+  // ---- admin shell / sidebar ----
+  shell: { flex: 1, flexDirection: 'row', backgroundColor: colors.soft },
+  sidebar: { backgroundColor: colors.white, borderRightWidth: 1, borderRightColor: colors.border, paddingTop: 14 },
+  brand: { paddingHorizontal: 16, paddingBottom: 14, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.line, alignItems: 'flex-start' },
+  navItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 10, paddingHorizontal: 12, paddingVertical: 11, borderRadius: radius.md, position: 'relative' },
+  navItemCompact: { justifyContent: 'center', marginHorizontal: 8, paddingHorizontal: 0 },
+  navItemActive: { backgroundColor: colors.redSoft },
+  navActiveBar: { position: 'absolute', left: -10, top: 8, bottom: 8, width: 3, borderRadius: 3, backgroundColor: colors.red },
+  navLabel: { color: colors.muted, fontWeight: '700', fontSize: 14 },
+  navLabelActive: { color: colors.red },
+  sideFooter: { borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: 8, gap: 2 },
+  main: { flex: 1 },
+  topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 28, paddingVertical: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  pageTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
+  pageSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  adminAvatar: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
+  adminAvatarText: { color: colors.white, fontWeight: '900', fontSize: 16 },
   tabs: { gap: 8 },
   arrRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 14 },
   arrPos: { width: 26, color: colors.muted, fontWeight: '900', fontSize: 14 },

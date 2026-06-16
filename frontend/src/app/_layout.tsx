@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '../lib/store';
@@ -18,24 +18,34 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
   document.head.appendChild(style);
 }
 
+// Admin routes get their own full-screen dashboard chrome, so the public
+// header / chatbot are hidden there.
+function Shell() {
+  const pathname = usePathname();
+  const isAdmin = (pathname || '').startsWith('/admin');
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {!isAdmin && <Header />}
+      <View style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.bg },
+            animation: 'fade',
+          }}
+        />
+      </View>
+      {!isAdmin && <Chatbot />}
+    </View>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppProvider>
         <ToastProvider>
-          <View style={{ flex: 1, backgroundColor: colors.bg }}>
-            <Header />
-            <View style={{ flex: 1 }}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.bg },
-                  animation: 'fade',
-                }}
-              />
-            </View>
-            <Chatbot />
-          </View>
+          <Shell />
           <StatusBar style="dark" />
         </ToastProvider>
       </AppProvider>
