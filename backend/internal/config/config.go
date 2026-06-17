@@ -23,6 +23,7 @@ type Config struct {
 	SMTPPass   string
 	SMTPFrom   string
 	AppBaseURL string
+	AdminEmail string // inbox that receives inquiry/registration notifications
 }
 
 func Load() Config {
@@ -44,6 +45,7 @@ func Load() Config {
 		SMTPPass:        get("SMTP_PASS", ""),
 		SMTPFrom:        get("SMTP_FROM", ""),
 		AppBaseURL:      get("APP_BASE_URL", ""),
+		AdminEmail:      get("ADMIN_EMAIL", "importexportrpk@gmail.com"),
 	}
 }
 

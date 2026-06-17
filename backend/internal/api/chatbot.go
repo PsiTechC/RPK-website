@@ -20,7 +20,7 @@ type chatReq struct {
 
 const chatSystemPrompt = `You are "RPK Assistant", the friendly customer-support chatbot for
 RPK FOR FOOD TRADING CO. L.L.C — a wholesale & retail food and grocery trading company based in
-Al Mankhool, Dubai, UAE (phone +971 583072132, email dubai.trader12@gmail.com).
+Al Mankhool, Dubai, UAE (phone +971 583072132, email importexportrpk@gmail.com).
 
 You help visitors with:
 - Finding grocery & food products (rice, flour, spices & masala, pulses, oils & ghee, nuts,
@@ -47,7 +47,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{
 			"reply": "Hi! I'm the RPK Assistant. The AI service isn't configured yet — please " +
 				"set ANTHROPIC_API_KEY on the server. Meanwhile you can browse our products by " +
-				"category, or contact us at +971 583072132 / dubai.trader12@gmail.com.",
+				"category, or contact us at +971 583072132 / importexportrpk@gmail.com.",
 		})
 		return
 	}

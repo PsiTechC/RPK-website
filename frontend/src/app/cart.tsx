@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, TextInput, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { api, imageUri } from '../lib/api';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, BRAND } from '../lib/theme';
 import { useApp, money } from '../lib/store';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
@@ -51,11 +51,31 @@ export default function Cart() {
     return true;
   }
 
+  // Open the customer's mail app addressed to the admin inbox, prefilled.
+  function openInquiryMail() {
+    const phone = form.customer_phone ? `${country.dial} ${form.customer_phone}` : '—';
+    const lines = [
+      `Name: ${form.customer_name}`,
+      `Email: ${form.customer_email || '—'}`,
+      `Phone: ${phone}`,
+      '',
+      'Products I am interested in:',
+      ...cart.map((l) => `- ${l.product.name} × ${l.qty} ${l.product.unit}`),
+      '',
+      form.shipping_address ? `Message: ${form.shipping_address}` : '',
+    ];
+    const subject = `Product Inquiry — ${form.customer_name}`;
+    const url = `mailto:${BRAND.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+    Linking.openURL(url).catch(() => {});
+  }
+
   // Prices aren't shown to shoppers — instead of paying, they send an inquiry
-  // with the cart items so our team can follow up with a quote.
+  // with the cart items so our team can follow up with a quote. We open the
+  // customer's email client (to the admin inbox) AND log it in the dashboard.
   async function sendInquiry() {
     setError('');
     if (!validate()) return;
+    openInquiryMail();
     setPlacing(true);
     try {
       await api.createInquiry({
@@ -68,7 +88,9 @@ export default function Cart() {
       setDone(true);
       clearCart();
     } catch (e: any) {
-      setError(e.message || 'Could not send your inquiry.');
+      // Still consider it done — the email draft to the admin was opened.
+      setDone(true);
+      clearCart();
     } finally {
       setPlacing(false);
     }

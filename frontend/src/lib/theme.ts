@@ -55,5 +55,5 @@ export const BRAND = {
   tagline: 'Quality groceries & food, traded worldwide from Dubai.',
   address: '1E5, 1st Floor, Al Fardan Building, Al Mankhool, Dubai, UAE',
   phone: '+971 583072132',
-  email: 'dubai.trader12@gmail.com',
+  email: 'importexportrpk@gmail.com',
 };

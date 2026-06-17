@@ -23,6 +23,7 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [similar, setSimilar] = useState<Product[]>([]);
+  const [more, setMore] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
@@ -33,6 +34,7 @@ export default function ProductDetail() {
     if (!id) return;
     setLoading(true);
     setSimilar([]);
+    setMore([]);
     setReviews([]);
     setMyRating(0);
     setMyComment('');
@@ -66,14 +68,17 @@ export default function ProductDetail() {
     }
   }
 
-  // Other products from the same category (excluding this one).
+  // Similar products (same category) + everything else, like Amazon/Flipkart.
   useEffect(() => {
     if (!product) return;
     api
       .products()
-      .then((all) =>
-        setSimilar(all.filter((p) => p.category_name === product.category_name && p.id !== product.id).slice(0, 6))
-      )
+      .then((all) => {
+        const sim = all.filter((p) => p.category_name === product.category_name && p.id !== product.id).slice(0, 6);
+        setSimilar(sim);
+        const shownIds = new Set([product.id, ...sim.map((p) => p.id)]);
+        setMore(all.filter((p) => !shownIds.has(p.id)));
+      })
       .catch(() => {});
   }, [product?.id]);
 
@@ -177,92 +182,97 @@ export default function ProductDetail() {
         </View>
       </Container>
 
-      {/* Product details — full width below the hero */}
-      {(product.highlights?.length > 0 || !!product.nutrition?.trim() || !!product.seller?.trim()) && (
-        <Container style={{ marginTop: 22 }}>
-          <View style={[styles.detailsRow, stacked && { flexDirection: 'column' }]}>
-            {/* Highlights */}
-            {product.highlights?.length > 0 && (
-              <Card style={[styles.detailCard, { padding: 0, overflow: 'hidden' }]}>
-                <Text style={styles.detailHead}>Highlights</Text>
-                {product.highlights.map((h, i) => (
-                  <View key={i} style={[styles.hlRow, i % 2 === 1 && { backgroundColor: colors.offWhite }]}>
-                    <Text style={styles.hlLabel}>{h.label}</Text>
-                    <Text style={styles.hlValue}>{h.value}</Text>
+      {/* Below hero: left = Nutrition/Highlights/Seller · right = Ratings & Reviews */}
+      <Container style={{ marginTop: 22 }}>
+        <View style={[styles.infoRow, stacked && { flexDirection: 'column' }]}>
+          {/* LEFT column */}
+          {(product.highlights?.length > 0 || !!product.nutrition?.trim() || !!product.seller?.trim()) && (
+            <View style={styles.infoCol}>
+              {!!product.nutrition?.trim() && (
+                <Card style={{ flex: 1 }}>
+                  <Text style={styles.detailHead2}>Nutritional Information</Text>
+                  <View style={styles.nutriGrid}>
+                    {product.nutrition.split('\n').filter((l) => l.trim()).map((l, i) => (
+                      <View key={i} style={styles.bulletRow}>
+                        <View style={styles.bullet} />
+                        <Text style={styles.bulletText}>{l.trim()}</Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </Card>
-            )}
-
-            {/* Nutritional Information */}
-            {!!product.nutrition?.trim() && (
-              <Card style={styles.detailCard}>
-                <Text style={styles.detailHead2}>Nutritional Information</Text>
-                <View style={styles.nutriGrid}>
-                  {product.nutrition.split('\n').filter((l) => l.trim()).map((l, i) => (
-                    <View key={i} style={styles.bulletRow}>
-                      <View style={styles.bullet} />
-                      <Text style={styles.bulletText}>{l.trim()}</Text>
+                </Card>
+              )}
+              {product.highlights?.length > 0 && (
+                <Card style={{ padding: 0, overflow: 'hidden' }}>
+                  <Text style={styles.detailHead}>Highlights</Text>
+                  {product.highlights.map((h, i) => (
+                    <View key={i} style={[styles.hlRow, i % 2 === 1 && { backgroundColor: colors.offWhite }]}>
+                      <Text style={styles.hlLabel}>{h.label}</Text>
+                      <Text style={styles.hlValue}>{h.value}</Text>
                     </View>
                   ))}
-                </View>
-              </Card>
-            )}
-          </View>
-
-          {/* Seller Details */}
-          {!!product.seller?.trim() && (
-            <Card style={{ marginTop: 14 }}>
-              <Text style={styles.detailHead2}>Seller Details</Text>
-              <Text style={styles.sellerText}>{product.seller}</Text>
-            </Card>
-          )}
-        </Container>
-      )}
-
-      {/* Ratings & Reviews */}
-      <Container style={{ marginTop: 40 }}>
-        <SectionTitle
-          title="Ratings & Reviews"
-          subtitle={product.review_count > 0 ? `${product.rating.toFixed(1)} out of 5 · ${product.review_count} review${product.review_count === 1 ? '' : 's'}` : 'Be the first to review this product'}
-        />
-
-        <Card style={{ gap: 10, marginBottom: 16 }}>
-          {user ? (
-            <>
-              <Text style={styles.writeTitle}>Write a review</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Text style={styles.qtyLabel}>Your rating</Text>
-                <Stars value={myRating} size={28} onRate={setMyRating} />
-              </View>
-              <Field label="Comment (optional)" value={myComment} onChangeText={setMyComment} placeholder="Share your experience with this product…" multiline />
-              {!!reviewErr && <Text style={styles.error}>{reviewErr}</Text>}
-              <Button label={posting ? 'Saving…' : 'Submit review'} onPress={submitReview} disabled={posting} style={{ alignSelf: 'flex-start' }} />
-            </>
-          ) : (
-            <View style={styles.loginRow}>
-              <Text style={styles.muted}>Log in to leave a rating and review.</Text>
-              <Button label="Log in" onPress={() => router.push('/login')} />
+                </Card>
+              )}
+              {!!product.seller?.trim() && (
+                <Card>
+                  <Text style={styles.detailHead2}>Seller Details</Text>
+                  <Text style={styles.sellerText}>{product.seller}</Text>
+                </Card>
+              )}
             </View>
           )}
-        </Card>
 
-        {reviews.length === 0 ? (
-          <Text style={styles.muted}>No reviews yet — your feedback helps other buyers.</Text>
-        ) : (
-          <View style={{ gap: 12 }}>
-            {reviews.map((r) => (
-              <Card key={r.id} style={{ gap: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={styles.reviewAuthor}>{r.author_name || 'Customer'}</Text>
-                  <Stars value={r.rating} size={15} />
+          {/* RIGHT column — Ratings & Reviews */}
+          <View style={styles.infoCol}>
+            <Card style={{ gap: 12, flex: 1 }}>
+              <View>
+                <Text style={styles.detailHead2}>Ratings & Reviews</Text>
+                <Text style={[styles.muted, { marginTop: 2 }]}>
+                  {product.review_count > 0
+                    ? `${product.rating.toFixed(1)} out of 5 · ${product.review_count} review${product.review_count === 1 ? '' : 's'}`
+                    : 'Be the first to review this product'}
+                </Text>
+              </View>
+
+              <View style={styles.reviewDivider} />
+
+              {user ? (
+                <View style={{ gap: 10 }}>
+                  <Text style={styles.writeTitle}>Write a review</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Text style={styles.qtyLabel}>Your rating</Text>
+                    <Stars value={myRating} size={26} onRate={setMyRating} />
+                  </View>
+                  <Field label="Comment (optional)" value={myComment} onChangeText={setMyComment} placeholder="Share your experience…" multiline />
+                  {!!reviewErr && <Text style={styles.error}>{reviewErr}</Text>}
+                  <Button label={posting ? 'Saving…' : 'Submit review'} onPress={submitReview} disabled={posting} style={{ alignSelf: 'flex-start' }} />
                 </View>
-                {!!r.comment && <Text style={styles.reviewComment}>{r.comment}</Text>}
-                <Text style={styles.reviewDate}>{new Date(r.created_at).toLocaleDateString()}</Text>
-              </Card>
-            ))}
+              ) : (
+                <View style={styles.loginRow}>
+                  <Text style={styles.muted}>Log in to leave a rating and review.</Text>
+                  <Button label="Log in" onPress={() => router.push('/login')} />
+                </View>
+              )}
+
+              {reviews.length > 0 && (
+                <>
+                  <View style={styles.reviewDivider} />
+                  <View style={{ gap: 14 }}>
+                    {reviews.map((r) => (
+                      <View key={r.id} style={{ gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Text style={styles.reviewAuthor}>{r.author_name || 'Customer'}</Text>
+                          <Stars value={r.rating} size={15} />
+                        </View>
+                        {!!r.comment && <Text style={styles.reviewComment}>{r.comment}</Text>}
+                        <Text style={styles.reviewDate}>{new Date(r.created_at).toLocaleDateString()}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+            </Card>
           </View>
-        )}
+        </View>
       </Container>
 
       {similar.length > 0 && (
@@ -270,6 +280,17 @@ export default function ProductDetail() {
           <SectionTitle title="Similar Products" subtitle={`More from ${product.category_name}`} />
           <View style={[styles.grid, { gap }]}>
             {similar.map((p) => (
+              <ProductCard key={p.id} product={p} width={cardW} />
+            ))}
+          </View>
+        </Container>
+      )}
+
+      {more.length > 0 && (
+        <Container style={{ marginTop: 40 }}>
+          <SectionTitle title="Explore More Products" subtitle="Everything else in our store" />
+          <View style={[styles.grid, { gap }]}>
+            {more.map((p) => (
               <ProductCard key={p.id} product={p} width={cardW} />
             ))}
           </View>
@@ -290,6 +311,9 @@ const styles = StyleSheet.create({
   buyBox: { gap: 14, backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 24, ...shadow.soft },
   detailsRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' },
   detailCard: { flex: 1, minWidth: 240 },
+  infoRow: { flexDirection: 'row', gap: 16, alignItems: 'stretch' },
+  infoCol: { flex: 1, gap: 14, minWidth: 300 },
+  reviewDivider: { height: 1, backgroundColor: colors.border },
   emojiTile: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   name: { fontSize: 28, fontWeight: '900', color: colors.ink },
   price: { fontSize: 26, fontWeight: '900', color: colors.orange },

@@ -84,6 +84,11 @@ export default function Admin() {
     if (params.tab && ALL_TABS.includes(params.tab as Tab)) setTab(params.tab as Tab);
   }, [params.tab]);
 
+  // Products controls live in the topbar, so their state is lifted here.
+  const [prodSearch, setProdSearch] = useState('');
+  const [prodView, setProdView] = useState<'list' | 'grid'>('list');
+  const [prodAddNonce, setProdAddNonce] = useState(0);
+
   if (ready && (!user || user.role !== 'admin')) {
     return (
       <Container style={{ marginTop: 60, maxWidth: 460 }}>
@@ -136,14 +141,45 @@ export default function Admin() {
             <Text style={styles.pageSub}>RPK admin · manage your store</Text>
           </View>
           <View style={styles.topRight}>
-            {!compact && <Text style={styles.updated}>Updated just now · AED · Dubai</Text>}
+            {tab === 'products' && (
+              <>
+                {!compact && (
+                  <View style={styles.topSearch}>
+                    <Ionicons name="search" size={17} color={colors.muted} />
+                    <TextInput
+                      value={prodSearch}
+                      onChangeText={setProdSearch}
+                      placeholder="Search products…"
+                      placeholderTextColor={colors.muted}
+                      style={styles.searchInput}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {prodSearch.length > 0 && (
+                      <Pressable onPress={() => setProdSearch('')} hitSlop={8} accessibilityLabel="Clear search">
+                        <Ionicons name="close-circle" size={17} color={colors.muted} />
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+                <View style={styles.viewToggle}>
+                  <Pressable style={[styles.viewBtn, prodView === 'list' && styles.viewBtnActive]} onPress={() => setProdView('list')} accessibilityLabel="List view">
+                    <Text style={[styles.viewIcon, prodView === 'list' && styles.viewIconActive]}>☰</Text>
+                  </Pressable>
+                  <Pressable style={[styles.viewBtn, prodView === 'grid' && styles.viewBtnActive]} onPress={() => setProdView('grid')} accessibilityLabel="Grid view">
+                    <Text style={[styles.viewIcon, prodView === 'grid' && styles.viewIconActive]}>▦</Text>
+                  </Pressable>
+                </View>
+                <Button label={compact ? '+' : '+ Add product'} onPress={() => setProdAddNonce((n) => n + 1)} style={compact ? { paddingHorizontal: 14 } : undefined} />
+              </>
+            )}
             <View style={styles.adminAvatar}><Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text></View>
           </View>
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: compact ? 16 : 28, paddingBottom: 64 }}>
           <View style={{ width: '100%', maxWidth: 1280, alignSelf: 'center' }}>
             {token && tab === 'dashboard' && <Dashboard token={token} onNavigate={setTab} />}
-            {token && tab === 'products' && <Products token={token} />}
+            {token && tab === 'products' && <Products token={token} search={prodSearch} onSearch={setProdSearch} view={prodView} addNonce={prodAddNonce} />}
             {token && tab === 'arrange' && <Arrange token={token} />}
             {token && tab === 'orders' && <Orders token={token} />}
             {token && tab === 'customers' && <Customers token={token} />}
@@ -369,20 +405,23 @@ function StatCard({ card, onNavigate }: { card: StatCardDef; onNavigate: (t: Tab
 // ---------- Products ----------
 type ProductView = 'list' | 'grid';
 
-function Products({ token }: { token: string }) {
+function Products({ token, search, onSearch, view, addNonce }: { token: string; search: string; onSearch: (t: string) => void; view: ProductView; addNonce: number }) {
   const { width } = useWindowDimensions();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editing, setEditing] = useState<Product | null | undefined>(undefined); // undefined=closed, null=new
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<ProductView>('list');
   const [confirming, setConfirming] = useState<Product | null>(null); // product pending delete
-  const [query, setQuery] = useState('');
   const [selectedCat, setSelectedCat] = useState<string>('all'); // category sidebar filter
   const toast = useToast();
   const stacked = width < 820;
 
-  const q = query.trim().toLowerCase();
+  // "+ Add product" lives in the topbar; opening it bumps addNonce.
+  useEffect(() => {
+    if (addNonce > 0) setEditing(null);
+  }, [addNonce]);
+
+  const q = search.trim().toLowerCase();
   const filtered = products.filter((p) => {
     const inCat = selectedCat === 'all' || p.category_name === selectedCat;
     const inSearch = !q || p.name.toLowerCase().includes(q) || (p.category_name || '').toLowerCase().includes(q);
@@ -418,9 +457,9 @@ function Products({ token }: { token: string }) {
 
   const catList = (
     <>
-      <CatItem label="All products" count={products.length} active={selectedCat === 'all'} stacked={stacked} onPress={() => setSelectedCat('all')} />
+      <CatItem label="All products" active={selectedCat === 'all'} stacked={stacked} onPress={() => setSelectedCat('all')} />
       {categories.map((c) => (
-        <CatItem key={c.id} label={c.name} count={countFor(c.name)} active={selectedCat === c.name} stacked={stacked} onPress={() => setSelectedCat(c.name)} />
+        <CatItem key={c.id} label={c.name} active={selectedCat === c.name} stacked={stacked} onPress={() => setSelectedCat(c.name)} />
       ))}
     </>
   );
@@ -440,56 +479,32 @@ function Products({ token }: { token: string }) {
           </View>
         )}
 
-        {/* Main content */}
+        {/* Main content (search / view / add live in the topbar on desktop) */}
         <View style={{ flex: 1, gap: 12 }}>
-          <View style={styles.toolbar}>
-            <Text style={styles.h}>
-              {q || selectedCat !== 'all' ? `${filtered.length} of ${products.length} products` : `${products.length} products`}
-            </Text>
-            <View style={styles.toolbarRight}>
-              <View style={styles.viewToggle}>
-                <Pressable
-                  style={[styles.viewBtn, view === 'list' && styles.viewBtnActive]}
-                  onPress={() => setView('list')}
-                  accessibilityLabel="List view"
-                >
-                  <Text style={[styles.viewIcon, view === 'list' && styles.viewIconActive]}>☰</Text>
+          {/* Mobile-only search (topbar is too narrow on phones) */}
+          {stacked && (
+            <View style={styles.search}>
+              <Ionicons name="search" size={18} color={colors.muted} />
+              <TextInput
+                value={search}
+                onChangeText={onSearch}
+                placeholder="Search products…"
+                placeholderTextColor={colors.muted}
+                style={styles.searchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {search.length > 0 && (
+                <Pressable onPress={() => onSearch('')} hitSlop={8} accessibilityLabel="Clear search">
+                  <Ionicons name="close-circle" size={18} color={colors.muted} />
                 </Pressable>
-                <Pressable
-                  style={[styles.viewBtn, view === 'grid' && styles.viewBtnActive]}
-                  onPress={() => setView('grid')}
-                  accessibilityLabel="Grid view"
-                >
-                  <Text style={[styles.viewIcon, view === 'grid' && styles.viewIconActive]}>▦</Text>
-                </Pressable>
-              </View>
-              <Button label="+ Add product" onPress={() => setEditing(null)} />
+              )}
             </View>
-          </View>
-
-          {/* Search across name & category */}
-          <View style={styles.search}>
-            <Ionicons name="search" size={18} color={colors.muted} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search products by name or category…"
-              placeholderTextColor={colors.muted}
-              style={styles.searchInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {query.length > 0 && (
-              <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
-                <Ionicons name="close-circle" size={18} color={colors.muted} />
-              </Pressable>
-            )}
-          </View>
-
+          )}
           {loading ? (
             <Text style={styles.muted}>Loading…</Text>
           ) : filtered.length === 0 ? (
-            <Text style={styles.muted}>{q ? `No products match “${query}”.` : 'No products in this category.'}</Text>
+            <Text style={styles.muted}>{q ? `No products match “${search}”.` : 'No products in this category.'}</Text>
           ) : view === 'list' ? (
             <ProductTable products={filtered} onEdit={setEditing} onDelete={setConfirming} />
           ) : (
@@ -525,13 +540,10 @@ function Products({ token }: { token: string }) {
 }
 
 // One row in the Products category sidebar (or a chip on narrow screens).
-function CatItem({ label, count, active, stacked, onPress }: { label: string; count: number; active: boolean; stacked: boolean; onPress: () => void }) {
+function CatItem({ label, active, stacked, onPress }: { label: string; active: boolean; stacked: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[stacked ? styles.catChip : styles.catRow, active && (stacked ? styles.catChipActive : styles.catRowActive)]}>
       <Text style={[styles.catText, active && styles.catTextActive]} numberOfLines={1}>{label}</Text>
-      <View style={[styles.catCount, active && styles.catCountActive]}>
-        <Text style={[styles.catCountText, active && { color: colors.white }]}>{count}</Text>
-      </View>
     </Pressable>
   );
 }
@@ -553,8 +565,9 @@ function ProductTable({
   const fits = width >= 820;
 
   const table = (
-    <View style={[styles.table, fits ? styles.tableFull : styles.tableMin]}>
-        <View style={[styles.tr, styles.thead]}>
+    <View style={[styles.table, fits ? styles.tableFull : styles.tableMin, fits && styles.tableStickyWrap]}>
+        <View style={[styles.tr, styles.thead, fits && styles.theadSticky]}>
+          <Text style={[styles.th, styles.colSr]}>Sr No</Text>
           <Text style={[styles.th, styles.colImg]}>Image</Text>
           <Text style={[styles.th, styles.colName]}>Name</Text>
           <Text style={[styles.th, styles.colCat]}>Category</Text>
@@ -566,6 +579,7 @@ function ProductTable({
         </View>
         {products.map((p, i) => (
           <View key={p.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+            <Text style={[styles.td, styles.tdStrong, styles.colSr]}>{i + 1}</Text>
             <View style={styles.colImg}><ProductThumb product={p} size={44} /></View>
             <Text style={[styles.td, styles.colName, styles.tdStrong]} numberOfLines={2}>{p.name}</Text>
             <Text style={[styles.td, styles.colCat]} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>
@@ -1302,7 +1316,8 @@ const styles = StyleSheet.create({
   topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 28, paddingVertical: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   pageTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
   pageSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
+  topSearch: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 240, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: colors.white },
   adminAvatar: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
   adminAvatarText: { color: colors.white, fontWeight: '900', fontSize: 16 },
   tabs: { gap: 8 },
@@ -1448,9 +1463,10 @@ const styles = StyleSheet.create({
   adminRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, flexWrap: 'wrap' },
   // products category sidebar
   prodLayout: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
+  prodHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
   catSidebar: { width: 220, backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 8, gap: 4 },
   // Keep the category list in view while the product list scrolls (web).
-  catSticky: { position: 'sticky' as any, top: 12, maxHeight: '88vh' as any, overflowY: 'auto' as any },
+  catSticky: { position: 'sticky' as any, top: 16, height: 'calc(100vh - 110px)' as any, overflowY: 'auto' as any },
   catSideTitle: { fontWeight: '900', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 8, paddingTop: 6, paddingBottom: 4 },
   catRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.sm },
   catRowActive: { backgroundColor: colors.orange },
@@ -1473,13 +1489,18 @@ const styles = StyleSheet.create({
   // table
   table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.white },
   tableFull: { width: '100%' },
-  tableMin: { minWidth: 760 },
+  // sticky header (web): overflow must be visible on the table so the header
+  // can pin to the page scroll instead of being clipped by the rounded corners.
+  tableStickyWrap: { overflow: 'visible' as any },
+  theadSticky: { position: 'sticky' as any, top: 0, zIndex: 5, backgroundColor: '#FAFAFB', borderBottomWidth: 1, borderBottomColor: colors.border },
+  tableMin: { minWidth: 812 },
   tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
   thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
   trAlt: { backgroundColor: '#FCFCFD' },
   th: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   td: { fontSize: 14, color: colors.text },
   tdStrong: { fontWeight: '800', color: colors.ink },
+  colSr: { width: 52 },
   colImg: { width: 52 },
   colName: { flex: 2.2, minWidth: 150 },
   colCat: { flex: 1.5, minWidth: 110, color: colors.muted },
