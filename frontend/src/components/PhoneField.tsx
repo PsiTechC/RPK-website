@@ -80,19 +80,28 @@ export function PhoneField({
         <TextInput
           value={number}
           onChangeText={(t) => {
-            // keep digits/spaces only and cap at 15 digits (E.164 max)
-            const cleaned = t.replace(/[^\d ]/g, '');
-            const digits = cleaned.replace(/\D/g, '');
-            onNumberChange(digits.length > 15 ? number : cleaned);
+            // Digits only, capped to the selected country's national length
+            // (e.g. India = 10) so you can't type more than the country allows.
+            const digits = t.replace(/\D/g, '').slice(0, country.phoneMax);
+            onNumberChange(digits);
           }}
           placeholder={placeholder}
           placeholderTextColor={colors.muted}
           keyboardType="phone-pad"
-          maxLength={17}
+          maxLength={country.phoneMax}
           style={[styles.input, !!error && styles.errBorder]}
         />
       </View>
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : (
+        <Text style={styles.hintText}>
+          {country.phoneMin === country.phoneMax
+            ? `${country.name} numbers are ${country.phoneMax} digits`
+            : `${country.name} numbers are ${country.phoneMin}–${country.phoneMax} digits`}
+          {number ? `  ·  ${number.replace(/\D/g, '').length}/${country.phoneMax}` : ''}
+        </Text>
+      )}
     </View>
   );
 }
@@ -113,9 +122,10 @@ const styles = StyleSheet.create({
   },
   errBorder: { borderColor: colors.red },
   errorText: { color: colors.red, fontSize: 12 },
+  hintText: { color: colors.muted, fontSize: 11 },
   scrim: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 },
   dropdown: {
-    position: 'absolute' as any, top: 52, left: 0, width: 280, backgroundColor: colors.white,
+    position: 'absolute' as any, top: 52, left: 0, width: 280, maxWidth: '86vw' as any, backgroundColor: colors.white,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, zIndex: 100, ...shadow.card,
   },
   search: {

@@ -40,7 +40,9 @@ export default function Home() {
   const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : width < 1500 ? 5 : 6;
   const gap = 16;
   const contentW = Math.min(width, 1600) - 36;
-  const cardW = (contentW - gap * (cols - 1)) / cols;
+  // Percentage card width keeps exactly N per row regardless of scrollbar width
+  // or sub-pixel rounding (which broke fixed-pixel widths on mobile).
+  const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%', 6: '15%' } as Record<number, string>)[cols];
   // single-line category carousel: ~2.4 tiles visible at once so one sits centred
   const carouselItemW = Math.min(320, Math.max(220, Math.round(contentW / (width < 560 ? 1.4 : 2.6))));
 

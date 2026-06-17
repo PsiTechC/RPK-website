@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
@@ -9,7 +10,7 @@ import { ContactPanel } from '../components/ContactPanel';
 import { PhoneField } from '../components/PhoneField';
 import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
 import { parsePhone, Country } from '../lib/countries';
-import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
+import { vEmail, vName, vPhoneLen, vRequired, isClean, sanitizeName } from '../lib/validate';
 
 const TYPES = [
   { key: 'import', label: 'Import', desc: 'I want to buy & import from RPK' },
@@ -55,7 +56,7 @@ export default function ImportExport() {
     const e: Record<string, string | null> = {
       company_name: vRequired(form.company_name, 'Company name'),
       email: vEmail(form.email),
-      phone: vPhone(form.phone, false),
+      phone: vPhoneLen(form.phone, country, false),
       contact_person: form.contact_person.trim() ? vName(form.contact_person, 'Contact person') : null,
     };
     setErrors(e);
@@ -97,10 +98,10 @@ export default function ImportExport() {
           </View>
 
           {/* Form / success */}
-          <View style={{ flex: 1 }}>
+          <View style={stacked ? { width: '100%' } : { flex: 1 }}>
             {done ? (
               <Card style={{ alignItems: 'center', gap: 12, paddingVertical: 40 }}>
-                <Text style={{ fontSize: 50 }}>🎉</Text>
+                <Ionicons name="ribbon" size={56} color={colors.green} />
                 <Text style={styles.successTitle}>Application Received</Text>
                 <Text style={styles.successText}>
                   Thank you! Your registration for <Text style={{ fontWeight: '800' }}>{form.company_name}</Text> is now{' '}
@@ -130,7 +131,7 @@ export default function ImportExport() {
                 </View>
 
                 <View style={[styles.twoCol, stacked && { flexDirection: 'column' }]}>
-                  <Field style={{ flex: 1 }} label="Contact person" value={form.contact_person} onChangeText={set('contact_person')} placeholder="Full name" error={errors.contact_person} />
+                  <Field style={{ flex: 1 }} label="Contact person" value={form.contact_person} onChangeText={(t) => set('contact_person')(sanitizeName(t))} placeholder="Full name" error={errors.contact_person} />
                   <Field style={{ flex: 1 }} label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@company.com" keyboardType="email-address" error={errors.email} />
                 </View>
                 <PhoneField label={`Phone & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />

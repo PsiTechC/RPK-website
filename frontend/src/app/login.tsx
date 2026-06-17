@@ -7,7 +7,7 @@ import { Footer } from '../components/Footer';
 import { Container, Button, Field, Card } from '../components/ui';
 import { PhoneField } from '../components/PhoneField';
 import { DEFAULT_COUNTRY } from '../lib/countries';
-import { vEmail, vName, vPassword, vPhone, vRequired, isClean } from '../lib/validate';
+import { vEmail, vName, vPassword, vPhoneLen, vRequired, isClean, sanitizeName } from '../lib/validate';
 
 export default function Login() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function Login() {
     };
     if (mode === 'register') {
       e.name = vName(form.name, 'Full name');
-      e.phone = vPhone(form.phone, true);
+      e.phone = vPhoneLen(form.phone, country, true);
     }
     setErrors(e);
     return isClean(e);
@@ -81,7 +81,7 @@ export default function Login() {
 
           {mode === 'register' && (
             <>
-              <Field label="Full name" value={form.name} onChangeText={set('name')} placeholder="Your name" error={errors.name} />
+              <Field label="Full name" value={form.name} onChangeText={(t) => set('name')(sanitizeName(t))} placeholder="Your name" error={errors.name} />
               <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
               <View style={{ gap: 6 }}>
                 <Text style={styles.label}>Account type</Text>

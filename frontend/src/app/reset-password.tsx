@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '../lib/api';
 import { colors } from '../lib/theme';
@@ -46,7 +47,7 @@ export default function ResetPassword() {
         <Card style={{ gap: 14 }}>
           {done ? (
             <>
-              <Text style={{ fontSize: 44, textAlign: 'center' }}>✅</Text>
+              <Ionicons name="checkmark-circle" size={52} color={colors.green} style={{ alignSelf: 'center' }} />
               <Text style={styles.title}>Password updated</Text>
               <Text style={styles.sub}>Your password has been reset. You can now log in with your new password.</Text>
               <Button label="Go to login" onPress={() => router.replace('/login')} />

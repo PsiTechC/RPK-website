@@ -51,7 +51,7 @@ export default function Account() {
     return (
       <Container style={{ marginTop: 60, maxWidth: 460 }}>
         <Card style={{ alignItems: 'center', gap: 14, paddingVertical: 40 }}>
-          <Text style={{ fontSize: 44 }}>🔐</Text>
+          <Ionicons name="lock-closed-outline" size={46} color={colors.muted} />
           <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink }}>Please log in</Text>
           <Button label="Go to login" onPress={() => router.push('/login')} />
         </Card>

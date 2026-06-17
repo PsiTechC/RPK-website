@@ -138,10 +138,10 @@ export default function Admin() {
 
       {/* Main */}
       <View style={styles.main}>
-        <View style={styles.topbar}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pageTitle}>{TAB_LABELS[tab]}</Text>
-            <Text style={styles.pageSub}>RPK admin · manage your store</Text>
+        <View style={[styles.topbar, compact && styles.topbarCompact]}>
+          <View style={{ flex: 1, minWidth: 130 }}>
+            <Text style={styles.pageTitle} numberOfLines={1}>{TAB_LABELS[tab]}</Text>
+            <Text style={styles.pageSub} numberOfLines={1}>RPK admin · manage your store</Text>
           </View>
           <View style={styles.topRight}>
             {tab === 'products' && (
@@ -173,7 +173,7 @@ export default function Admin() {
                     <Text style={[styles.viewIcon, prodView === 'grid' && styles.viewIconActive]}>▦</Text>
                   </Pressable>
                 </View>
-                <Button label={compact ? '+' : '+ Add product'} onPress={() => setProdAddNonce((n) => n + 1)} style={compact ? { paddingHorizontal: 14 } : undefined} />
+                <Button label={compact ? '' : 'Add product'} icon="add" onPress={() => setProdAddNonce((n) => n + 1)} style={compact ? styles.addBtnCompact : undefined} />
               </>
             )}
             <View style={styles.adminAvatar}><Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text></View>
@@ -472,9 +472,7 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
       <View style={[styles.prodLayout, stacked && { flexDirection: 'column' }]}>
         {/* Category sidebar — filters the product list */}
         {stacked ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 2 }}>
-            {catList}
-          </ScrollView>
+          <View style={styles.catChipRow}>{catList}</View>
         ) : (
           <View style={[styles.catSidebar, Platform.OS === 'web' && styles.catSticky]}>
             <Text style={styles.catSideTitle}>Categories</Text>
@@ -797,6 +795,8 @@ function Orders({ token }: { token: string }) {
 
 // ---------- Customers ----------
 function Customers({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
+  const fits = width >= 760;
   const [items, setItems] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -844,26 +844,28 @@ function Customers({ token }: { token: string }) {
       {filtered.length === 0 ? (
         <Text style={styles.muted}>{items.length === 0 ? 'No customers yet.' : `No customers match “${query}”.`}</Text>
       ) : (
-        <View style={styles.table}>
-          <View style={[styles.tr, styles.thead]}>
-            <Text style={[styles.th, styles.cuName]}>Name</Text>
-            <Text style={[styles.th, styles.cuEmail]}>Email</Text>
-            <Text style={[styles.th, styles.cuPhone]}>Phone</Text>
-            <Text style={[styles.th, styles.cuRole]}>Type</Text>
-            <Text style={[styles.th, styles.cuJoined]}>Joined</Text>
-          </View>
-          {filtered.map((u, i) => (
-            <View key={u.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
-              <Text style={[styles.td, styles.tdStrong, styles.cuName]} numberOfLines={1}>{u.name}</Text>
-              <Text style={[styles.td, styles.cuEmail]} numberOfLines={1}>{u.email}</Text>
-              <Text style={[styles.td, styles.cuPhone]} numberOfLines={1}>{u.phone || '—'}</Text>
-              <View style={styles.cuRole}>
-                <Badge text={u.role} tone={u.role === 'business' ? 'navy' : 'muted'} />
-              </View>
-              <Text style={[styles.td, styles.cuJoined]}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</Text>
+        <Tbl fits={fits}>
+          <View style={[styles.table, !fits && styles.cuTableMin]}>
+            <View style={[styles.tr, styles.thead]}>
+              <Text style={[styles.th, styles.cuName]}>Name</Text>
+              <Text style={[styles.th, styles.cuEmail]}>Email</Text>
+              <Text style={[styles.th, styles.cuPhone]}>Phone</Text>
+              <Text style={[styles.th, styles.cuRole]}>Type</Text>
+              <Text style={[styles.th, styles.cuJoined]}>Joined</Text>
             </View>
-          ))}
-        </View>
+            {filtered.map((u, i) => (
+              <View key={u.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+                <Text style={[styles.td, styles.tdStrong, styles.cuName]} numberOfLines={1}>{u.name}</Text>
+                <Text style={[styles.td, styles.cuEmail]} numberOfLines={1}>{u.email}</Text>
+                <Text style={[styles.td, styles.cuPhone]} numberOfLines={1}>{u.phone || '—'}</Text>
+                <View style={styles.cuRole}>
+                  <Badge text={u.role} tone={u.role === 'business' ? 'navy' : 'muted'} />
+                </View>
+                <Text style={[styles.td, styles.cuJoined]}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</Text>
+              </View>
+            ))}
+          </View>
+        </Tbl>
       )}
     </View>
   );
@@ -1358,6 +1360,8 @@ const styles = StyleSheet.create({
   sideFooter: { borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: 8, gap: 2 },
   main: { flex: 1 },
   topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 28, paddingVertical: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  topbarCompact: { paddingHorizontal: 14, flexWrap: 'wrap', rowGap: 10 },
+  addBtnCompact: { paddingHorizontal: 12, gap: 0 },
   pageTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
   pageSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
@@ -1410,6 +1414,7 @@ const styles = StyleSheet.create({
   barTrack: { height: 8, backgroundColor: '#EEF0F3', borderRadius: 999, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 999 },
   // customers table columns
+  cuTableMin: { minWidth: 720 },
   cuName: { width: 160 },
   cuEmail: { flex: 1, minWidth: 180 },
   cuPhone: { width: 150 },
@@ -1529,7 +1534,8 @@ const styles = StyleSheet.create({
   catSideTitle: { fontWeight: '900', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 8, paddingTop: 6, paddingBottom: 4 },
   catRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.sm },
   catRowActive: { backgroundColor: colors.orange },
-  catChip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#F1F2F5' },
+  catChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  catChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#F1F2F5' },
   catChipActive: { backgroundColor: colors.orange },
   catText: { flex: 1, color: colors.text, fontWeight: '700', fontSize: 13 },
   catTextActive: { color: colors.white },

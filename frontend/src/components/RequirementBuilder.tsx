@@ -113,7 +113,7 @@ export function RequirementBuilder({ items, onChange }: { items: ReqItem[]; onCh
 
 const styles = StyleSheet.create({
   label: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  chips: { gap: 8, paddingVertical: 2 },
+  chips: { gap: 8, paddingVertical: 2, alignItems: 'center' },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#F1F2F5' },
   chipOn: { backgroundColor: colors.navy },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },

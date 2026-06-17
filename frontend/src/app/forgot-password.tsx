@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
 import { colors } from '../lib/theme';
@@ -37,7 +38,7 @@ export default function ForgotPassword() {
         <Card style={{ gap: 14 }}>
           {sent ? (
             <>
-              <Text style={{ fontSize: 44, textAlign: 'center' }}>📧</Text>
+              <Ionicons name="mail-outline" size={50} color={colors.navy} style={{ alignSelf: 'center' }} />
               <Text style={styles.title}>Check your email</Text>
               <Text style={styles.sub}>
                 If an account exists for <Text style={{ fontWeight: '800' }}>{email.trim()}</Text>, we've sent a link to

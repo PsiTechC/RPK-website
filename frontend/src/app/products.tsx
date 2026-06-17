@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, useWindowDimensions, ActivityIndicator, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Category, Product } from '../lib/api';
 import { colors, radius } from '../lib/theme';
@@ -53,8 +54,9 @@ export default function Products() {
 
   const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : width < 1500 ? 5 : 6;
   const gap = 16;
-  const contentW = Math.min(width, 1600) - 36;
-  const cardW = (contentW - gap * (cols - 1)) / cols;
+  // Percentage card width keeps exactly N per row regardless of scrollbar width
+  // or sub-pixel rounding (which broke fixed-pixel widths on mobile).
+  const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%', 6: '15%' } as Record<number, string>)[cols];
 
   const activeName = active === 'all' ? 'All Products' : categories.find((c) => c.slug === active)?.name || 'Products';
 
@@ -69,7 +71,7 @@ export default function Products() {
         <SectionTitle title={activeName} subtitle={`${filtered.length} item${filtered.length === 1 ? '' : 's'}`} />
 
         <View style={styles.searchWrap}>
-          <Text style={{ fontSize: 16 }}>🔎</Text>
+          <Ionicons name="search-outline" size={18} color={colors.muted} />
           <TextInput
             value={search}
             onChangeText={setSearch}

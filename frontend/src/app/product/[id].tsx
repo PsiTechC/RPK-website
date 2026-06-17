@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Product, Review, imageUri } from '../../lib/api';
@@ -82,11 +83,11 @@ export default function ProductDetail() {
       .catch(() => {});
   }, [product?.id]);
 
-  const stacked = width < 820;
+  const stacked = width < 900;
   const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : 5;
   const gap = 16;
   const contentW = Math.min(width, 1200) - 36;
-  const cardW = (contentW - gap * (cols - 1)) / cols;
+  const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%' } as Record<number, string>)[cols];
 
   if (loading) return <ActivityIndicator color={colors.orange} style={{ marginTop: 60 }} />;
   if (!product)
@@ -175,8 +176,14 @@ export default function ProductDetail() {
             </View>
 
             <View style={styles.infoBox}>
-              <Text style={styles.infoText}>📦 Wholesale & retail · Sold per {product.unit}</Text>
-              <Text style={styles.infoText}>🌍 Available for import/export — register your business to order in bulk.</Text>
+              <View style={styles.infoLine}>
+                <Ionicons name="cube-outline" size={16} color={colors.orangeDark} />
+                <Text style={styles.infoText}>Wholesale & retail · Sold per {product.unit}</Text>
+              </View>
+              <View style={styles.infoLine}>
+                <Ionicons name="globe-outline" size={16} color={colors.orangeDark} />
+                <Text style={styles.infoText}>Available for import/export — register your business to order in bulk.</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -328,8 +335,9 @@ const styles = StyleSheet.create({
   stepText: { fontSize: 22, fontWeight: '800', color: colors.navy },
   qtyVal: { width: 44, textAlign: 'center', fontWeight: '800', fontSize: 16, color: colors.ink },
   qtyInput: { width: 50, height: 40, textAlign: 'center', fontWeight: '800', fontSize: 16, color: colors.ink, outlineStyle: 'none' as any },
-  infoBox: { backgroundColor: colors.cream, borderRadius: radius.md, padding: 14, gap: 6, marginTop: 8 },
-  infoText: { color: colors.text, fontSize: 13 },
+  infoBox: { backgroundColor: colors.cream, borderRadius: radius.md, padding: 14, gap: 8, marginTop: 8 },
+  infoLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  infoText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 19 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   ratingText: { color: colors.text, fontWeight: '700', fontSize: 14 },
   muted: { color: colors.muted, fontSize: 14 },

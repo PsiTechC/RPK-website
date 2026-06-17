@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../lib/theme';
 import { BRAND } from '../lib/theme';
 import { Logo } from './Logo';
@@ -21,9 +22,18 @@ export function Footer() {
         </View>
         <View style={styles.col}>
           <Text style={styles.h}>Contact</Text>
-          <Text style={styles.line}>📞 {BRAND.phone}</Text>
-          <Text style={styles.line}>✉️ {BRAND.email}</Text>
-          <Text style={styles.line}>🌍 Import & Export — worldwide</Text>
+          <View style={styles.contactLine}>
+            <Ionicons name="call-outline" size={14} color="#D6DEF7" />
+            <Text style={styles.line}>{BRAND.phone}</Text>
+          </View>
+          <View style={styles.contactLine}>
+            <Ionicons name="mail-outline" size={14} color="#D6DEF7" />
+            <Text style={styles.line}>{BRAND.email}</Text>
+          </View>
+          <View style={styles.contactLine}>
+            <Ionicons name="globe-outline" size={14} color="#D6DEF7" />
+            <Text style={styles.line}>Import & Export — worldwide</Text>
+          </View>
         </View>
       </View>
       <View style={styles.bottom}>
@@ -48,6 +58,7 @@ const styles = StyleSheet.create({
   },
   col: { gap: 8 },
   h: { color: colors.orange, fontWeight: '800', fontSize: 15, marginBottom: 4 },
+  contactLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   line: { color: '#D6DEF7', fontSize: 13, lineHeight: 20 },
   tag: { color: '#C9D4F5', fontSize: 13, lineHeight: 20 },
   bottom: { borderTopWidth: 1, borderTopColor: '#2A3F7A', paddingVertical: 16 },

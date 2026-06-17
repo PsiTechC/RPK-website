@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { api, imageUri } from '../lib/api';
@@ -9,7 +10,7 @@ import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
 import { PhoneField } from '../components/PhoneField';
 import { parsePhone } from '../lib/countries';
-import { vEmail, vName, vPhone, vRequired, isClean } from '../lib/validate';
+import { vEmail, vName, vPhoneLen, vRequired, isClean, sanitizeName } from '../lib/validate';
 
 export default function Cart() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function Cart() {
     const e: Record<string, string | null> = {
       customer_name: vName(form.customer_name, 'Full name'),
       customer_email: form.customer_email ? vEmail(form.customer_email) : null,
-      customer_phone: form.customer_phone ? vPhone(form.customer_phone, false) : null,
+      customer_phone: form.customer_phone ? vPhoneLen(form.customer_phone, country, false) : null,
     };
     setErrors(e);
     if (!isClean(e)) return false;
@@ -80,7 +81,7 @@ export default function Cart() {
       <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
         <Container style={{ marginTop: 40, maxWidth: 640 }}>
           <Card style={{ alignItems: 'center', gap: 12, paddingVertical: 36 }}>
-            <Text style={{ fontSize: 54 }}>✅</Text>
+            <Ionicons name="checkmark-circle" size={58} color={colors.green} />
             <Text style={styles.successTitle}>Inquiry Sent!</Text>
             <Text style={styles.successText}>
               Thank you{form.customer_name ? `, ${form.customer_name.split(' ')[0]}` : ''}. Our team has received your
@@ -104,14 +105,14 @@ export default function Cart() {
 
         {cart.length === 0 ? (
           <Card style={{ alignItems: 'center', gap: 14, paddingVertical: 40 }}>
-            <Text style={{ fontSize: 44 }}>🛒</Text>
+            <Ionicons name="cart-outline" size={50} color={colors.muted} />
             <Text style={{ color: colors.muted, fontSize: 16 }}>Your cart is empty.</Text>
             <Button label="Browse products" onPress={() => router.push('/products')} />
           </Card>
         ) : (
           <View style={[styles.layout, stacked && { flexDirection: 'column' }]}>
             {/* Items */}
-            <View style={{ flex: 1, gap: 12 }}>
+            <View style={stacked ? { width: '100%', gap: 12 } : { flex: 1, gap: 12 }}>
               {cart.map((l) => (
                 <Card key={l.product.id} style={styles.line}>
                   <Image source={{ uri: imageUri(l.product.image_url) }} style={styles.lineImg} contentFit="cover" />
@@ -160,7 +161,7 @@ export default function Cart() {
               )}
 
               <View style={{ gap: 10, marginTop: 8 }}>
-                <Field label="Full name" value={form.customer_name} onChangeText={set('customer_name')} placeholder="Your name" error={errors.customer_name} />
+                <Field label="Full name" value={form.customer_name} onChangeText={(t) => set('customer_name')(sanitizeName(t))} placeholder="Your name" error={errors.customer_name} />
                 <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
                 <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.customer_phone} onNumberChange={set('customer_phone')} error={errors.customer_phone} />
                 <Field label="Message (optional)" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Quantity needed, delivery location, any questions…" multiline />

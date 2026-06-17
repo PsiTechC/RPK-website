@@ -13,7 +13,7 @@ import { Stars } from './Stars';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function ProductCard({ product, width = 220 }: { product: Product; width?: number }) {
+export function ProductCard({ product, width = 220 }: { product: Product; width?: number | string }) {
   const router = useRouter();
   const { addToCart } = useApp();
   const toast = useToast();

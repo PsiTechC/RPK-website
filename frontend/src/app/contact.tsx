@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { api } from '../lib/api';
 import { colors } from '../lib/theme';
@@ -9,7 +10,7 @@ import { ContactPanel } from '../components/ContactPanel';
 import { PhoneField } from '../components/PhoneField';
 import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
 import { DEFAULT_COUNTRY } from '../lib/countries';
-import { vName, vEmail, vPhone, isClean } from '../lib/validate';
+import { vName, vEmail, vPhoneLen, isClean, sanitizeName } from '../lib/validate';
 
 export default function Contact() {
   const { width } = useWindowDimensions();
@@ -40,7 +41,7 @@ export default function Contact() {
     const e: Record<string, string | null> = {
       name: vName(form.name, 'Your name'),
       email: form.email ? vEmail(form.email) : null,
-      phone: form.phone ? vPhone(form.phone) : null,
+      phone: form.phone ? vPhoneLen(form.phone, country, false) : null,
     };
     setErrors(e);
     if (!isClean(e)) return;
@@ -80,10 +81,10 @@ export default function Contact() {
           </View>
 
           {/* inquiry form / success */}
-          <View style={{ flex: 1 }}>
+          <View style={stacked ? { width: '100%' } : { flex: 1 }}>
             {done ? (
               <Card style={{ alignItems: 'center', gap: 12, paddingVertical: 44 }}>
-                <Text style={{ fontSize: 50 }}>✅</Text>
+                <Ionicons name="checkmark-circle" size={56} color={colors.green} />
                 <Text style={styles.successTitle}>Inquiry Sent!</Text>
                 <Text style={styles.successText}>
                   Thank you{form.name ? `, ${form.name.split(' ')[0]}` : ''}. Our team will get back to you
@@ -99,7 +100,7 @@ export default function Contact() {
                     <Text style={styles.productPillText}>Product: {form.product}</Text>
                   </View>
                 )}
-                <Field label="Your name *" value={form.name} onChangeText={set('name')} placeholder="Full name" error={errors.name} />
+                <Field label="Your name *" value={form.name} onChangeText={(t) => set('name')(sanitizeName(t))} placeholder="Full name" error={errors.name} />
                 <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
                 <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
                 <RequirementBuilder items={items} onChange={setItems} />

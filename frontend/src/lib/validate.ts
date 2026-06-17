@@ -1,5 +1,7 @@
 // Reusable form validators. Each returns an error string, or null when valid.
 
+import type { Country } from './countries';
+
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function vRequired(v: string | undefined, label = 'This field'): string | null {
@@ -38,6 +40,26 @@ export function vPhone(v: string, required = false): string | null {
   const digits = t.replace(/\D/g, '');
   if (digits.length < 7 || digits.length > 15) return 'Enter a valid phone number (7–15 digits)';
   return null;
+}
+
+// Country-aware phone: the local number (no dial code) must be digits only and
+// match the selected country's expected length, e.g. India = exactly 10 digits.
+export function vPhoneLen(local: string, country: Country, required = false): string | null {
+  const digits = (local || '').replace(/\D/g, '');
+  if (!digits) return required ? 'Phone number is required' : null;
+  const { phoneMin, phoneMax, name } = country;
+  if (digits.length < phoneMin || digits.length > phoneMax) {
+    return phoneMin === phoneMax
+      ? `${name} phone numbers must be ${phoneMax} digits`
+      : `${name} phone numbers must be ${phoneMin}–${phoneMax} digits`;
+  }
+  return null;
+}
+
+// Strip characters that aren't allowed in a person's name (digits especially),
+// for live input filtering. Keeps letters, spaces and . ' -
+export function sanitizeName(v: string): string {
+  return (v || '').replace(/[^\p{L} .'-]/gu, '');
 }
 
 export function vPassword(v: string): string | null {
