@@ -13,7 +13,7 @@ export function Donut({ slices, size = 170, thickness = 26 }: { slices: DonutSli
 
   return (
     <Svg width={size} height={size}>
-      <G transform={`rotate(-90, ${center}, ${center})`}>
+      <G rotation={-90} origin={`${center}, ${center}`}>
         {slices.map((s, i) => {
           const dash = (s.value / total) * circ;
           const el = (

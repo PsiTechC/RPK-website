@@ -3,11 +3,8 @@ package api
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"html"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -16,26 +13,6 @@ import (
 
 	"github.com/rpkfood/backend/internal/auth"
 )
-
-// loginAuth implements the SMTP "LOGIN" auth mechanism. Some servers
-// (cPanel/Dovecot, used by psitech.co.in) reject "PLAIN" and require "LOGIN",
-// which Go's standard library does not provide out of the box.
-type loginAuth struct{ user, pass string }
-
-func (a *loginAuth) Start(*smtp.ServerInfo) (string, []byte, error) { return "LOGIN", nil, nil }
-func (a *loginAuth) Next(from []byte, more bool) ([]byte, error) {
-	if !more {
-		return nil, nil
-	}
-	switch string(from) {
-	case "Username:":
-		return []byte(a.user), nil
-	case "Password:":
-		return []byte(a.pass), nil
-	default:
-		return nil, errors.New("smtp login: unexpected server challenge: " + string(from))
-	}
-}
 
 // randomToken returns a URL-safe random token for password-reset links.
 func randomToken() string {
@@ -62,68 +39,15 @@ func (s *Server) sendMail(to, subject, htmlBody string) error {
 	if from == "" {
 		from = cfg.SMTPUser
 	}
-	// A valid Date and Message-ID lower the spam score; many filters penalise
-	// their absence. Message-ID is scoped to the sending domain.
-	domain := "localhost"
-	if i := strings.LastIndex(cfg.SMTPUser, "@"); i >= 0 {
-		domain = cfg.SMTPUser[i+1:]
-	}
 	msg := []byte("From: " + from + "\r\n" +
 		"To: " + to + "\r\n" +
 		"Subject: " + subject + "\r\n" +
-		"Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
-		"Message-ID: <" + randomToken() + "@" + domain + ">\r\n" +
 		"MIME-Version: 1.0\r\n" +
 		"Content-Type: text/html; charset=UTF-8\r\n" +
 		"\r\n" + htmlBody)
-
+	auth := smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)
 	addr := cfg.SMTPHost + ":" + cfg.SMTPPort
-	tlsCfg := &tls.Config{ServerName: cfg.SMTPHost}
-
-	// Establish the connection: implicit TLS on 465, otherwise plain + STARTTLS.
-	var c *smtp.Client
-	var err error
-	if cfg.SMTPPort == "465" {
-		conn, e := tls.Dial("tcp", addr, tlsCfg)
-		if e != nil {
-			return e
-		}
-		c, err = smtp.NewClient(conn, cfg.SMTPHost)
-	} else {
-		if c, err = smtp.Dial(addr); err == nil {
-			if ok, _ := c.Extension("STARTTLS"); ok {
-				err = c.StartTLS(tlsCfg)
-			}
-		}
-	}
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	// LOGIN auth works on both cPanel/Dovecot and Gmail.
-	if err := c.Auth(&loginAuth{cfg.SMTPUser, cfg.SMTPPass}); err != nil {
-		return err
-	}
-	// Envelope sender is the authenticated account (keeps SPF aligned), even if
-	// the human-readable From header carries a display name.
-	if err := c.Mail(cfg.SMTPUser); err != nil {
-		return err
-	}
-	if err := c.Rcpt(to); err != nil {
-		return err
-	}
-	w, err := c.Data()
-	if err != nil {
-		return err
-	}
-	if _, err := w.Write(msg); err != nil {
-		return err
-	}
-	if err := w.Close(); err != nil {
-		return err
-	}
-	return c.Quit()
+	return smtp.SendMail(addr, auth, from, []string{to}, msg)
 }
 
 // POST /api/auth/forgot-password { email }
@@ -153,9 +77,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 			}
 			link := strings.TrimRight(base, "/") + "/reset-password?token=" + raw
 			log.Printf("[reset] password reset link for %s: %s", req.Email, link)
-			if err := s.sendMail(req.Email, "Reset your RPK password", resetEmailHTML(name, link)); err != nil {
-				log.Printf("[mail] failed to send password reset to %s: %v", req.Email, err)
-			}
+			_ = s.sendMail(req.Email, "Reset your RPK password", resetEmailHTML(name, link))
 		}
 	}
 	writeJSON(w, 200, map[string]string{"status": "ok"})
@@ -201,17 +123,18 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func resetEmailHTML(name, link string) string {
-	greeting := "there"
+	greeting := "Hello"
 	if strings.TrimSpace(name) != "" {
-		greeting = html.EscapeString(name)
+		greeting = "Hello " + name
 	}
-	safeLink := html.EscapeString(link)
-	body := fmt.Sprintf(`<p style="margin:0 0 14px;color:#444;font-size:14px;line-height:22px;">Hello %s,</p>
-<p style="margin:0 0 22px;color:#444;font-size:14px;line-height:22px;">We received a request to reset your password. Click the button below to choose a new one. This link expires in 1 hour.</p>
-<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:999px;background:#E2231A;">
-  <a href="%s" style="display:inline-block;padding:13px 30px;color:#ffffff;font-weight:bold;font-size:14px;text-decoration:none;">Reset password</a>
-</td></tr></table>
-<p style="margin:22px 0 0;color:#9A9A9A;font-size:12px;line-height:18px;">If the button doesn't work, copy this link into your browser:<br>%s</p>
-<p style="margin:10px 0 0;color:#9A9A9A;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>`, greeting, safeLink, safeLink)
-	return emailShell("Reset your password", "", body, "This is an automated message from RPK Food Trading.")
+	return fmt.Sprintf(`<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#2A2A2A">
+  <h2 style="color:#E2231A">RPK Food Trading</h2>
+  <p>%s,</p>
+  <p>We received a request to reset your password. Click the button below to choose a new one. This link expires in 1 hour.</p>
+  <p style="text-align:center;margin:28px 0">
+    <a href="%s" style="background:#E2231A;color:#fff;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:999px;display:inline-block">Reset password</a>
+  </p>
+  <p style="color:#6B7280;font-size:13px">If the button doesn't work, copy this link into your browser:<br>%s</p>
+  <p style="color:#6B7280;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
+</div>`, greeting, link, link)
 }

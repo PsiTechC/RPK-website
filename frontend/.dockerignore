@@ -4,7 +4,3 @@ dist
 web-build
 .git
 *.log
-# Never bake local dev env (e.g. EXPO_PUBLIC_API_URL=localhost) into the prod
-# build — production serves same-origin via nginx (Dockerfile sets it to "").
-.env
-.env.*

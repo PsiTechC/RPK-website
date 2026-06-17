@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -56,34 +54,7 @@ func (s *Server) handleCreateRegistration(w http.ResponseWriter, r *http.Request
 		writeErr(w, 500, "could not submit registration")
 		return
 	}
-	// Notify the admin inbox (async — don't block the response on SMTP).
-	go func(req registrationReq, id int64) {
-		if err := s.sendMail(s.cfg.AdminEmail, "New import/export registration from "+req.CompanyName, registrationEmailHTML(req, id)); err != nil {
-			log.Printf("[mail] failed to send registration #%d notification to %s: %v", id, s.cfg.AdminEmail, err)
-		}
-	}(req, id)
-
 	writeJSON(w, 201, map[string]interface{}{"id": id, "status": "pending"})
-}
-
-func registrationEmailHTML(g registrationReq, id int64) string {
-	body := detailTable([]emailRow{
-		{"Company", g.CompanyName},
-		{"Business type", g.BusinessType},
-		{"Country", g.Country},
-		{"Contact", g.ContactPerson},
-		{"Email", g.Email},
-		{"Phone", g.Phone},
-		{"Product interest", g.ProductInterest},
-		{"Requirement", formatItems(g.Items)},
-		{"Message", g.Message},
-	})
-	return emailShell(
-		"New import / export registration",
-		"A business just registered for import / export through the website.",
-		body,
-		fmt.Sprintf("Registration #%d · view it in the admin dashboard → Registrations.", id),
-	)
 }
 
 func (s *Server) handleMyRegistrations(w http.ResponseWriter, r *http.Request) {

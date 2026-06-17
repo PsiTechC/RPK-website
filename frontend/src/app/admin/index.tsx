@@ -48,10 +48,7 @@ const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delive
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
   delivered: 'green', cancelled: 'red', approved: 'green', rejected: 'red', paid: 'green', unpaid: 'muted',
-  new: 'orange', contacted: 'navy', closed: 'muted',
 };
-const REG_STATUSES = ['approved', 'pending', 'rejected'];
-const INQ_STATUSES = ['new', 'contacted', 'closed'];
 const toneColor: Record<string, string> = {
   orange: colors.orange, navy: colors.navy, green: colors.green, red: colors.red, muted: colors.muted,
 };
@@ -940,90 +937,55 @@ function Registrations({ token }: { token: string }) {
 }
 
 // Full registration details + approve/reject/pending controls.
-// A label/value pair row inside a bordered info card.
-function InfoRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
-  return (
-    <View style={[styles.infoRow, first && { borderTopWidth: 0 }]}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue} selectable>{value}</Text>
-    </View>
-  );
-}
-
-// A row of selectable status chips; the active one is highlighted in its tone.
-function StatusPicker({ statuses, current, onPick }: { statuses: string[]; current: string; onPick: (s: string) => void }) {
-  return (
-    <View style={styles.statusPicker}>
-      {statuses.map((s) => {
-        const active = current === s;
-        const tc = toneColor[statusTone[s]] || colors.navy;
-        return (
-          <Pressable key={s} style={[styles.statusChip, active && { backgroundColor: tc, borderColor: tc }]} onPress={() => onPick(s)}>
-            <Text style={[styles.statusChipText, active && { color: colors.white }]}>{s}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 function RegistrationDetailModal({ reg: r, onClose, onStatus }: { reg: Registration; onClose: () => void; onStatus: (id: number, s: string) => void }) {
   const content = (
     <View style={styles.overlay}>
       <View style={styles.modal}>
         <View style={styles.modalHead}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.modalTitle} numberOfLines={1}>{r.company_name}</Text>
-            <Text style={styles.modalSub}>Import / Export registration · #{r.id}</Text>
-          </View>
-          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}><Text style={styles.modalClose}>✕</Text></Pressable>
+          <Text style={styles.modalTitle}>{r.company_name}</Text>
+          <Pressable onPress={onClose} hitSlop={10}><Text style={styles.modalClose}>✕</Text></Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 18 }}>
-          <View style={{ gap: 8 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 16 }}>
+          <View style={{ gap: 4 }}>
             <Text style={styles.odSection}>Applicant</Text>
-            <View style={styles.infoCard}>
-              <InfoRow label="Business" value={r.business_type || '—'} first />
-              <InfoRow label="Country" value={r.country || '—'} />
-              <InfoRow label="Contact" value={r.contact_person || '—'} />
-              <InfoRow label="Email" value={r.email || '—'} />
-              <InfoRow label="Phone" value={r.phone || '—'} />
-            </View>
+            <Text style={styles.odStrong}>{r.company_name}</Text>
+            <Text style={styles.odMeta}>{r.business_type} · {r.country || '—'} · {r.contact_person || '—'}</Text>
+            <Text style={styles.odMeta}>{r.email} · {r.phone || 'no phone'}</Text>
           </View>
 
           {Array.isArray(r.items) && r.items.length > 0 && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: 6 }}>
               <Text style={styles.odSection}>Requirement</Text>
-              <View style={styles.infoCard}>
-                {r.items.map((it: any, idx: number) => (
-                  <View key={idx} style={[styles.reqRow, idx === 0 && { borderTopWidth: 0 }]}>
-                    <Text style={styles.reqName} numberOfLines={2}>{it.name}</Text>
-                    <Text style={styles.reqQty}>{it.qty} {it.unit}</Text>
-                  </View>
-                ))}
-              </View>
+              {r.items.map((it: any, idx: number) => (
+                <Text key={idx} style={styles.odMeta}>• {it.name} — {it.qty} {it.unit}</Text>
+              ))}
             </View>
           )}
 
           {!!r.product_interest && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: 4 }}>
               <Text style={styles.odSection}>Interest</Text>
-              <Text style={styles.odBody}>{r.product_interest}</Text>
+              <Text style={styles.odMeta}>{r.product_interest}</Text>
             </View>
           )}
 
           {!!r.message && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: 4 }}>
               <Text style={styles.odSection}>Message</Text>
-              <View style={styles.quoteCard}>
-                <Text style={styles.quoteText}>{r.message}</Text>
-              </View>
+              <Text style={styles.message}>“{r.message}”</Text>
             </View>
           )}
 
-          <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
             <Text style={styles.odSection}>Status</Text>
-            <StatusPicker statuses={REG_STATUSES} current={r.status} onPick={(s) => onStatus(r.id, s)} />
+            <Badge text={r.status} tone={statusTone[r.status] || 'muted'} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Button label="Approve" variant="navy" onPress={() => onStatus(r.id, 'approved')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Reject" variant="danger" onPress={() => onStatus(r.id, 'rejected')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Pending" variant="ghost" onPress={() => onStatus(r.id, 'pending')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
           </View>
         </ScrollView>
 
@@ -1115,56 +1077,50 @@ function InquiryDetailModal({ inquiry: q, onClose, onStatus }: { inquiry: any; o
     <View style={styles.overlay}>
       <View style={styles.modal}>
         <View style={styles.modalHead}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.modalTitle} numberOfLines={1}>{q.name}</Text>
-            <Text style={styles.modalSub}>Inquiry · #{q.id} · {new Date(q.created_at).toLocaleDateString()}</Text>
-          </View>
-          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}><Text style={styles.modalClose}>✕</Text></Pressable>
+          <Text style={styles.modalTitle}>Inquiry · {q.name}</Text>
+          <Pressable onPress={onClose} hitSlop={10}><Text style={styles.modalClose}>✕</Text></Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 18 }}>
-          <View style={{ gap: 8 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 16 }}>
+          <View style={{ gap: 4 }}>
             <Text style={styles.odSection}>Contact</Text>
-            <View style={styles.infoCard}>
-              <InfoRow label="Email" value={q.email || '—'} first />
-              <InfoRow label="Phone" value={q.phone || '—'} />
-              <InfoRow label="Received" value={new Date(q.created_at).toLocaleString()} />
-            </View>
+            <Text style={styles.odStrong}>{q.name}</Text>
+            <Text style={styles.odMeta}>{q.email || 'no email'} · {q.phone || 'no phone'}</Text>
+            <Text style={styles.odMeta}>{new Date(q.created_at).toLocaleString()}</Text>
           </View>
 
           {Array.isArray(q.items) && q.items.length > 0 && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: 6 }}>
               <Text style={styles.odSection}>Requirement</Text>
-              <View style={styles.infoCard}>
-                {q.items.map((it: any, idx: number) => (
-                  <View key={idx} style={[styles.reqRow, idx === 0 && { borderTopWidth: 0 }]}>
-                    <Text style={styles.reqName} numberOfLines={2}>{it.name}</Text>
-                    <Text style={styles.reqQty}>{it.qty} {it.unit}</Text>
-                  </View>
-                ))}
-              </View>
+              {q.items.map((it: any, idx: number) => (
+                <Text key={idx} style={styles.odMeta}>• {it.name} — {it.qty} {it.unit}</Text>
+              ))}
             </View>
           )}
 
           {!!q.product && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: 4 }}>
               <Text style={styles.odSection}>Product</Text>
-              <Text style={styles.odBody}>{q.product}</Text>
+              <Text style={styles.odMeta}>{q.product}</Text>
             </View>
           )}
 
           {!!q.message && (
-            <View style={{ gap: 8 }}>
+            <View style={{ gap: 4 }}>
               <Text style={styles.odSection}>Message</Text>
-              <View style={styles.quoteCard}>
-                <Text style={styles.quoteText}>{q.message}</Text>
-              </View>
+              <Text style={styles.message}>“{q.message}”</Text>
             </View>
           )}
 
-          <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
             <Text style={styles.odSection}>Status</Text>
-            <StatusPicker statuses={INQ_STATUSES} current={q.status} onPick={(s) => onStatus(q.id, s)} />
+            <Badge text={q.status} tone={statusTone[q.status] || 'muted'} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Button label="Mark contacted" variant="navy" onPress={() => onStatus(q.id, 'contacted')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="Close" variant="ghost" onPress={() => onStatus(q.id, 'closed')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
+            <Button label="New" variant="ghost" onPress={() => onStatus(q.id, 'new')} style={{ paddingVertical: 8, paddingHorizontal: 16 }} />
           </View>
         </ScrollView>
 
@@ -1495,28 +1451,13 @@ const styles = StyleSheet.create({
   // order detail modal
   overlay: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,28,66,0.45)', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000 },
   modal: { width: '100%', maxWidth: 600, maxHeight: '88vh' as any, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', ...shadow.card },
-  modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 14, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalTitle: { color: colors.ink, fontWeight: '900', fontSize: 18 },
-  modalSub: { color: colors.muted, fontSize: 12, fontWeight: '600', marginTop: 2 },
-  closeBtn: { width: 32, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft },
-  modalClose: { color: colors.muted, fontSize: 16, fontWeight: '800' },
-  modalFoot: { flexDirection: 'row', justifyContent: 'flex-end', padding: 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.soft },
-  odSection: { fontWeight: '900', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: colors.navy },
+  modalTitle: { color: colors.white, fontWeight: '900', fontSize: 17 },
+  modalClose: { color: colors.white, fontSize: 18, fontWeight: '700' },
+  modalFoot: { flexDirection: 'row', justifyContent: 'flex-end', padding: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  odSection: { fontWeight: '900', fontSize: 13, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   odStrong: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   odMeta: { color: colors.muted, fontSize: 13 },
-  odBody: { color: colors.text, fontSize: 14, lineHeight: 21 },
-  infoCard: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden' },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: 1, borderTopColor: colors.line },
-  infoLabel: { width: 96, color: colors.muted, fontWeight: '700', fontSize: 13 },
-  infoValue: { flex: 1, color: colors.ink, fontWeight: '600', fontSize: 14 },
-  reqRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: 1, borderTopColor: colors.line },
-  reqName: { flex: 1, color: colors.ink, fontWeight: '600', fontSize: 14 },
-  reqQty: { color: colors.orangeDark, fontWeight: '800', fontSize: 13 },
-  quoteCard: { backgroundColor: colors.soft, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.orange, paddingHorizontal: 14, paddingVertical: 12 },
-  quoteText: { color: colors.text, fontSize: 14, lineHeight: 21, fontStyle: 'italic' },
-  statusPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  statusChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border },
-  statusChipText: { fontSize: 13, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
   odQty: { width: 50, textAlign: 'right' },
   odPrice: { width: 90, textAlign: 'right' },
   adminRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, flexWrap: 'wrap' },
@@ -1579,4 +1520,9 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: '800', color: colors.ink, fontSize: 15 },
   rowMeta: { color: colors.muted, fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
   orderTotal: { fontWeight: '900', color: colors.navy, fontSize: 17 },
+  statusPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+  statusChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F1F2F5' },
+  statusChipActive: { backgroundColor: colors.navy },
+  statusChipText: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'capitalize' },
+  message: { color: colors.text, fontStyle: 'italic', fontSize: 13, marginTop: 4 },
 });

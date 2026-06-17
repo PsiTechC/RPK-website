@@ -27,7 +27,6 @@ export function Button({
   onPress,
   variant = 'primary',
   style,
-  textStyle,
   disabled,
   icon,
 }: {
@@ -35,20 +34,18 @@ export function Button({
   onPress?: () => void;
   variant?: 'primary' | 'navy' | 'outline' | 'danger' | 'ghost';
   style?: ViewStyle;
-  textStyle?: TextStyle;
   disabled?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const v = btnVariants[variant];
-  const textColor = (textStyle?.color ?? v.text.color) as string;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [styles.btn, v.btn, disabled && { opacity: 0.5 }, pressed && { opacity: 0.85 }, style]}
     >
-      {!!icon && <Ionicons name={icon} size={16} color={textColor} />}
-      <Text style={[styles.btnText, v.text, textStyle]}>{label}</Text>
+      {!!icon && <Ionicons name={icon} size={16} color={v.text.color as string} />}
+      <Text style={[styles.btnText, v.text]}>{label}</Text>
     </Pressable>
   );
 }
