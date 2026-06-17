@@ -113,6 +113,7 @@ export default function Login() {
           </Text>
         </Card>
       </Container>
+      <View style={{ height: 64 }} />
       <Footer />
     </ScrollView>
   );

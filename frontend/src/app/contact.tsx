@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { api } from '../lib/api';
-import { colors, BRAND } from '../lib/theme';
+import { colors } from '../lib/theme';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Field, Card, Badge } from '../components/ui';
 import { ContactPanel } from '../components/ContactPanel';
@@ -51,19 +51,7 @@ export default function Contact() {
     const summary = items.map((i) => `${i.name} ×${i.qty} ${i.unit}`).join(', ');
     const productField = [summary, form.product.trim()].filter(Boolean).join(' | ');
 
-    // Open the customer's mail app addressed to the admin inbox.
-    const lines = [
-      `Name: ${form.name}`,
-      `Email: ${form.email || '—'}`,
-      `Phone: ${form.phone ? `${country.dial} ${form.phone}` : '—'}`,
-      productField ? `Product / requirement: ${productField}` : '',
-      '',
-      form.message ? `Message: ${form.message}` : '',
-    ];
-    Linking.openURL(
-      `mailto:${BRAND.email}?subject=${encodeURIComponent(`Inquiry — ${form.name}`)}&body=${encodeURIComponent(lines.join('\n'))}`
-    ).catch(() => {});
-
+    // Send the inquiry to the backend, which emails the admin inbox directly.
     setBusy(true);
     try {
       await api.createInquiry({
@@ -74,7 +62,7 @@ export default function Contact() {
       });
       setDone(true);
     } catch {
-      setDone(true); // email draft was opened either way
+      setError('Sorry, we could not send your inquiry right now. Please try again, or WhatsApp us.');
     } finally {
       setBusy(false);
     }
