@@ -83,7 +83,7 @@ export default function Home() {
           <FadeInUp delay={460}>
             <View style={styles.heroBtns}>
               <Button label="Shop Products" onPress={() => router.push('/products')} />
-              <Button label="Import / Export" variant="outline" onPress={() => router.push('/import-export')} style={styles.outlineOnDark} />
+              <Button label="Import / Export" variant="outline" onPress={() => router.push('/import-export')} style={styles.outlineOnDark} textStyle={{ color: colors.red }} />
             </View>
           </FadeInUp>
           <FadeInUp delay={600}>

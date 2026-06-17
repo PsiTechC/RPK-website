@@ -105,7 +105,7 @@ export default function ProductDetail() {
         </Pressable>
 
         <View style={[styles.row, stacked && { flexDirection: 'column' }]}>
-          <View style={[styles.imageBox, stacked ? { width: '100%', maxWidth: 420, alignSelf: 'center' } : { width: 420 }]}>
+          <View style={[styles.imageBox, stacked ? { width: '100%', maxWidth: 420, alignSelf: 'center', aspectRatio: 1 } : { width: 420 }]}>
             {!isPlaceholder(product.image_url) ? (
               <Image source={{ uri: imageUri(product.image_url) }} style={styles.image} contentFit="contain" transition={200} />
             ) : visualByName(product.category_name).photo ? (
@@ -305,8 +305,8 @@ export default function ProductDetail() {
 
 const styles = StyleSheet.create({
   back: { color: colors.navy, fontWeight: '700', fontSize: 15 },
-  row: { flexDirection: 'row', gap: 28, alignItems: 'flex-start' },
-  imageBox: { aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start', padding: 16, ...shadow.soft },
+  row: { flexDirection: 'row', gap: 28, alignItems: 'stretch' },
+  imageBox: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadow.soft },
   image: { width: '100%', height: '100%' },
   buyBox: { gap: 14, backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 24, ...shadow.soft },
   detailsRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' },

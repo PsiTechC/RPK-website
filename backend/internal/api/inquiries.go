@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"html"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,29 +61,62 @@ func (s *Server) handleCreateInquiry(w http.ResponseWriter, r *http.Request) {
 
 	// Notify the admin inbox (async — don't block the response on SMTP).
 	go func(req inquiryReq, id int64) {
-		_ = s.sendMail(s.cfg.AdminEmail, "New inquiry from "+req.Name, inquiryEmailHTML(req, id))
+		if err := s.sendMail(s.cfg.AdminEmail, "New inquiry from "+req.Name, inquiryEmailHTML(req, id)); err != nil {
+			log.Printf("[mail] failed to send inquiry #%d notification to %s: %v", id, s.cfg.AdminEmail, err)
+		}
 	}(req, id)
 
 	writeJSON(w, 201, map[string]interface{}{"id": id, "status": "received"})
 }
 
 func inquiryEmailHTML(q inquiryReq, id int64) string {
-	row := func(label, val string) string {
-		if strings.TrimSpace(val) == "" {
-			return ""
+	body := detailTable([]emailRow{
+		{"Name", q.Name},
+		{"Email", q.Email},
+		{"Phone", q.Phone},
+		{"Product", q.Product},
+		{"Requirement", formatItems(q.Items)},
+		{"Message", q.Message},
+	})
+	return emailShell(
+		"New customer inquiry",
+		"A customer just submitted an inquiry through the website.",
+		body,
+		fmt.Sprintf("Inquiry #%d · view it in the admin dashboard → Inquiries.", id),
+	)
+}
+
+// formatItems turns the requirement JSON (e.g. [{"name":"Rice","unit":"BAG","qty":1}])
+// into a human-readable line like "Rice ×1 BAG, …" for emails. Returns "" if empty.
+func formatItems(raw json.RawMessage) string {
+	s := strings.TrimSpace(string(raw))
+	if s == "" || s == "[]" || s == "null" {
+		return ""
+	}
+	var items []struct {
+		Name string  `json:"name"`
+		Unit string  `json:"unit"`
+		Qty  float64 `json:"qty"`
+	}
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return ""
+	}
+	parts := make([]string, 0, len(items))
+	for _, it := range items {
+		name := strings.TrimSpace(it.Name)
+		if name == "" {
+			continue
 		}
-		return "<p style=\"margin:6px 0\"><b>" + label + ":</b> " + html.EscapeString(val) + "</p>"
+		line := name
+		if it.Qty > 0 {
+			line += " ×" + strconv.FormatFloat(it.Qty, 'f', -1, 64)
+		}
+		if u := strings.TrimSpace(it.Unit); u != "" {
+			line += " " + u
+		}
+		parts = append(parts, line)
 	}
-	items := strings.TrimSpace(string(q.Items))
-	itemsHTML := ""
-	if items != "" && items != "[]" && items != "null" {
-		itemsHTML = "<p style=\"margin:6px 0\"><b>Requirement:</b> " + html.EscapeString(items) + "</p>"
-	}
-	return fmt.Sprintf(`<div style="font-family:Arial,sans-serif;max-width:540px;color:#2A2A2A">
-  <h2 style="color:#E2231A">New Inquiry — RPK Food Trading</h2>
-  %s%s%s%s%s%s
-  <p style="color:#6B7280;font-size:12px;margin-top:14px">Inquiry #%d · view it in the admin dashboard → Inquiries.</p>
-</div>`, row("Name", q.Name), row("Email", q.Email), row("Phone", q.Phone), row("Product", q.Product), row("Message", q.Message), itemsHTML, id)
+	return strings.Join(parts, ", ")
 }
 
 func (s *Server) handleAdminListInquiries(w http.ResponseWriter, r *http.Request) {
