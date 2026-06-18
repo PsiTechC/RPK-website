@@ -7,7 +7,7 @@ import { Logo } from './Logo';
 
 export function Footer() {
   const { width } = useWindowDimensions();
-  const compact = width < 720;
+  const compact = width < 900;
   return (
     <View style={styles.wrap}>
       <View style={[styles.inner, compact && { flexDirection: 'column', gap: 20 }]}>

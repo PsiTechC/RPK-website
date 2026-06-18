@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -78,10 +79,11 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		currency = cur
-		lt := price * float64(it.Quantity)
+		lt := round2(price * float64(it.Quantity))
 		subtotal += lt
 		lines = append(lines, resolved{it.ProductID, name, unit, price, it.Quantity, lt})
 	}
+	subtotal = round2(subtotal)
 	if len(lines) == 0 {
 		writeErr(w, 400, "no valid items")
 		return
@@ -135,7 +137,11 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func subtotalCents(v float64) int64 { return int64(v * 100) }
+func subtotalCents(v float64) int64 { return int64(round2(v) * 100) }
+
+// round2 rounds money to 2 decimals, matching the DB's NUMERIC(12,2) columns and
+// avoiding float artifacts (e.g. 0.1*3) leaking into payment refs / responses.
+func round2(v float64) float64 { return math.Round(v*100) / 100 }
 
 func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserIDFrom(r.Context())

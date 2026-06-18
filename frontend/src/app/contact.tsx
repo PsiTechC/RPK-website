@@ -40,15 +40,11 @@ export default function Contact() {
     setError('');
     const e: Record<string, string | null> = {
       name: vName(form.name, 'Your name'),
-      email: form.email ? vEmail(form.email) : null,
-      phone: form.phone ? vPhoneLen(form.phone, country, false) : null,
+      email: vEmail(form.email),
+      phone: vPhoneLen(form.phone, country, true),
     };
     setErrors(e);
     if (!isClean(e)) return;
-    if (!form.email.trim() && !form.phone.trim()) {
-      setError('Please provide an email or phone number so we can reach you.');
-      return;
-    }
     const summary = items.map((i) => `${i.name} ×${i.qty} ${i.unit}`).join(', ');
     const productField = [summary, form.product.trim()].filter(Boolean).join(' | ');
 
@@ -101,8 +97,8 @@ export default function Contact() {
                   </View>
                 )}
                 <Field label="Your name *" value={form.name} onChangeText={(t) => set('name')(sanitizeName(t))} placeholder="Full name" error={errors.name} />
-                <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
-                <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
+                <Field label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
+                <PhoneField label="Phone *" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
                 <RequirementBuilder items={items} onChange={setItems} />
                 <Field label="Other products / notes" value={form.product} onChangeText={set('product')} placeholder="Anything not listed above…" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Quantity needed, delivery location, any questions…" multiline />

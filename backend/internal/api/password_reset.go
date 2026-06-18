@@ -149,13 +149,23 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 			uid, sha256hex(raw), expires); e == nil {
 			base := s.cfg.AppBaseURL
 			if base == "" {
-				base = "http://localhost:8081"
+				// Fall back to the host the request came in on (no hardcoded local URL).
+				scheme := "https"
+				if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+					scheme = "http"
+				}
+				base = scheme + "://" + r.Host
 			}
 			link := strings.TrimRight(base, "/") + "/reset-password?token=" + raw
 			log.Printf("[reset] password reset link for %s: %s", req.Email, link)
-			if err := s.sendMail(req.Email, "Reset your RPK password", resetEmailHTML(name, link)); err != nil {
-				log.Printf("[mail] failed to send password reset to %s: %v", req.Email, err)
-			}
+			// Send asynchronously so the response time is identical whether or not
+			// the account exists — otherwise the synchronous SMTP round-trip (~seconds)
+			// leaks which emails are registered (user-enumeration timing oracle).
+			go func(to, nm, lnk string) {
+				if err := s.sendMail(to, "Reset your RPK password", resetEmailHTML(nm, lnk)); err != nil {
+					log.Printf("[mail] failed to send password reset to %s: %v", to, err)
+				}
+			}(req.Email, name, link)
 		}
 	}
 	writeJSON(w, 200, map[string]string{"status": "ok"})

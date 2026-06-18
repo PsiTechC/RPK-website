@@ -119,13 +119,21 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 		where += " AND p.name ILIKE $" + strconv.Itoa(len(args))
 	}
 
+	// Bound the result set so the query can never be truly unbounded. Default
+	// 1000 (covers the whole catalogue today); callers may page with ?limit/?offset.
+	limit, offset := parseLimitOffset(q.Get("limit"), q.Get("offset"), 1000, 1000)
+	args = append(args, limit)
+	limitClause := " LIMIT $" + strconv.Itoa(len(args))
+	args = append(args, offset)
+	offsetClause := " OFFSET $" + strconv.Itoa(len(args))
+
 	sql := `SELECT p.id, p.name, p.slug, p.category_id, COALESCE(c.name,''), p.unit, p.price,
 	               p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
 		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
 		        p.highlights, p.nutrition, p.seller
 	        FROM products p LEFT JOIN categories c ON c.id = p.category_id ` +
-		where + ` ORDER BY p.sort_order, p.name`
+		where + ` ORDER BY p.sort_order, p.name` + limitClause + offsetClause
 
 	rows, err := s.pool.Query(r.Context(), sql, args...)
 	if err != nil {

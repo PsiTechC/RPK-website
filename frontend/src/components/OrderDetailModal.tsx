@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Pressable, Platform } from 'react-n
 import { Order } from '../lib/api';
 import { colors, radius, shadow } from '../lib/theme';
 import { money } from '../lib/store';
+import { fmtDateTime } from '../lib/date';
 import { Button, Badge } from './ui';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -44,7 +45,7 @@ export function OrderDetailModal({
             <Text style={styles.strong}>{order.customer_name}</Text>
             <Text style={styles.meta}>{order.customer_email} · {order.customer_phone || 'no phone'}</Text>
             {!!order.shipping_address && <Text style={styles.meta}>Ship to: {order.shipping_address}</Text>}
-            <Text style={styles.meta}>Placed {new Date(order.created_at).toLocaleString()}</Text>
+            <Text style={styles.meta}>Placed {fmtDateTime(order.created_at)}</Text>
           </View>
 
           <View style={{ gap: 6 }}>

@@ -40,15 +40,11 @@ export default function Cart() {
   function validate(): boolean {
     const e: Record<string, string | null> = {
       customer_name: vName(form.customer_name, 'Full name'),
-      customer_email: form.customer_email ? vEmail(form.customer_email) : null,
-      customer_phone: form.customer_phone ? vPhoneLen(form.customer_phone, country, false) : null,
+      customer_email: vEmail(form.customer_email),
+      customer_phone: vPhoneLen(form.customer_phone, country, true),
     };
     setErrors(e);
     if (!isClean(e)) return false;
-    if (!form.customer_email.trim() && !form.customer_phone.trim()) {
-      setError('Please provide an email or phone number so we can reach you.');
-      return false;
-    }
     return true;
   }
 
@@ -162,8 +158,8 @@ export default function Cart() {
 
               <View style={{ gap: 10, marginTop: 8 }}>
                 <Field label="Full name" value={form.customer_name} onChangeText={(t) => set('customer_name')(sanitizeName(t))} placeholder="Your name" error={errors.customer_name} />
-                <Field label="Email" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
-                <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.customer_phone} onNumberChange={set('customer_phone')} error={errors.customer_phone} />
+                <Field label="Email *" value={form.customer_email} onChangeText={set('customer_email')} placeholder="you@email.com" keyboardType="email-address" error={errors.customer_email} />
+                <PhoneField label="Phone *" country={country} onCountryChange={setCountry} number={form.customer_phone} onNumberChange={set('customer_phone')} error={errors.customer_phone} />
                 <Field label="Message (optional)" value={form.shipping_address} onChangeText={set('shipping_address')} placeholder="Quantity needed, delivery location, any questions…" multiline />
               </View>
 

@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.md, overflow: 'hidden', justifyContent: 'flex-end', ...shadow.card },
   toShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%', opacity: 0.55 },
   emoji: { position: 'absolute', top: '18%', alignSelf: 'center', fontSize: 60, opacity: 0.9 },
-  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15,10,10,0.34)' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,10,10,0.34)' },
   label: { padding: 12 },
   name: { color: colors.white, fontWeight: '900', fontSize: 15 },
   cta: { color: '#FFE3DF', fontWeight: '700', fontSize: 12, marginTop: 2 },

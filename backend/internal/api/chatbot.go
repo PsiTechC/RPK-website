@@ -42,6 +42,19 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "messages required")
 		return
 	}
+	// Bound the conversation so a single request can't blow up the paid API call.
+	if len(req.Messages) > 30 {
+		writeErr(w, 400, "conversation too long")
+		return
+	}
+	total := 0
+	for _, m := range req.Messages {
+		total += len(m.Content)
+	}
+	if total > 8000 {
+		writeErr(w, 400, "message too long")
+		return
+	}
 
 	if s.cfg.AnthropicAPIKey == "" {
 		writeJSON(w, 200, map[string]string{

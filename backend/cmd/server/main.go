@@ -15,6 +15,12 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Refuse to start with a guessable signing secret — otherwise anyone can mint
+	// a valid admin JWT offline and take over the API.
+	if cfg.JWTSecret == "" || cfg.JWTSecret == "dev_insecure_secret_change_me" || len(cfg.JWTSecret) < 16 {
+		log.Fatal("JWT_SECRET must be set to a strong random value (>=16 chars). Generate one with: openssl rand -hex 32")
+	}
+
 	ctx := context.Background()
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {

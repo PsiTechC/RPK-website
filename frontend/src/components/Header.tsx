@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
@@ -20,6 +21,7 @@ export function Header() {
   const router = useRouter();
   const { user, cartCount, logout } = useApp();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets(); // keep the header clear of the notch / status bar
   const compact = width < 1024;
 
   const [menuOpen, setMenuOpen] = useState(false); // mobile nav
@@ -38,7 +40,7 @@ export function Header() {
   };
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { paddingTop: insets.top }]}>
       <View style={styles.accent} />
       <View style={styles.inner}>
         {/* Left — logo */}
@@ -104,7 +106,7 @@ export function Header() {
       {!compact && profileOpen && user && (
         <>
           <Pressable style={styles.scrim} onPress={() => setProfileOpen(false)} />
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, { top: insets.top + 64 }]}>
             <View style={styles.ddHead}>
               <View style={styles.ddAvatar}>
                 <Text style={styles.avatarText}>{user.name?.[0]?.toUpperCase() || '?'}</Text>
@@ -129,7 +131,7 @@ export function Header() {
       {compact && menuOpen && (
         <>
           <Pressable style={styles.scrim} onPress={() => setMenuOpen(false)} />
-          <View style={styles.mobilePanel}>
+          <View style={[styles.mobilePanel, { top: insets.top + 60 }]}>
             {NAV.map((n) => {
               const active = pathname === n.href;
               return (
@@ -256,7 +258,11 @@ const styles = StyleSheet.create({
   chevron: { color: colors.muted, fontSize: 12, fontWeight: '900' },
 
   // dropdown
-  scrim: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 },
+  // Full-screen tap-catcher to dismiss menus. 'fixed' covers the viewport on web;
+  // native has no 'fixed', so use absolute with a tall height to cover the screen.
+  scrim: Platform.OS === 'web'
+    ? ({ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 } as any)
+    : { position: 'absolute', top: 0, left: 0, right: 0, height: 2000, zIndex: 90 },
   dropdown: {
     position: 'absolute' as any, top: 64, right: 18, width: 248, backgroundColor: colors.white,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 8, zIndex: 110, ...shadow.card,

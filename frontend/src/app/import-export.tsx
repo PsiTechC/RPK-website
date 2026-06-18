@@ -56,7 +56,7 @@ export default function ImportExport() {
     const e: Record<string, string | null> = {
       company_name: vRequired(form.company_name, 'Company name'),
       email: vEmail(form.email),
-      phone: vPhoneLen(form.phone, country, false),
+      phone: vPhoneLen(form.phone, country, true),
       contact_person: form.contact_person.trim() ? vName(form.contact_person, 'Contact person') : null,
     };
     setErrors(e);
@@ -134,7 +134,7 @@ export default function ImportExport() {
                   <Field style={{ flex: 1 }} label="Contact person" value={form.contact_person} onChangeText={(t) => set('contact_person')(sanitizeName(t))} placeholder="Full name" error={errors.contact_person} />
                   <Field style={{ flex: 1 }} label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@company.com" keyboardType="email-address" error={errors.email} />
                 </View>
-                <PhoneField label={`Phone & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
+                <PhoneField label={`Phone * & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
                 <RequirementBuilder items={items} onChange={setItems} />
                 <Field label="Other products / notes" value={form.product_interest} onChangeText={(t) => setForm({ ...form, product_interest: t })} placeholder="Anything not listed above…" />
                 <Field label="Message" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Tell us about your business & requirements" multiline />

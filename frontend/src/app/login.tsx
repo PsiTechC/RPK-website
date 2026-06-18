@@ -82,7 +82,7 @@ export default function Login() {
           {mode === 'register' && (
             <>
               <Field label="Full name" value={form.name} onChangeText={(t) => set('name')(sanitizeName(t))} placeholder="Your name" error={errors.name} />
-              <PhoneField label="Phone" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
+              <PhoneField label="Phone *" country={country} onCountryChange={setCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
               <View style={{ gap: 6 }}>
                 <Text style={styles.label}>Account type</Text>
                 <View style={styles.roleRow}>
@@ -93,7 +93,7 @@ export default function Login() {
             </>
           )}
 
-          <Field label="Email" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
+          <Field label="Email *" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
           <Field label="Password" value={form.password} onChangeText={set('password')} placeholder="••••••" secureTextEntry error={errors.password} />
 
           {mode === 'login' && (

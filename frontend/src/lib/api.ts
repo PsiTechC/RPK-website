@@ -48,6 +48,8 @@ export type Product = {
   highlights: { label: string; value: string }[];
   nutrition: string;
   seller: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Review = {

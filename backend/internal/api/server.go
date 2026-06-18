@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -26,8 +28,15 @@ func NewServer(pool *pgxpool.Pool, authSvc *auth.Service, cfg config.Config) *Se
 
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
+	r.Use(middleware.RealIP) // trust X-Forwarded-For from the nginx proxy for rate-limit keys
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	// Abuse limiters (per client IP). Auth = brute-force guard; chat = paid API
+	// cost guard; contact = admin email-flood guard.
+	authLimit := newRateLimiter(10, time.Minute)
+	chatLimit := newRateLimiter(20, time.Minute)
+	contactLimit := newRateLimiter(5, time.Minute)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -38,16 +47,20 @@ func (s *Server) Router() http.Handler {
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 
-	// Serve admin-uploaded product images.
+	// Serve admin-uploaded product images. nosniff stops browsers from
+	// re-interpreting a file as HTML/script regardless of its extension.
 	fileServer := http.FileServer(http.Dir(s.cfg.UploadsDir))
-	r.Handle("/uploads/*", http.StripPrefix("/uploads/", fileServer))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		fileServer.ServeHTTP(w, req)
+	})))
 
 	r.Route("/api", func(r chi.Router) {
-		// Public
-		r.Post("/auth/register", s.handleRegister)
-		r.Post("/auth/login", s.handleLogin)
-		r.Post("/auth/forgot-password", s.handleForgotPassword)
-		r.Post("/auth/reset-password", s.handleResetPassword)
+		// Public — auth endpoints are rate-limited against brute force.
+		r.With(authLimit.middleware).Post("/auth/register", s.handleRegister)
+		r.With(authLimit.middleware).Post("/auth/login", s.handleLogin)
+		r.With(authLimit.middleware).Post("/auth/forgot-password", s.handleForgotPassword)
+		r.With(authLimit.middleware).Post("/auth/reset-password", s.handleResetPassword)
 
 		r.Get("/categories", s.handleListCategories)
 		r.Get("/products", s.handleListProducts)
@@ -56,10 +69,10 @@ func (s *Server) Router() http.Handler {
 
 		// import/export — open to public, but link the user when logged in so it
 		// shows under "My Registrations" on their account.
-		r.With(s.auth.Optional).Post("/registrations", s.handleCreateRegistration)
-		r.Post("/chat", s.handleChat)                        // AI chatbot
-		r.Get("/stats", s.handlePublicStats)                 // homepage counters (products/categories/countries)
-		r.Post("/inquiries", s.handleCreateInquiry)          // "Call to Inquiry" / contact form
+		r.With(contactLimit.middleware, s.auth.Optional).Post("/registrations", s.handleCreateRegistration)
+		r.With(chatLimit.middleware).Post("/chat", s.handleChat)        // AI chatbot (paid API)
+		r.Get("/stats", s.handlePublicStats)                            // homepage counters
+		r.With(contactLimit.middleware).Post("/inquiries", s.handleCreateInquiry) // contact form → admin email
 
 		// Authenticated (any logged-in user)
 		r.Group(func(r chi.Router) {
@@ -122,11 +135,32 @@ func writeErr(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
+// maxRequestBytes caps JSON request bodies to prevent memory-exhaustion DoS.
+// (Image uploads use their own, larger limit on a separate path.)
+const maxRequestBytes = 1 << 20 // 1 MiB
+
 func readJSON(r *http.Request, v interface{}) error {
 	defer r.Body.Close()
-	dec := json.NewDecoder(r.Body)
+	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, maxRequestBytes))
 	dec.DisallowUnknownFields()
 	return dec.Decode(v)
+}
+
+// parseLimitOffset clamps client-supplied pagination to a safe range so list
+// endpoints can never run an unbounded query.
+func parseLimitOffset(limitStr, offsetStr string, def, max int) (int, int) {
+	limit := def
+	if n, err := strconv.Atoi(limitStr); err == nil && n > 0 {
+		limit = n
+	}
+	if limit > max {
+		limit = max
+	}
+	offset := 0
+	if n, err := strconv.Atoi(offsetStr); err == nil && n > 0 {
+		offset = n
+	}
+	return limit, offset
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)

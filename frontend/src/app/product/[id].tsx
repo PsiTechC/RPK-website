@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Product, Review, imageUri } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { useApp } from '../../lib/store';
+import { fmtDate } from '../../lib/date';
 import { useToast } from '../../components/Toast';
 import { visualByName, isPlaceholder } from '../../lib/foodVisuals';
 import { Footer } from '../../components/Footer';
@@ -271,7 +272,7 @@ export default function ProductDetail() {
                           <Stars value={r.rating} size={15} />
                         </View>
                         {!!r.comment && <Text style={styles.reviewComment}>{r.comment}</Text>}
-                        <Text style={styles.reviewDate}>{new Date(r.created_at).toLocaleDateString()}</Text>
+                        <Text style={styles.reviewDate}>{fmtDate(r.created_at)}</Text>
                       </View>
                     ))}
                   </View>

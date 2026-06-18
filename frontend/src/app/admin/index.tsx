@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api, Product, Order, Registration, Category, User } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
+import { fmtDate, fmtDateTime } from '../../lib/date';
 import { Container, SectionTitle, Button, Card, Badge } from '../../components/ui';
 import { ProductForm } from '../../components/admin/ProductForm';
 import { ProductThumb } from '../../components/admin/ProductThumb';
@@ -91,6 +92,8 @@ export default function Admin() {
   const [prodSearch, setProdSearch] = useState('');
   const [prodView, setProdView] = useState<'list' | 'grid'>('list');
   const [prodAddNonce, setProdAddNonce] = useState(0);
+  // Orders status filter (also lives in the topbar, on the right).
+  const [orderStatus, setOrderStatus] = useState('all');
 
   if (ready && (!user || user.role !== 'admin')) {
     return (
@@ -176,6 +179,7 @@ export default function Admin() {
                 <Button label={compact ? '' : 'Add product'} icon="add" onPress={() => setProdAddNonce((n) => n + 1)} style={compact ? styles.addBtnCompact : undefined} />
               </>
             )}
+            {tab === 'orders' && <StatusFilter value={orderStatus} onChange={setOrderStatus} />}
             <View style={styles.adminAvatar}><Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text></View>
           </View>
         </View>
@@ -184,7 +188,7 @@ export default function Admin() {
             {token && tab === 'dashboard' && <Dashboard token={token} onNavigate={setTab} />}
             {token && tab === 'products' && <Products token={token} search={prodSearch} onSearch={setProdSearch} view={prodView} addNonce={prodAddNonce} />}
             {token && tab === 'arrange' && <Arrange token={token} />}
-            {token && tab === 'orders' && <Orders token={token} />}
+            {token && tab === 'orders' && <Orders token={token} statusFilter={orderStatus} />}
             {token && tab === 'customers' && <Customers token={token} />}
             {token && tab === 'registrations' && <Registrations token={token} />}
             {token && tab === 'inquiries' && <Inquiries token={token} />}
@@ -332,7 +336,7 @@ function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) 
                 <Text style={[styles.td, styles.tdStrong, styles.rOrder]}>{o.id}</Text>
                 <Text style={[styles.td, styles.rCust]} numberOfLines={1}>{o.customer_name}</Text>
                 <Text style={[styles.td, styles.rShip]} numberOfLines={1}>{o.shipping_address || '—'}</Text>
-                <Text style={[styles.td, styles.rDate]}>{new Date(o.created_at).toLocaleDateString()}</Text>
+                <Text style={[styles.td, styles.rDate]}>{fmtDate(o.created_at)}</Text>
                 <Text style={[styles.td, styles.tdStrong, styles.rTotal]}>{money(o.subtotal, o.currency)}</Text>
                 <View style={styles.rStatus}><Badge text={o.status} tone={statusTone[o.status] || 'muted'} /></View>
               </View>
@@ -561,9 +565,9 @@ function ProductTable({
 }) {
   const { width } = useWindowDimensions();
   // On roomy screens the table fills the container (flex columns absorb the
-  // extra width — no empty gap on the right). On small screens it keeps its
-  // min width and scrolls horizontally so nothing gets squashed.
-  const fits = width >= 820;
+  // extra width — no empty gap on the right). When the columns can't all fit it
+  // keeps its min width and scrolls horizontally so nothing gets squashed.
+  const fits = width >= 1040;
 
   const table = (
     <View style={[styles.table, fits ? styles.tableFull : styles.tableMin, fits && styles.tableStickyWrap]}>
@@ -576,6 +580,8 @@ function ProductTable({
           <Text style={[styles.th, styles.colUnit]}>Unit</Text>
           <Text style={[styles.th, styles.colStock]}>Stock</Text>
           <Text style={[styles.th, styles.colStatus]}>Status</Text>
+          <Text style={[styles.th, styles.colDate]}>Added</Text>
+          <Text style={[styles.th, styles.colDate]}>Updated</Text>
           <Text style={[styles.th, styles.colActions]}>Actions</Text>
         </View>
         {products.map((p, i) => (
@@ -590,6 +596,8 @@ function ProductTable({
             <View style={styles.colStatus}>
               <Badge text={p.is_active ? 'active' : 'hidden'} tone={p.is_active ? 'green' : 'muted'} />
             </View>
+            <Text style={[styles.td, styles.colDate]}>{fmtDate(p.created_at)}</Text>
+            <Text style={[styles.td, styles.colDate]}>{fmtDate(p.updated_at)}</Text>
             <View style={[styles.colActions, styles.actionCell]}>
               <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={styles.smallBtn} />
               <Button label="Delete" variant="danger" onPress={() => onDelete(p)} style={styles.smallBtn} />
@@ -721,12 +729,100 @@ function Archived({ token }: { token: string }) {
 }
 
 // ---------- Orders ----------
-function Orders({ token }: { token: string }) {
+type OrderSortKey = 'id' | 'customer_name' | 'customer_email' | 'customer_phone' | 'shipping_address' | 'created_at' | 'status';
+
+// Clickable column header: toggles asc/desc and shows the active direction arrow.
+function SortHeader({ label, col, sortKey, sortDir, onSort, style }: {
+  label: string;
+  col: OrderSortKey;
+  sortKey: OrderSortKey;
+  sortDir: 'asc' | 'desc';
+  onSort: (k: OrderSortKey) => void;
+  style?: any;
+}) {
+  const active = sortKey === col;
+  return (
+    <Pressable style={[styles.sortHead, style]} onPress={() => onSort(col)} accessibilityLabel={`Sort by ${label}`}>
+      <Text style={[styles.th, active && styles.thActive]} numberOfLines={1}>{label}</Text>
+      <Ionicons
+        name={active ? (sortDir === 'asc' ? 'arrow-up' : 'arrow-down') : 'swap-vertical'}
+        size={12}
+        color={active ? colors.navy : colors.muted}
+      />
+    </Pressable>
+  );
+}
+
+// Topbar status filter — a pill that opens the six statuses + "All".
+function StatusFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const options = ['all', ...ORDER_STATUSES];
+  return (
+    <View style={{ position: 'relative', zIndex: open ? 200 : 1 }}>
+      <Pressable style={styles.filterBtn} onPress={() => setOpen((o) => !o)}>
+        <Ionicons name="funnel-outline" size={14} color={colors.navy} />
+        <Text style={styles.filterBtnText}>{value === 'all' ? 'All statuses' : value}</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={colors.muted} />
+      </Pressable>
+      {open && (
+        <>
+          <Pressable style={styles.filterScrim} onPress={() => setOpen(false)} />
+          <View style={styles.filterMenu}>
+            {options.map((opt) => {
+              const active = opt === value;
+              return (
+                <Pressable key={opt} style={[styles.filterItem, active && styles.filterItemActive]} onPress={() => { onChange(opt); setOpen(false); }}>
+                  <Text style={[styles.filterItemText, active && { color: colors.navy, fontWeight: '900' }]}>
+                    {opt === 'all' ? 'All statuses' : opt}
+                  </Text>
+                  {active && <Ionicons name="checkmark" size={15} color={colors.navy} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
+function Orders({ token, statusFilter = 'all' }: { token: string; statusFilter?: string }) {
   const { width } = useWindowDimensions();
   const fits = width >= 1024; // fill width on desktop; scroll on narrow screens
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<Order | null>(null);
+  const [sortKey, setSortKey] = useState<OrderSortKey>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  function onSort(k: OrderSortKey) {
+    if (k === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(k);
+      setSortDir(k === 'created_at' || k === 'id' ? 'desc' : 'asc');
+    }
+  }
+
+  const sorted = useMemo(() => {
+    const val = (o: Order): number | string => {
+      switch (sortKey) {
+        case 'id':
+          return o.id;
+        case 'created_at':
+          return new Date(o.created_at).getTime();
+        default:
+          return String((o as any)[sortKey] ?? '').toLowerCase();
+      }
+    };
+    const list = statusFilter === 'all' ? orders : orders.filter((o) => o.status === statusFilter);
+    return [...list].sort((a, b) => {
+      const av = val(a);
+      const bv = val(b);
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [orders, sortKey, sortDir, statusFilter]);
 
   async function load() {
     setLoading(true);
@@ -756,37 +852,37 @@ function Orders({ token }: { token: string }) {
 
   return (
     <View style={{ gap: 12 }}>
-      <Text style={styles.h}>{orders.length} order{orders.length === 1 ? '' : 's'}</Text>
       <Tbl fits={fits}>
         <View style={[styles.table, fits ? styles.tableFull : styles.ordersTable]}>
           <View style={[styles.tr, styles.thead]}>
-            <Text style={[styles.th, styles.oOrder]}>Order</Text>
-            <Text style={[styles.th, styles.oName]}>Customer</Text>
-            <Text style={[styles.th, styles.oEmail]}>Email</Text>
-            <Text style={[styles.th, styles.oPhone]}>Phone</Text>
-            <Text style={[styles.th, styles.oShip]}>Ship to</Text>
-            <Text style={[styles.th, styles.oDate]}>Placed</Text>
-            <Text style={[styles.th, styles.oStatus]}>Status</Text>
+            <SortHeader label="Order" col="id" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oOrder} />
+            <SortHeader label="Customer" col="customer_name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oName} />
+            <SortHeader label="Email" col="customer_email" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oEmail} />
+            <SortHeader label="Phone" col="customer_phone" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oPhone} />
+            <SortHeader label="Ship to" col="shipping_address" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oShip} />
+            <SortHeader label="Placed" col="created_at" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oDate} />
+            <SortHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={onSort} style={styles.oStatus} />
             <Text style={[styles.th, styles.oView]}>View</Text>
           </View>
-          {orders.map((o, i) => (
-            <View key={o.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+          {sorted.map((o, i) => (
+            <Pressable key={o.id} style={({ hovered }: any) => [styles.tr, i % 2 === 1 && styles.trAlt, hovered && styles.trHover]} onPress={() => view(o.id)}>
               <Text style={[styles.td, styles.tdStrong, styles.oOrder]}>{o.id}</Text>
               <Text style={[styles.td, styles.oName]} numberOfLines={1}>{o.customer_name}</Text>
               <Text style={[styles.td, styles.oEmail]} numberOfLines={1}>{o.customer_email}</Text>
               <Text style={[styles.td, styles.oPhone]} numberOfLines={1}>{o.customer_phone || '—'}</Text>
               <Text style={[styles.td, styles.oShip]} numberOfLines={1}>{o.shipping_address || '—'}</Text>
-              <Text style={[styles.td, styles.oDate]}>{new Date(o.created_at).toLocaleDateString()}</Text>
+              <Text style={[styles.td, styles.oDate]}>{fmtDate(o.created_at)}</Text>
               <View style={styles.oStatus}><Badge text={o.status} tone={statusTone[o.status] || 'muted'} /></View>
               <View style={styles.oView}>
-                <Pressable style={styles.eyeBtn} onPress={() => view(o.id)} accessibilityLabel={`View order ${o.id}`}>
+                <View style={styles.eyeBtn}>
                   <Ionicons name="eye-outline" size={18} color={colors.navy} />
-                </Pressable>
+                </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </Tbl>
+      {sorted.length === 0 && <Text style={styles.muted}>No orders with status “{statusFilter}”.</Text>}
 
       {detail && <OrderDetailModal order={detail} onClose={() => setDetail(null)} onStatus={setStatus} />}
     </View>
@@ -800,6 +896,7 @@ function Customers({ token }: { token: string }) {
   const [items, setItems] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [detail, setDetail] = useState<User | null>(null);
 
   useEffect(() => {
     api.admin.customers(token).then(setItems).catch(() => {}).finally(() => setLoading(false));
@@ -854,21 +951,59 @@ function Customers({ token }: { token: string }) {
               <Text style={[styles.th, styles.cuJoined]}>Joined</Text>
             </View>
             {filtered.map((u, i) => (
-              <View key={u.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+              <Pressable key={u.id} style={({ hovered }: any) => [styles.tr, i % 2 === 1 && styles.trAlt, hovered && styles.trHover]} onPress={() => setDetail(u)}>
                 <Text style={[styles.td, styles.tdStrong, styles.cuName]} numberOfLines={1}>{u.name}</Text>
                 <Text style={[styles.td, styles.cuEmail]} numberOfLines={1}>{u.email}</Text>
                 <Text style={[styles.td, styles.cuPhone]} numberOfLines={1}>{u.phone || '—'}</Text>
                 <View style={styles.cuRole}>
                   <Badge text={u.role} tone={u.role === 'business' ? 'navy' : 'muted'} />
                 </View>
-                <Text style={[styles.td, styles.cuJoined]}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</Text>
-              </View>
+                <Text style={[styles.td, styles.cuJoined]}>{fmtDate(u.created_at)}</Text>
+              </Pressable>
             ))}
           </View>
         </Tbl>
       )}
+
+      {detail && <CustomerDetailModal user={detail} onClose={() => setDetail(null)} />}
     </View>
   );
+}
+
+// Full customer info, opened by clicking a row.
+function CustomerDetailModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const content = (
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        <View style={styles.modalHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modalTitle} numberOfLines={1}>{user.name}</Text>
+            <Text style={styles.modalSub}>Customer · #{user.id}</Text>
+          </View>
+          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}><Text style={styles.modalClose}>✕</Text></Pressable>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 18 }}>
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Account</Text>
+            <View style={styles.infoCard}>
+              <InfoRow label="Name" value={user.name} first />
+              <InfoRow label="Email" value={user.email} />
+              <InfoRow label="Phone" value={user.phone || '—'} />
+              <InfoRow label="Type" value={user.role} />
+              <InfoRow label="Joined" value={fmtDateTime(user.created_at)} />
+            </View>
+          </View>
+        </ScrollView>
+        <View style={styles.modalFoot}>
+          <Button label="Close" variant="ghost" onPress={onClose} />
+        </View>
+      </View>
+    </View>
+  );
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
 }
 
 // ---------- Registrations ----------
@@ -919,7 +1054,7 @@ function Registrations({ token }: { token: string }) {
             <Text style={[styles.th, styles.gView]}>View</Text>
           </View>
           {regs.map((r, i) => (
-            <View key={r.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+            <Pressable key={r.id} style={({ hovered }: any) => [styles.tr, i % 2 === 1 && styles.trAlt, hovered && styles.trHover]} onPress={() => setDetail(r)}>
               <Text style={[styles.td, styles.tdStrong, styles.gCompany]} numberOfLines={1}>{r.company_name}</Text>
               <Text style={[styles.td, styles.gType]}>{r.business_type}</Text>
               <Text style={[styles.td, styles.gCountry]} numberOfLines={1}>{r.country || '—'}</Text>
@@ -927,11 +1062,11 @@ function Registrations({ token }: { token: string }) {
               <Text style={[styles.td, styles.gReq]} numberOfLines={1}>{regReqSummary(r)}</Text>
               <View style={styles.gStatus}><Badge text={r.status} tone={statusTone[r.status] || 'muted'} /></View>
               <View style={styles.gView}>
-                <Pressable style={styles.eyeBtn} onPress={() => setDetail(r)} accessibilityLabel={`View ${r.company_name}`}>
+                <View style={styles.eyeBtn}>
                   <Ionicons name="eye-outline" size={18} color={colors.navy} />
-                </Pressable>
+                </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </Tbl>
@@ -1089,19 +1224,19 @@ function Inquiries({ token }: { token: string }) {
             <Text style={[styles.th, styles.qView]}>View</Text>
           </View>
           {items.map((q, i) => (
-            <View key={q.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+            <Pressable key={q.id} style={({ hovered }: any) => [styles.tr, i % 2 === 1 && styles.trAlt, hovered && styles.trHover]} onPress={() => setDetail(q)}>
               <Text style={[styles.td, styles.tdStrong, styles.qName]} numberOfLines={1}>{q.name}</Text>
               <Text style={[styles.td, styles.qEmail]} numberOfLines={1}>{q.email || '—'}</Text>
               <Text style={[styles.td, styles.qPhone]} numberOfLines={1}>{q.phone || '—'}</Text>
               <Text style={[styles.td, styles.qReq]} numberOfLines={1}>{inquiryReqSummary(q)}</Text>
-              <Text style={[styles.td, styles.qDate]}>{new Date(q.created_at).toLocaleDateString()}</Text>
+              <Text style={[styles.td, styles.qDate]}>{fmtDate(q.created_at)}</Text>
               <View style={styles.qStatus}><Badge text={q.status} tone={statusTone[q.status] || 'muted'} /></View>
               <View style={styles.qView}>
-                <Pressable style={styles.eyeBtn} onPress={() => setDetail(q)} accessibilityLabel={`View inquiry from ${q.name}`}>
+                <View style={styles.eyeBtn}>
                   <Ionicons name="eye-outline" size={18} color={colors.navy} />
-                </Pressable>
+                </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </Tbl>
@@ -1119,7 +1254,7 @@ function InquiryDetailModal({ inquiry: q, onClose, onStatus }: { inquiry: any; o
         <View style={styles.modalHead}>
           <View style={{ flex: 1 }}>
             <Text style={styles.modalTitle} numberOfLines={1}>{q.name}</Text>
-            <Text style={styles.modalSub}>Inquiry · #{q.id} · {new Date(q.created_at).toLocaleDateString()}</Text>
+            <Text style={styles.modalSub}>Inquiry · #{q.id} · {fmtDate(q.created_at)}</Text>
           </View>
           <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}><Text style={styles.modalClose}>✕</Text></Pressable>
         </View>
@@ -1130,7 +1265,7 @@ function InquiryDetailModal({ inquiry: q, onClose, onStatus }: { inquiry: any; o
             <View style={styles.infoCard}>
               <InfoRow label="Email" value={q.email || '—'} first />
               <InfoRow label="Phone" value={q.phone || '—'} />
-              <InfoRow label="Received" value={new Date(q.created_at).toLocaleString()} />
+              <InfoRow label="Received" value={fmtDateTime(q.created_at)} />
             </View>
           </View>
 
@@ -1359,7 +1494,7 @@ const styles = StyleSheet.create({
   navLabelActive: { color: colors.red },
   sideFooter: { borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: 8, gap: 2 },
   main: { flex: 1 },
-  topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 28, paddingVertical: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 28, paddingVertical: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, zIndex: 30 },
   topbarCompact: { paddingHorizontal: 14, flexWrap: 'wrap', rowGap: 10 },
   addBtnCompact: { paddingHorizontal: 12, gap: 0 },
   pageTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
@@ -1487,8 +1622,8 @@ const styles = StyleSheet.create({
   qDate: { width: 100 },
   qStatus: { width: 110 },
   qView: { width: 56, alignItems: 'center' },
-  ordersTable: { minWidth: 1040 },
-  oOrder: { width: 56 },
+  ordersTable: { minWidth: 1060 },
+  oOrder: { width: 76 },
   oName: { width: 150 },
   oEmail: { flex: 1, minWidth: 190 },
   oPhone: { width: 140 },
@@ -1534,6 +1669,15 @@ const styles = StyleSheet.create({
   catSideTitle: { fontWeight: '900', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 8, paddingTop: 6, paddingBottom: 4 },
   catRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.sm },
   catRowActive: { backgroundColor: colors.orange },
+  sortHead: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  thActive: { color: colors.navy, fontWeight: '900' },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, backgroundColor: colors.white },
+  filterBtnText: { color: colors.ink, fontWeight: '800', fontSize: 13, textTransform: 'capitalize' },
+  filterScrim: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 150 },
+  filterMenu: { position: 'absolute' as any, top: 46, right: 0, width: 180, backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, zIndex: 200, ...shadow.card },
+  filterItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 9 },
+  filterItemActive: { backgroundColor: colors.cream },
+  filterItemText: { color: colors.text, fontWeight: '700', fontSize: 13, textTransform: 'capitalize' },
   catChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   catChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#F1F2F5' },
   catChipActive: { backgroundColor: colors.orange },
@@ -1558,10 +1702,11 @@ const styles = StyleSheet.create({
   // can pin to the page scroll instead of being clipped by the rounded corners.
   tableStickyWrap: { overflow: 'visible' as any },
   theadSticky: { position: 'sticky' as any, top: 0, zIndex: 5, backgroundColor: '#FAFAFB', borderBottomWidth: 1, borderBottomColor: colors.border },
-  tableMin: { minWidth: 812 },
+  tableMin: { minWidth: 1012 },
   tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
   thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
   trAlt: { backgroundColor: '#FCFCFD' },
+  trHover: { backgroundColor: colors.cream },
   th: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   td: { fontSize: 14, color: colors.text },
   tdStrong: { fontWeight: '800', color: colors.ink },
@@ -1573,6 +1718,7 @@ const styles = StyleSheet.create({
   colUnit: { width: 60 },
   colStock: { width: 60 },
   colStatus: { width: 84 },
+  colDate: { width: 100, color: colors.muted },
   colActions: { width: 150 },
   actionCell: { flexDirection: 'row', gap: 8 },
   smallBtn: { paddingHorizontal: 12, paddingVertical: 7 },

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { api, Order } from '../lib/api';
 import { colors, radius } from '../lib/theme';
 import { useApp, money } from '../lib/store';
+import { fmtDate } from '../lib/date';
 import { Footer } from '../components/Footer';
 import { Container, SectionTitle, Button, Card, Badge } from '../components/ui';
 import { OrderDetailModal } from '../components/OrderDetailModal';
@@ -95,7 +96,7 @@ export default function Account() {
               {orders.map((o, i) => (
                 <View key={o.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
                   <Text style={[styles.td, styles.tdStrong, styles.cOrder]}>{o.id}</Text>
-                  <Text style={[styles.td, styles.cDate]}>{new Date(o.created_at).toLocaleDateString()}</Text>
+                  <Text style={[styles.td, styles.cDate]}>{fmtDate(o.created_at)}</Text>
                   <Text style={[styles.td, styles.cShip]} numberOfLines={1}>{o.shipping_address || '—'}</Text>
                   {isAdmin && <Text style={[styles.td, styles.cAmt]}>{money(o.subtotal, o.currency)}</Text>}
                   <View style={styles.cStatus}><Badge text={o.status} tone={statusTone[o.status] || 'muted'} /></View>
