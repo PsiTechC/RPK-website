@@ -171,13 +171,9 @@ var seedProducts = []seedProd{
 
 	// --- From "List of Products" document ---
 	{"Turmeric Whole", "Spices & Masala", "KG", 8},
-	{"Turmeric", "Spices & Masala", "KG", 8},
-	{"Turmeric Powder", "Spices & Masala", "KG", 9},
 	{"Coriander Seeds", "Spices & Masala", "KG", 7},
-	{"Coriander Powder", "Spices & Masala", "KG", 9},
 	{"Cumin Seeds", "Spices & Masala", "KG", 12},
 	{"Clove", "Spices & Masala", "KG", 40},
-	{"Fennel", "Spices & Masala", "KG", 12},
 	{"Sesame Seeds", "Spices & Masala", "KG", 14},
 	{"Green Cardamom", "Spices & Masala", "KG", 90},
 	{"All Purpose Flour", "Flour & Atta", "KG", 5},
@@ -227,8 +223,18 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, adminHash string) error {
 		catID[c.name] = id
 	}
 
-	// Products — assign the real category photo. On re-seed, refresh only rows
-	// whose image is still a placeholder, so admin-set images are preserved.
+	// Products are seeded ONLY on a fresh database. On an existing DB a re-deploy
+	// must never touch products — otherwise any product an admin deleted would be
+	// re-inserted (its slug no longer exists), resurrecting "duplicates" on every
+	// deploy. After the first seed, products are managed solely via the dashboard.
+	var productCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM products`).Scan(&productCount); err != nil {
+		return fmt.Errorf("count products: %w", err)
+	}
+	if productCount > 0 {
+		return nil // already populated — leave admin's catalogue untouched
+	}
+
 	for _, p := range seedProducts {
 		cid := catID[p.cat]
 		photo := categoryPhoto[p.cat] // "" for Salt -> emoji tile on the frontend
@@ -236,9 +242,7 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, adminHash string) error {
 		if _, err := pool.Exec(ctx,
 			`INSERT INTO products (name, slug, category_id, unit, price, currency, image_url, description, stock, is_active)
 			 VALUES ($1,$2,$3,$4,$5,'AED',$6,$7,100,TRUE)
-			 ON CONFLICT (slug) DO UPDATE SET
-			    image_url = CASE WHEN products.image_url LIKE '%placehold%'
-			                     THEN EXCLUDED.image_url ELSE products.image_url END`,
+			 ON CONFLICT (slug) DO NOTHING`,
 			p.name, slug(p.name), cid, p.unit, p.price, photo, desc,
 		); err != nil {
 			return fmt.Errorf("seed product %s: %w", p.name, err)
