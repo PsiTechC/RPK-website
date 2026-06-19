@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -15,7 +15,8 @@ import { Logo } from './Logo';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const WHATSAPP = BRAND.phone.replace(/[^\d]/g, '');
 // Out-of-stock image treatment: blur+grey on web; opacity dims on native too.
-const IMG_OUT = { filter: 'blur(2.5px) grayscale(0.6)', opacity: 0.55 } as any;
+// Frosted blur over the whole card when out of stock (web; native dims only).
+const OUT_FROST = Platform.OS === 'web' ? ({ backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' } as any) : null;
 
 export function ProductCard({ product, width = 220 }: { product: Product; width?: number | string }) {
   const router = useRouter();
@@ -42,10 +43,10 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
     >
       <View style={[styles.imgWrap, { backgroundColor: usePhoto || v.photo ? colors.cream : v.from }]}>
         {usePhoto ? (
-          <Image source={{ uri: imageUri(product.image_url) }} style={[styles.img, out && IMG_OUT]} contentFit="cover" transition={200} />
+          <Image source={{ uri: imageUri(product.image_url) }} style={styles.img} contentFit="cover" transition={200} />
         ) : v.photo ? (
           // No product image — show the category's real photo instead of the emoji.
-          <Image source={{ uri: v.photo }} style={[styles.img, out && IMG_OUT]} contentFit="cover" transition={200} />
+          <Image source={{ uri: v.photo }} style={styles.img} contentFit="cover" transition={200} />
         ) : (
           <>
             <View style={[styles.toShade, { backgroundColor: v.to }]} />
@@ -58,11 +59,6 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
         <View pointerEvents="none" style={styles.brandMark}>
           <Logo size={22} />
         </View>
-        {out && (
-          <View pointerEvents="none" style={styles.outOverlay}>
-            <Text style={styles.outText}>Out of Stock</Text>
-          </View>
-        )}
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
@@ -110,6 +106,11 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
           </Pressable>
         </View>
       </View>
+      {out && (
+        <View pointerEvents="none" style={[styles.outOverlay, OUT_FROST]}>
+          <Text style={styles.outText}>Out of Stock</Text>
+        </View>
+      )}
     </AnimatedPressable>
   );
 }
@@ -135,6 +136,6 @@ const styles = StyleSheet.create({
   addDisabled: { backgroundColor: colors.offWhite, borderColor: colors.border, opacity: 0.7 },
   addDisabledText: { color: colors.muted },
   brandMark: { position: 'absolute', right: 8, top: 8 },
-  outOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.2)' },
+  outOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,244,244,0.42)', zIndex: 5 },
   outText: { backgroundColor: 'rgba(20,20,20,0.78)', color: colors.white, fontWeight: '900', fontSize: 12, letterSpacing: 0.5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, overflow: 'hidden' },
 });

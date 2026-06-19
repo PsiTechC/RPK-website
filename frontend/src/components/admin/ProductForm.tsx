@@ -32,8 +32,8 @@ export function ProductForm({
     name: product?.name || '',
     category_id: product?.category_id ?? (categories[0]?.id ?? null),
     unit: product?.unit || 'PC',
-    price: String(product?.price ?? ''),
-    stock: String(product?.stock ?? '100'),
+    price: String(product?.price ?? '0'),
+    stock: String(product?.stock ?? '0'),
     image_url: product?.image_url || '',
     description: product?.description || '',
     nutrition: product?.nutrition || '',
@@ -58,12 +58,12 @@ export function ProductForm({
 
   // Price: digits + a single decimal point only. Stock: digits only.
   const setPrice = (t: string) => {
-    const clean = t.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+    const clean = t.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').replace(/^0+(?=\d)/, '');
     setForm((f) => ({ ...f, price: clean }));
     setErrors((e) => (e.price ? { ...e, price: undefined } : e));
   };
   const setStock = (t: string) => {
-    const clean = t.replace(/\D/g, '');
+    const clean = t.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
     setForm((f) => ({ ...f, stock: clean }));
     setErrors((e) => (e.stock ? { ...e, stock: undefined } : e));
   };

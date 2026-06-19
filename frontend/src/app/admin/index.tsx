@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { api, Product, Order, Registration, Category, User } from '../../lib/api';
+import { api, Product, Order, Registration, Category, User, News } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
 import { fmtDate, fmtDateTime } from '../../lib/date';
-import { Container, SectionTitle, Button, Card, Badge } from '../../components/ui';
+import { Container, SectionTitle, Button, Card, Badge, Field } from '../../components/ui';
 import { ProductForm } from '../../components/admin/ProductForm';
 import { ProductThumb } from '../../components/admin/ProductThumb';
 import { Logo } from '../../components/Logo';
@@ -25,6 +25,7 @@ const TAB_ICONS: Record<Tab, keyof typeof Ionicons.glyphMap> = {
   customers: 'people-outline',
   registrations: 'document-text-outline',
   inquiries: 'chatbubbles-outline',
+  news: 'newspaper-outline',
   archived: 'archive-outline',
 };
 
@@ -42,9 +43,9 @@ const PLACEHOLDER_TRENDS: Record<string, { dir: 'up' | 'down'; pct: string }> = 
 // TODO: wire to API — last 7 days of paid revenue. Placeholder shape only.
 const PLACEHOLDER_REVENUE_7D = [120, 240, 180, 360, 300, 520, 460];
 
-type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'archived';
+type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'news' | 'archived';
 
-const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'customers', 'registrations', 'inquiries', 'archived'];
+const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'customers', 'registrations', 'inquiries', 'news', 'archived'];
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
@@ -70,6 +71,7 @@ const TAB_LABELS: Record<Tab, string> = {
   customers: 'Customers',
   registrations: 'Registrations',
   inquiries: 'Inquiries',
+  news: 'News',
   archived: 'Archived',
 };
 
@@ -192,6 +194,7 @@ export default function Admin() {
             {token && tab === 'customers' && <Customers token={token} />}
             {token && tab === 'registrations' && <Registrations token={token} />}
             {token && tab === 'inquiries' && <Inquiries token={token} />}
+            {token && tab === 'news' && <NewsAdmin token={token} />}
             {token && tab === 'archived' && <Archived token={token} />}
           </View>
         </ScrollView>
@@ -227,7 +230,6 @@ function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) 
     { label: 'Products', value: stats.total_products, tone: colors.navy, icon: 'cube-outline', to: 'products', subtitle: 'In catalogue' },
     { label: 'Customers', value: stats.total_customers, tone: colors.navy, icon: 'people-outline', to: 'customers', subtitle: 'Registered users' },
     { label: 'Registrations', value: stats.total_registrations, tone: colors.red, icon: 'document-text-outline', to: 'registrations', subtitle: 'Import / export' },
-    { label: 'Pending Reg.', value: stats.pending_registrations, tone: colors.red, icon: 'hourglass-outline', to: 'registrations', subtitle: 'Awaiting review' },
     { label: 'Categories', value: stats.total_categories, tone: colors.navy, icon: 'pricetags-outline', to: 'arrange', subtitle: 'Product groups' },
   ];
 
@@ -1555,6 +1557,7 @@ const styles = StyleSheet.create({
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   statCard: {
     minWidth: 150,
+    maxWidth: 300,
     flexGrow: 1,
     flexBasis: 150,
     gap: 6,
@@ -1765,3 +1768,119 @@ const styles = StyleSheet.create({
   rowMeta: { color: colors.muted, fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
   orderTotal: { fontWeight: '900', color: colors.navy, fontSize: 17 },
 });
+
+// ---------- News (admin-managed) ----------
+function NewsAdmin({ token }: { token: string }) {
+  const [items, setItems] = useState<News[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<News | null | undefined>(undefined); // undefined=list, null=new
+  const [confirming, setConfirming] = useState<News | null>(null);
+  const toast = useToast();
+
+  async function load() {
+    setLoading(true);
+    try { setItems(await api.admin.news(token)); } catch {} finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, [token]);
+
+  async function del() {
+    const n = confirming;
+    if (!n) return;
+    setConfirming(null);
+    try { await api.admin.deleteNews(n.id, token); toast('Article deleted', 'info'); load(); }
+    catch { toast('Could not delete article', 'error'); }
+  }
+
+  if (editing !== undefined) {
+    return <NewsForm token={token} article={editing} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); load(); }} />;
+  }
+
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <Button label="+ New article" icon="add" onPress={() => setEditing(null)} />
+      </View>
+      {loading ? (
+        <Text style={styles.muted}>Loading…</Text>
+      ) : items.length === 0 ? (
+        <Text style={styles.muted}>No news yet. Click “New article” to publish your first update.</Text>
+      ) : (
+        <View style={{ gap: 10 }}>
+          {items.map((n) => (
+            <Card key={n.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, gap: 5 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {!!n.tag && <Badge text={n.tag} tone="orange" />}
+                  <Badge text={n.is_published ? 'published' : 'draft'} tone={n.is_published ? 'green' : 'muted'} />
+                  <Text style={styles.rowMeta}>{fmtDate(n.created_at)}</Text>
+                </View>
+                <Text style={styles.rowTitle} numberOfLines={1}>{n.title}</Text>
+                <Text style={[styles.rowMeta, { textTransform: 'none' }]} numberOfLines={2}>{n.body}</Text>
+              </View>
+              <Button label="Edit" variant="ghost" onPress={() => setEditing(n)} style={styles.smallBtn} />
+              <Button label="Delete" variant="danger" onPress={() => setConfirming(n)} style={styles.smallBtn} />
+            </Card>
+          ))}
+        </View>
+      )}
+      {confirming && (
+        <ConfirmDialog
+          title="Delete this article?"
+          message={`“${confirming.title}” will be permanently removed.`}
+          confirmLabel="Delete"
+          onConfirm={del}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+    </View>
+  );
+}
+
+function NewsForm({ token, article, onClose, onSaved }: { token: string; article: News | null; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    title: article?.title || '',
+    tag: article?.tag || '',
+    body: article?.body || '',
+    image_url: article?.image_url || '',
+    is_published: article?.is_published ?? true,
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const toast = useToast();
+  const set = (k: 'title' | 'tag' | 'body' | 'image_url') => (t: string) => setForm((f) => ({ ...f, [k]: t }));
+
+  async function save() {
+    setError('');
+    if (!form.title.trim()) { setError('Title is required.'); return; }
+    setBusy(true);
+    try {
+      if (article) await api.admin.updateNews(article.id, form, token);
+      else await api.admin.createNews(form, token);
+      toast('Article saved', 'success');
+      onSaved();
+    } catch (e: any) {
+      setError(e.message || 'Could not save article');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={{ gap: 14, maxWidth: 720 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.h}>{article ? 'Edit article' : 'New article'}</Text>
+        <Button label="← Back" variant="ghost" onPress={onClose} style={styles.smallBtn} />
+      </View>
+      <Field label="Title *" value={form.title} onChangeText={set('title')} placeholder="Headline" />
+      <Field label="Tag" value={form.tag} onChangeText={set('tag')} placeholder="e.g. Exports, Quality, Company" />
+      <Field label="Image URL" value={form.image_url} onChangeText={set('image_url')} placeholder="https://… (optional)" />
+      <Field label="Body" value={form.body} onChangeText={set('body')} placeholder="Write the article…" multiline />
+      <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} onPress={() => setForm((f) => ({ ...f, is_published: !f.is_published }))}>
+        <Ionicons name={form.is_published ? 'checkbox' : 'square-outline'} size={22} color={form.is_published ? colors.green : colors.muted} />
+        <Text style={styles.rowTitle}>Published (visible on the website)</Text>
+      </Pressable>
+      {!!error && <Text style={{ color: colors.red, fontSize: 13 }}>{error}</Text>}
+      <Button label={busy ? 'Saving…' : article ? 'Save changes' : 'Publish article'} onPress={save} disabled={busy} />
+    </View>
+  );
+}

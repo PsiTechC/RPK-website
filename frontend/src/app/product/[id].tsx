@@ -144,7 +144,6 @@ export default function ProductDetail() {
               <Text style={styles.muted}>No reviews yet</Text>
             )}
             <Badge text={product.stock > 0 ? 'In stock' : 'Out of stock'} tone={product.stock > 0 ? 'green' : 'red'} />
-            <Text style={styles.desc}>{product.description}</Text>
 
             <View style={styles.qtyRow}>
               <Text style={styles.qtyLabel}>Quantity</Text>
@@ -192,17 +191,6 @@ export default function ProductDetail() {
                 }}
               />
               <Button label="Go to cart" variant="ghost" onPress={() => router.push('/cart')} />
-            </View>
-
-            <View style={styles.infoBox}>
-              <View style={styles.infoLine}>
-                <Ionicons name="cube-outline" size={16} color={colors.orangeDark} />
-                <Text style={styles.infoText}>Wholesale & retail · Sold per {product.unit}</Text>
-              </View>
-              <View style={styles.infoLine}>
-                <Ionicons name="globe-outline" size={16} color={colors.orangeDark} />
-                <Text style={styles.infoText}>Available for import/export — register your business to order in bulk.</Text>
-              </View>
             </View>
           </View>
         </View>

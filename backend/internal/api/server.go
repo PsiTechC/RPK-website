@@ -74,6 +74,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/stats", s.handlePublicStats)                            // homepage counters
 		r.With(contactLimit.middleware).Post("/inquiries", s.handleCreateInquiry) // contact form → admin email
 		r.With(contactLimit.middleware).Post("/feedback", s.handleCreateFeedback) // website star-rating feedback
+		r.Get("/news", s.handleListNews) // public news list
 
 		// Authenticated (any logged-in user)
 		r.Group(func(r chi.Router) {
@@ -119,6 +120,11 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/inquiries/{id}", s.handleAdminUpdateInquiry)
 
 			r.Get("/feedback", s.handleAdminListFeedback)
+
+			r.Get("/news", s.handleAdminListNews)
+			r.Post("/news", s.handleCreateNews)
+			r.Put("/news/{id}", s.handleUpdateNews)
+			r.Delete("/news/{id}", s.handleDeleteNews)
 
 			r.Delete("/reviews/{id}", s.handleAdminDeleteReview)
 		})

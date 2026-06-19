@@ -53,6 +53,17 @@ export type Product = {
   updated_at?: string;
 };
 
+export type News = {
+  id: number;
+  title: string;
+  tag: string;
+  body: string;
+  image_url: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Review = {
   id: number;
   product_id: number;
@@ -191,6 +202,8 @@ export const api = {
   createFeedback: (body: { rating: number; comment?: string }) =>
     request<any>('/api/feedback', { method: 'POST', body }),
 
+  news: () => request<News[]>('/api/news'),
+
   // admin
   admin: {
     stats: (token: string) => request<any>('/api/admin/stats', { token }),
@@ -201,6 +214,10 @@ export const api = {
       request<any>(`/api/admin/products/${id}`, { method: 'PUT', body, token }),
     setFeatured: (id: number, featured: boolean, token: string) =>
       request<any>(`/api/admin/products/${id}/featured`, { method: 'PATCH', body: { featured }, token }),
+    news: (token: string) => request<News[]>('/api/admin/news', { token }),
+    createNews: (body: any, token: string) => request<any>('/api/admin/news', { method: 'POST', body, token }),
+    updateNews: (id: number, body: any, token: string) => request<any>(`/api/admin/news/${id}`, { method: 'PUT', body, token }),
+    deleteNews: (id: number, token: string) => request<any>(`/api/admin/news/${id}`, { method: 'DELETE', token }),
     deleteProduct: (id: number, token: string) => // soft-delete → archive
       request<any>(`/api/admin/products/${id}`, { method: 'DELETE', token }),
     archivedProducts: (token: string) => request<Product[]>('/api/admin/products/archived', { token }),

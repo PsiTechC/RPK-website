@@ -8,6 +8,7 @@ import { api, Category } from '../lib/api';
 import { useApp } from '../lib/store';
 import { Logo } from './Logo';
 import { NotificationBell } from './NotificationBell';
+import { LanguageSelector } from './LanguageSelector';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home-outline' },
@@ -45,7 +46,7 @@ export function Header() {
     setMenuOpen(false);
     setProfileOpen(false);
     setCatOpen(false);
-    router.push(`/products?category=${slug}`);
+    router.push(`/products?category=${slug}&view=categories`);
   };
   const doLogout = () => {
     setMenuOpen(false);
@@ -91,6 +92,7 @@ export function Header() {
 
         {/* Right — actions */}
         <View style={styles.actions}>
+          <LanguageSelector compact={compact} />
           <NotificationBell />
           <Pressable style={styles.cartBtn} onPress={() => go('/cart')}>
             <Ionicons name="cart-outline" size={25} color={colors.ink} />
@@ -337,17 +339,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoWrap: { flexShrink: 0, marginRight: 4 },
-  nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
   navTextActive: { color: colors.red },
   navItemWrap: { position: 'relative' },
   navItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999,
     borderWidth: 1, borderColor: 'transparent',
   },
   navItemHover: { backgroundColor: colors.offWhite },
   navItemActive: { backgroundColor: 'rgba(226,35,26,0.08)', borderColor: 'rgba(226,35,26,0.18)' },
-  navItemText: { fontWeight: '800', fontSize: 14.5, letterSpacing: 0.1 },
+  navItemText: { fontWeight: '800', fontSize: 13.5, letterSpacing: 0.1 },
   catLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   catDropdown: {
     position: 'absolute' as any,

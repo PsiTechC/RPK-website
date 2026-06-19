@@ -121,6 +121,19 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
 
+-- Admin-managed news / updates shown on the public News page.
+CREATE TABLE IF NOT EXISTS news (
+    id           BIGSERIAL PRIMARY KEY,
+    title        TEXT NOT NULL DEFAULT '',
+    tag          TEXT NOT NULL DEFAULT '',
+    body         TEXT NOT NULL DEFAULT '',
+    image_url    TEXT NOT NULL DEFAULT '',
+    is_published BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_news_created ON news(created_at DESC);
+
 -- Rich product detail fields (added later; idempotent)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS highlights JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS nutrition  TEXT  NOT NULL DEFAULT '';
