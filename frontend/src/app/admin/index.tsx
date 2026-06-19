@@ -463,8 +463,13 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
   }
 
   // Toggle whether a product appears in the home-page "Featured" section.
+  // The home shows up to 10, so cap the selection at 10.
   async function toggleFeatured(p: Product) {
     const next = !p.is_featured;
+    if (next && products.filter((x) => x.is_featured).length >= 10) {
+      toast('You can feature up to 10 products on the home page', 'info');
+      return;
+    }
     setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_featured: next } : x)));
     try {
       await api.admin.setFeatured(p.id, next, token);
