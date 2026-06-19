@@ -73,6 +73,7 @@ func (s *Server) Router() http.Handler {
 		r.With(chatLimit.middleware).Post("/chat", s.handleChat)        // AI chatbot (paid API)
 		r.Get("/stats", s.handlePublicStats)                            // homepage counters
 		r.With(contactLimit.middleware).Post("/inquiries", s.handleCreateInquiry) // contact form → admin email
+		r.With(contactLimit.middleware).Post("/feedback", s.handleCreateFeedback) // website star-rating feedback
 
 		// Authenticated (any logged-in user)
 		r.Group(func(r chi.Router) {
@@ -102,6 +103,7 @@ func (s *Server) Router() http.Handler {
 			r.Put("/products/{id}", s.handleUpdateProduct)
 			r.Delete("/products/{id}", s.handleDeleteProduct)           // soft-delete (archive)
 			r.Patch("/products/{id}/restore", s.handleRestoreProduct)   // un-archive
+			r.Patch("/products/{id}/featured", s.handleSetFeatured)     // toggle home-page featured
 			r.Delete("/products/{id}/purge", s.handlePurgeProduct)      // permanent delete
 
 			r.Post("/uploads", s.handleUploadImage)
@@ -115,6 +117,8 @@ func (s *Server) Router() http.Handler {
 
 			r.Get("/inquiries", s.handleAdminListInquiries)
 			r.Patch("/inquiries/{id}", s.handleAdminUpdateInquiry)
+
+			r.Get("/feedback", s.handleAdminListFeedback)
 
 			r.Delete("/reviews/{id}", s.handleAdminDeleteReview)
 		})

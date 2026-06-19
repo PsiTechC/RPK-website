@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, ActivityIndicator, Pressable, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, Product, Review, imageUri } from '../../lib/api';
-import { colors, radius, shadow } from '../../lib/theme';
+import { colors, radius, shadow, BRAND } from '../../lib/theme';
 import { useApp } from '../../lib/store';
 import { fmtDate } from '../../lib/date';
 import { useToast } from '../../components/Toast';
@@ -13,6 +13,9 @@ import { Footer } from '../../components/Footer';
 import { ProductCard } from '../../components/ProductCard';
 import { Stars } from '../../components/Stars';
 import { Container, SectionTitle, Button, Badge, Field, Card } from '../../components/ui';
+import { Logo } from '../../components/Logo';
+
+const WHATSAPP = BRAND.phone.replace(/[^\d]/g, '');
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -90,6 +93,11 @@ export default function ProductDetail() {
   const contentW = Math.min(width, 1200) - 36;
   const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%' } as Record<number, string>)[cols];
 
+  function openWhatsApp() {
+    const text = encodeURIComponent(`Hello RPK, I'd like to inquire about "${product?.name ?? ''}".`);
+    Linking.openURL(`https://wa.me/${WHATSAPP}?text=${text}`);
+  }
+
   if (loading) return <ActivityIndicator color={colors.orange} style={{ marginTop: 60 }} />;
   if (!product)
     return (
@@ -117,6 +125,9 @@ export default function ProductDetail() {
                 <Text style={{ fontSize: 110 }}>{visualByName(product.category_name).emoji}</Text>
               </View>
             )}
+            <View pointerEvents="none" style={styles.brandMark}>
+              <Logo size={38} />
+            </View>
           </View>
 
           <View style={[styles.buyBox, { flex: 1 }]}>
@@ -157,12 +168,19 @@ export default function ProductDetail() {
             </View>
 
             <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 6 }}>
-              <Button
-                label="Call to Inquiry"
-                icon="call"
-                variant="primary"
-                onPress={() => router.push(`/contact?product=${encodeURIComponent(product.name)}`)}
-              />
+              <View style={styles.contactRow}>
+                <Button
+                  label="Call to Inquiry"
+                  icon="call"
+                  variant="primary"
+                  style={styles.inquiryBtn}
+                  textStyle={styles.inquiryText}
+                  onPress={() => router.push(`/contact?product=${encodeURIComponent(product.name)}`)}
+                />
+                <Pressable style={styles.waBtn} onPress={openWhatsApp}>
+                  <Ionicons name="logo-whatsapp" size={19} color={colors.white} />
+                </Pressable>
+              </View>
               <Button
                 label={added ? '✓ Added to cart' : 'Add to cart'}
                 variant={added ? 'navy' : 'outline'}
@@ -316,6 +334,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 28, alignItems: 'stretch' },
   imageBox: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadow.soft },
   image: { width: '100%', height: '100%' },
+  brandMark: { position: 'absolute', right: 12, top: 12 },
   buyBox: { gap: 14, backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 24, ...shadow.soft },
   detailsRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' },
   detailCard: { flex: 1, minWidth: 240 },
@@ -329,6 +348,10 @@ const styles = StyleSheet.create({
   desc: { color: colors.text, fontSize: 15, lineHeight: 24 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4, flexWrap: 'wrap' },
   qtyLabel: { fontWeight: '700', color: colors.text },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  inquiryBtn: { paddingVertical: 8, paddingHorizontal: 16 },
+  inquiryText: { fontSize: 13 },
+  waBtn: { width: 42, height: 42, borderRadius: 999, backgroundColor: '#25D366', alignItems: 'center', justifyContent: 'center' },
   unitChip: { backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   unitChipText: { color: colors.orangeDark, fontWeight: '800', fontSize: 14 },
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 999, overflow: 'hidden' },

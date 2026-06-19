@@ -58,7 +58,15 @@ export default function Products() {
   // or sub-pixel rounding (which broke fixed-pixel widths on mobile).
   const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%', 6: '15%' } as Record<number, string>)[cols];
 
-  const activeName = active === 'all' ? 'All Products' : categories.find((c) => c.slug === active)?.name || 'Products';
+  // Same /products route serves two entry points:
+  //  • Shop nav   -> no ?category param  -> "All Products"
+  //  • Categories -> ?category=all       -> "All Categories"
+  const activeName =
+    active !== 'all'
+      ? categories.find((c) => c.slug === active)?.name || 'Products'
+      : params.category === 'all'
+      ? 'All Categories'
+      : 'All Products';
 
   function selectCat(slug: string) {
     setActive(slug);
@@ -125,6 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 16,
     paddingVertical: 4,
+    marginTop: 12,
     marginBottom: 14,
   },
   search: { flex: 1, paddingVertical: 10, color: colors.text, fontSize: 15, outlineStyle: 'none' as any },

@@ -37,7 +37,7 @@ export default function Home() {
 
   // Full-screen hero (fills the viewport below the header).
   const heroHeight = Math.max(520, height - HEADER_H);
-  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : width < 1500 ? 5 : 6;
+  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : 5;
   const gap = 16;
   const contentW = Math.min(width, 1600) - 36;
   // Percentage card width keeps exactly N per row regardless of scrollbar width
@@ -57,6 +57,17 @@ export default function Home() {
   // emptied/removed category disappears from "Shop by Category" too.
   const activeCategories = useMemo(() => grouped.map((g) => g.category), [grouped]);
 
+  // Featured selection for the home page. Admin-picked products (is_featured)
+  // take priority; if none are marked, fall back to the top-rated picks. Either
+  // way it's a curated subset (not the whole catalogue), filling two rows.
+  const featured = useMemo(() => {
+    const picked = products.filter((p) => p.is_featured);
+    const base = picked.length
+      ? picked
+      : [...products].sort((a, b) => b.rating - a.rating || b.review_count - a.review_count);
+    return base.slice(0, cols * 2);
+  }, [products, cols]);
+
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       {/* HERO */}
@@ -70,29 +81,29 @@ export default function Home() {
           </FadeInUp>
           <View style={{ marginBottom: 14 }}>
             <LetterReveal
-              text="Quality Groceries & Food, Traded Worldwide"
+              text="Premium Foods. Trusted Supply. Worldwide Delivery."
               delay={200}
               duration={1700}
-              style={[styles.heroTitle, { fontSize: width < 600 ? 32 : 52, marginBottom: 0 }]}
+              style={[styles.heroTitle, { fontSize: width < 600 ? 30 : 48, marginBottom: 0 }]}
             />
           </View>
           <FadeInUp delay={340}>
             <Text style={styles.heroSub}>
-              From premium basmati and bold spices to oils, pulses and beverages — sourced and supplied by{' '}
-              {BRAND.legal}.
+              From aromatic basmati rice and spices to oils, pulses, and beverages — serving global markets with
+              quality and reliability.
             </Text>
           </FadeInUp>
           <FadeInUp delay={460}>
             <View style={styles.heroBtns}>
               <Button label="Shop Products" onPress={() => router.push('/products')} />
-              <Button label="Import / Export" variant="outline" onPress={() => router.push('/import-export')} style={styles.outlineOnDark} textStyle={{ color: colors.red }} />
+              <Button label="Import / Export" variant="outline" onPress={() => router.push('/import-export')} style={styles.importExportBtn} textStyle={{ color: colors.red }} />
             </View>
           </FadeInUp>
           <FadeInUp delay={600}>
             <View style={styles.trustRow}>
               <Trust n={`${products.length || '70'}+`} l="Products" />
-              <Trust n={`${activeCategories.length || categories.length || '11'}`} l="Categories" />
-              <Trust n={`${Math.max(countries, 20)}`} l="Countries" />
+              <Trust n={`${activeCategories.length || categories.length || '11'}+`} l="Categories" />
+              <Trust n={`${Math.max(countries, 20)}+`} l="Countries" />
             </View>
           </FadeInUp>
         </View>
@@ -110,36 +121,27 @@ export default function Home() {
         </Reveal>
       </Container>
 
-      {/* ALL PRODUCTS — CATEGORY WISE (soft band gives depth) */}
+      {/* FEATURED PRODUCTS — a curated selection, not the whole catalogue */}
       <View style={styles.productsBand}>
         <Container>
           <Reveal>
-            <SectionTitle title="Our Products" subtitle="Everything we stock, organised by category" />
-          </Reveal>
-        </Container>
-        {loading ? (
-          <ActivityIndicator color={colors.red} style={{ marginTop: 20 }} />
-        ) : (
-          grouped.map((g) => (
-            <Container key={g.category.id} style={{ marginTop: 30 }}>
-              <Reveal>
-                <View style={styles.catHead}>
-                  <View style={styles.catHeadLeft}>
-                    <View style={styles.accentDot} />
-                    <Text style={styles.catHeadTitle}>{g.category.name}</Text>
-                    <Text style={styles.catHeadCount}>{g.items.length}</Text>
-                  </View>
-                  <Button label="View all" variant="ghost" onPress={() => router.push(`/products?category=${g.category.slug}`)} style={styles.viewAll} />
-                </View>
-                <View style={[styles.grid, { gap }]}>
-                  {g.items.slice(0, 6).map((p) => (
+            <SectionTitle title="Featured Products" subtitle="A handpicked selection from our range" />
+            {loading ? (
+              <ActivityIndicator color={colors.red} style={{ marginTop: 20 }} />
+            ) : (
+              <>
+                <View style={[styles.grid, { gap, marginTop: 8 }]}>
+                  {featured.map((p) => (
                     <ProductCard key={p.id} product={p} width={cardW} />
                   ))}
                 </View>
-              </Reveal>
-            </Container>
-          ))
-        )}
+                <View style={{ alignItems: 'center', marginTop: 30 }}>
+                  <Button label="View all products" onPress={() => router.push('/products')} />
+                </View>
+              </>
+            )}
+          </Reveal>
+        </Container>
       </View>
 
       <Footer />
@@ -163,11 +165,11 @@ const styles = StyleSheet.create({
   heroTitle: { color: colors.white, fontWeight: '900', textAlign: 'center', marginBottom: 14 },
   heroSub: { color: '#F3E7E5', fontSize: 16, textAlign: 'center', lineHeight: 24, maxWidth: 640, marginBottom: 22 },
   heroBtns: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'center' },
-  outlineOnDark: { borderColor: colors.white, backgroundColor: 'rgba(255,255,255,0.08)' },
+  importExportBtn: { borderColor: colors.white, backgroundColor: colors.white },
   trustRow: { flexDirection: 'row', gap: 36, marginTop: 28 },
   trustNum: { color: colors.white, fontWeight: '900', fontSize: 24 },
   trustLabel: { color: '#EAD9D7', fontSize: 12, marginTop: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   banner: {
     backgroundColor: colors.cream,
     borderRadius: radius.lg,

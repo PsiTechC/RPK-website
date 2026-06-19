@@ -107,7 +107,7 @@ export function PhoneField({
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.text, fontWeight: '700', fontSize: 13 },
+  label: { color: colors.ink, fontWeight: '900', fontSize: 13 },
   row: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   codeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, height: 46,

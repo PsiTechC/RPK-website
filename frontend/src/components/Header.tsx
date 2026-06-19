@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
+import { api, Category } from '../lib/api';
 import { useApp } from '../lib/store';
 import { Logo } from './Logo';
 import { NotificationBell } from './NotificationBell';
@@ -11,6 +12,7 @@ import { NotificationBell } from './NotificationBell';
 const NAV = [
   { href: '/', label: 'Home', icon: 'home-outline' },
   { href: '/products', label: 'Shop', icon: 'bag-handle-outline' },
+  { href: '/products', label: 'Categories', icon: 'grid-outline', dropdown: true },
   { href: '/import-export', label: 'Import / Export', icon: 'globe-outline' },
   { href: '/about', label: 'About Us', icon: 'information-circle-outline' },
   { href: '/contact', label: 'Contact Us', icon: 'mail-outline' },
@@ -26,15 +28,29 @@ export function Header() {
 
   const [menuOpen, setMenuOpen] = useState(false); // mobile nav
   const [profileOpen, setProfileOpen] = useState(false); // account dropdown
+  const [catOpen, setCatOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    api.categories().then(setCategories).catch(() => {});
+  }, []);
 
   const go = (href: string) => {
     setMenuOpen(false);
     setProfileOpen(false);
+    setCatOpen(false);
     router.push(href as any);
+  };
+  const goCategory = (slug: string) => {
+    setMenuOpen(false);
+    setProfileOpen(false);
+    setCatOpen(false);
+    router.push(`/products?category=${slug}`);
   };
   const doLogout = () => {
     setMenuOpen(false);
     setProfileOpen(false);
+    setCatOpen(false);
     logout();
     router.replace('/');
   };
@@ -53,9 +69,23 @@ export function Header() {
         {/* Center — nav (desktop, icon + label pill) */}
         {!compact && (
           <View style={styles.nav}>
-            {NAV.map((n) => (
-              <NavItem key={n.href} icon={n.icon} label={n.label} active={pathname === n.href} onPress={() => go(n.href)} />
-            ))}
+            {NAV.map((n) =>
+              'dropdown' in n && n.dropdown ? (
+                <CategoryNavItem
+                  key={n.label}
+                  icon={n.icon}
+                  label={n.label}
+                  open={catOpen}
+                  active={pathname === '/products'}
+                  categories={categories}
+                  onToggle={() => setCatOpen((o) => !o)}
+                  onOpenAll={() => goCategory('all')}
+                  onSelect={goCategory}
+                />
+              ) : (
+                <NavItem key={n.href} icon={n.icon} label={n.label} active={pathname === n.href} onPress={() => go(n.href)} />
+              )
+            )}
           </View>
         )}
 
@@ -130,10 +160,33 @@ export function Header() {
       {/* Mobile dropdown panel */}
       {compact && menuOpen && (
         <>
-          <Pressable style={styles.scrim} onPress={() => setMenuOpen(false)} />
+          <Pressable style={styles.scrim} onPress={() => { setMenuOpen(false); setCatOpen(false); }} />
           <View style={[styles.mobilePanel, { top: insets.top + 60 }]}>
             {NAV.map((n) => {
               const active = pathname === n.href;
+              if ('dropdown' in n && n.dropdown) {
+                return (
+                  <View key={n.label}>
+                    <Pressable style={[styles.mItem, styles.mItemRow]} onPress={() => setCatOpen((o) => !o)}>
+                      <Ionicons name={n.icon as any} size={20} color={active ? colors.red : colors.text} />
+                      <Text style={[styles.mItemText, active && styles.navTextActive]}>{n.label}</Text>
+                      <Text style={styles.chevron}>{catOpen ? '▴' : '▾'}</Text>
+                    </Pressable>
+                    {catOpen && (
+                      <View style={styles.mobileCats}>
+                        <Pressable style={styles.mobileCatItem} onPress={() => goCategory('all')}>
+                          <Text style={styles.mobileCatText}>All Categories</Text>
+                        </Pressable>
+                        {categories.map((c) => (
+                          <Pressable key={c.id} style={styles.mobileCatItem} onPress={() => goCategory(c.slug)}>
+                            <Text style={styles.mobileCatText}>{c.name}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              }
               return (
                 <Pressable key={n.href} style={[styles.mItem, styles.mItemRow]} onPress={() => go(n.href)}>
                   <Ionicons name={n.icon as any} size={20} color={active ? colors.red : colors.text} />
@@ -201,6 +254,66 @@ function NavItem({ icon, label, active, onPress }: { icon: string; label: string
   );
 }
 
+function CategoryNavItem({
+  icon,
+  label,
+  active,
+  open,
+  categories,
+  onToggle,
+  onOpenAll,
+  onSelect,
+}: {
+  icon: string;
+  label: string;
+  active: boolean;
+  open: boolean;
+  categories: Category[];
+  onToggle: () => void;
+  onOpenAll: () => void;
+  onSelect: (slug: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const color = active || hovered || open ? colors.red : colors.muted;
+  return (
+    <View style={styles.navItemWrap}>
+      <View style={[styles.navItem, hovered && styles.navItemHover, open && styles.navItemActive]}>
+        {/* Click the label -> open the "All Categories" page */}
+        <Pressable
+          style={styles.catLabelBtn}
+          onPress={onOpenAll}
+          onHoverIn={() => setHovered(true)}
+          onHoverOut={() => setHovered(false)}
+          accessibilityLabel={label}
+        >
+          <Ionicons name={icon as any} size={18} color={color} />
+          <Text style={[styles.navItemText, { color }]} numberOfLines={1}>{label}</Text>
+        </Pressable>
+        {/* Click the chevron -> open the quick category dropdown */}
+        <Pressable onPress={onToggle} hitSlop={8} accessibilityLabel="Show categories">
+          <Text style={[styles.chevron, { color }]}>{open ? '▴' : '▾'}</Text>
+        </Pressable>
+      </View>
+      {open && (
+        <>
+          {/* tap anywhere outside to close */}
+          <Pressable style={styles.scrim} onPress={onToggle} />
+          <View style={styles.catDropdown}>
+            <Pressable style={({ hovered }: any) => [styles.catDropItem, styles.catDropAll, hovered && styles.catDropItemHover]} onPress={() => onSelect('all')}>
+              <Text style={[styles.catDropText, { color: colors.red }]}>All Categories</Text>
+            </Pressable>
+            {categories.map((c) => (
+              <Pressable key={c.id} style={({ hovered }: any) => [styles.catDropItem, hovered && styles.catDropItemHover]} onPress={() => onSelect(c.slug)}>
+                <Text style={styles.catDropText} numberOfLines={1}>{c.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 function DDItem({ icon, label, onPress, danger }: { icon: string; label: string; onPress: () => void; danger?: boolean }) {
   return (
     <Pressable style={({ hovered }: any) => [styles.ddItem, hovered && styles.ddItemHover]} onPress={onPress}>
@@ -226,6 +339,7 @@ const styles = StyleSheet.create({
   logoWrap: { flexShrink: 0, marginRight: 4 },
   nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   navTextActive: { color: colors.red },
+  navItemWrap: { position: 'relative' },
   navItem: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999,
@@ -234,6 +348,27 @@ const styles = StyleSheet.create({
   navItemHover: { backgroundColor: colors.offWhite },
   navItemActive: { backgroundColor: 'rgba(226,35,26,0.08)', borderColor: 'rgba(226,35,26,0.18)' },
   navItemText: { fontWeight: '800', fontSize: 14.5, letterSpacing: 0.1 },
+  catLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  catDropdown: {
+    position: 'absolute' as any,
+    top: 52,
+    left: 0,
+    width: 400,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    zIndex: 220,
+    ...shadow.card,
+  },
+  catDropItem: { width: '50%', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8 },
+  catDropItemHover: { backgroundColor: colors.offWhite },
+  catDropAll: { width: '100%', borderBottomWidth: 1, borderBottomColor: colors.line, borderRadius: 0, marginBottom: 4 },
+  catDropText: { color: colors.text, fontWeight: '700', fontSize: 14 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   cartBtn: { padding: 6 },
   cartIcon: { fontSize: 22 },
@@ -292,6 +427,9 @@ const styles = StyleSheet.create({
   mItem: { paddingVertical: 12, paddingHorizontal: 8 },
   mItemRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   mItemText: { color: colors.text, fontWeight: '800', fontSize: 16 },
+  mobileCats: { paddingLeft: 30, paddingBottom: 6 },
+  mobileCatItem: { paddingVertical: 8 },
+  mobileCatText: { color: colors.muted, fontWeight: '700', fontSize: 14 },
   mUser: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, paddingVertical: 8 },
   mAuth: { flexDirection: 'row', gap: 10, paddingVertical: 8, paddingHorizontal: 4 },
 });

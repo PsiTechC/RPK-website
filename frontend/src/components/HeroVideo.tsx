@@ -26,7 +26,15 @@ const PHOTOS = [
 const SCENES = PHOTOS.length + (HAS_VIDEO ? 1 : 0);
 const HOLD_MS = 5500;
 
-export function HeroVideo({ children, height }: { children: React.ReactNode; height: number }) {
+export function HeroVideo({
+  children,
+  height,
+  showDots = true,
+}: {
+  children?: React.ReactNode;
+  height?: number;
+  showDots?: boolean;
+}) {
   const [active, setActive] = useState(0);
 
   const player = useVideoPlayer(HAS_VIDEO ? VIDEO_URL : null, (p) => {
@@ -72,7 +80,7 @@ export function HeroVideo({ children, height }: { children: React.ReactNode; hei
   const photoBase = HAS_VIDEO ? 1 : 0;
 
   return (
-    <View style={[styles.wrap, { height }]}>
+    <View style={[styles.wrap, height != null ? { height } : StyleSheet.absoluteFill]}>
       <View style={styles.base} />
 
       {/* Optional video scene */}
@@ -97,13 +105,15 @@ export function HeroVideo({ children, height }: { children: React.ReactNode; hei
 
       <View style={styles.content}>{children}</View>
 
-      <View style={styles.dots}>
-        {Array.from({ length: SCENES }).map((_, i) => (
-          <Pressable key={i} onPress={() => setActive(i)} hitSlop={6}>
-            <View style={[styles.dot, i === active && styles.dotActive]} />
-          </Pressable>
-        ))}
-      </View>
+      {showDots && (
+        <View style={styles.dots}>
+          {Array.from({ length: SCENES }).map((_, i) => (
+            <Pressable key={i} onPress={() => setActive(i)} hitSlop={6}>
+              <View style={[styles.dot, i === active && styles.dotActive]} />
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

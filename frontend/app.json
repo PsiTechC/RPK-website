@@ -43,10 +43,14 @@
       [
         "expo-build-properties",
         {
-          "android": { "usesCleartextTraffic": true },
+          "android": {
+            "usesCleartextTraffic": true
+          },
           "ios": {
             "infoPlist": {
-              "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true }
+              "NSAppTransportSecurity": {
+                "NSAllowsArbitraryLoads": true
+              }
             }
           }
         }
@@ -55,6 +59,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5c598cca-8592-4151-b663-561e7bfe34da"
+      }
     }
   }
 }

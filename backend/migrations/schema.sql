@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS products (
 -- Soft-delete: archived products are hidden from the store & admin list but can
 -- be restored. NULL = live, a timestamp = archived (deleted) at that moment.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+-- Admin-curated "Featured on home page" flag.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active   ON products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_archived ON products(archived_at);
@@ -109,6 +111,15 @@ CREATE TABLE IF NOT EXISTS reviews (
     UNIQUE (product_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
+
+-- Website feedback (star rating + comment) submitted from the Contact page.
+CREATE TABLE IF NOT EXISTS feedback (
+    id         BIGSERIAL PRIMARY KEY,
+    rating     INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment    TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
 
 -- Rich product detail fields (added later; idempotent)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS highlights JSONB NOT NULL DEFAULT '[]';

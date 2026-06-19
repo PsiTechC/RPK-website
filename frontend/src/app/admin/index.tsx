@@ -44,7 +44,7 @@ const PLACEHOLDER_REVENUE_7D = [120, 240, 180, 360, 300, 520, 460];
 
 type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'archived';
 
-const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'archived'];
+const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'customers', 'registrations', 'inquiries', 'archived'];
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
@@ -462,6 +462,19 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
     }
   }
 
+  // Toggle whether a product appears in the home-page "Featured" section.
+  async function toggleFeatured(p: Product) {
+    const next = !p.is_featured;
+    setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_featured: next } : x)));
+    try {
+      await api.admin.setFeatured(p.id, next, token);
+      toast(next ? `“${p.name}” added to Featured` : `“${p.name}” removed from Featured`, 'success');
+    } catch {
+      setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_featured: !next } : x))); // revert
+      toast('Could not update featured', 'error');
+    }
+  }
+
   const catList = (
     <>
       <CatItem label="All products" active={selectedCat === 'all'} stacked={stacked} onPress={() => setSelectedCat('all')} />
@@ -511,9 +524,9 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
           ) : filtered.length === 0 ? (
             <Text style={styles.muted}>{q ? `No products match “${search}”.` : 'No products in this category.'}</Text>
           ) : view === 'list' ? (
-            <ProductTable products={filtered} onEdit={setEditing} onDelete={setConfirming} />
+            <ProductTable products={filtered} onEdit={setEditing} onDelete={setConfirming} onToggleFeatured={toggleFeatured} />
           ) : (
-            <ProductGrid products={filtered} width={width} onEdit={setEditing} onDelete={setConfirming} />
+            <ProductGrid products={filtered} width={width} onEdit={setEditing} onDelete={setConfirming} onToggleFeatured={toggleFeatured} />
           )}
         </View>
       </View>
@@ -558,10 +571,12 @@ function ProductTable({
   products,
   onEdit,
   onDelete,
+  onToggleFeatured,
 }: {
   products: Product[];
   onEdit: (p: Product) => void;
   onDelete: (p: Product) => void;
+  onToggleFeatured: (p: Product) => void;
 }) {
   const { width } = useWindowDimensions();
   // On roomy screens the table fills the container (flex columns absorb the
@@ -599,6 +614,14 @@ function ProductTable({
             <Text style={[styles.td, styles.colDate]}>{fmtDate(p.created_at)}</Text>
             <Text style={[styles.td, styles.colDate]}>{fmtDate(p.updated_at)}</Text>
             <View style={[styles.colActions, styles.actionCell]}>
+              <Pressable
+                onPress={() => onToggleFeatured(p)}
+                hitSlop={6}
+                style={styles.starBtn}
+                accessibilityLabel={p.is_featured ? 'Remove from featured' : 'Add to featured'}
+              >
+                <Ionicons name={p.is_featured ? 'star' : 'star-outline'} size={20} color={p.is_featured ? colors.orange : colors.muted} />
+              </Pressable>
               <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={styles.smallBtn} />
               <Button label="Delete" variant="danger" onPress={() => onDelete(p)} style={styles.smallBtn} />
             </View>
@@ -617,11 +640,13 @@ function ProductGrid({
   width,
   onEdit,
   onDelete,
+  onToggleFeatured,
 }: {
   products: Product[];
   width: number;
   onEdit: (p: Product) => void;
   onDelete: (p: Product) => void;
+  onToggleFeatured: (p: Product) => void;
 }) {
   const gap = 12;
   const cols = width < 620 ? 1 : width < 920 ? 2 : 3;
@@ -636,7 +661,9 @@ function ProductGrid({
               <Text style={styles.rowTitle} numberOfLines={2}>{p.name}</Text>
               <Text style={styles.rowMeta} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>
             </View>
-            {!p.is_active && <Badge text="hidden" tone="muted" />}
+            <Pressable onPress={() => onToggleFeatured(p)} hitSlop={6} style={styles.starBtn} accessibilityLabel={p.is_featured ? 'Remove from featured' : 'Add to featured'}>
+              <Ionicons name={p.is_featured ? 'star' : 'star-outline'} size={20} color={p.is_featured ? colors.orange : colors.muted} />
+            </Pressable>
           </View>
           <Text style={styles.gridMeta}>{money(p.price, p.currency)} / {p.unit} · stock {p.stock}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -1722,6 +1749,7 @@ const styles = StyleSheet.create({
   colActions: { width: 150 },
   actionCell: { flexDirection: 'row', gap: 8 },
   smallBtn: { paddingHorizontal: 12, paddingVertical: 7 },
+  starBtn: { paddingHorizontal: 6, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   // grid
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridCard: { gap: 10, padding: 14, flexGrow: 1 },

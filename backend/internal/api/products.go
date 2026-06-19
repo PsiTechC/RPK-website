@@ -118,6 +118,9 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "%"+search+"%")
 		where += " AND p.name ILIKE $" + strconv.Itoa(len(args))
 	}
+	if q.Get("featured") == "1" {
+		where += " AND p.is_featured = TRUE"
+	}
 
 	// Bound the result set so the query can never be truly unbounded. Default
 	// 1000 (covers the whole catalogue today); callers may page with ?limit/?offset.
@@ -131,7 +134,7 @@ func (s *Server) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	               p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
 		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
-		        p.highlights, p.nutrition, p.seller
+		        p.highlights, p.nutrition, p.seller, p.is_featured
 	        FROM products p LEFT JOIN categories c ON c.id = p.category_id ` +
 		where + ` ORDER BY p.sort_order, p.name` + limitClause + offsetClause
 
@@ -161,7 +164,7 @@ func (s *Server) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
 		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
-		        p.highlights, p.nutrition, p.seller
+		        p.highlights, p.nutrition, p.seller, p.is_featured
 		 FROM products p LEFT JOIN categories c ON c.id = p.category_id WHERE p.id=$1`, id)
 	p, err := scanProduct(row)
 	if err != nil {
@@ -309,7 +312,7 @@ func (s *Server) handleListArchivedProducts(w http.ResponseWriter, r *http.Reque
 		        p.currency, p.image_url, p.description, p.stock, p.is_active, p.created_at, p.updated_at,
 		        COALESCE((SELECT ROUND(AVG(rating)::numeric,1) FROM reviews rv WHERE rv.product_id=p.id),0),
 		        (SELECT COUNT(*) FROM reviews rv WHERE rv.product_id=p.id),
-		        p.highlights, p.nutrition, p.seller
+		        p.highlights, p.nutrition, p.seller, p.is_featured
 		 FROM products p LEFT JOIN categories c ON c.id = p.category_id
 		 WHERE p.archived_at IS NOT NULL ORDER BY p.archived_at DESC`)
 	if err != nil {
@@ -374,6 +377,29 @@ func scanProduct(row rowScanner) (models.Product, error) {
 	var p models.Product
 	err := row.Scan(&p.ID, &p.Name, &p.Slug, &p.CategoryID, &p.CategoryName, &p.Unit, &p.Price,
 		&p.Currency, &p.ImageURL, &p.Description, &p.Stock, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
-		&p.Rating, &p.ReviewCount, &p.Highlights, &p.Nutrition, &p.Seller)
+		&p.Rating, &p.ReviewCount, &p.Highlights, &p.Nutrition, &p.Seller, &p.IsFeatured)
 	return p, err
+}
+
+// handleSetFeatured toggles a product's "featured on home page" flag (admin).
+func (s *Server) handleSetFeatured(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var req struct {
+		Featured bool `json:"featured"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeErr(w, 400, "invalid body")
+		return
+	}
+	ct, err := s.pool.Exec(r.Context(),
+		`UPDATE products SET is_featured=$1, updated_at=now() WHERE id=$2`, req.Featured, id)
+	if err != nil {
+		writeErr(w, 500, "update failed")
+		return
+	}
+	if ct.RowsAffected() == 0 {
+		writeErr(w, 404, "product not found")
+		return
+	}
+	writeJSON(w, 200, map[string]bool{"featured": req.Featured})
 }

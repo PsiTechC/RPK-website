@@ -28,6 +28,7 @@ type Product struct {
 	Description  string    `json:"description"`
 	Stock        int             `json:"stock"`
 	IsActive     bool            `json:"is_active"`
+	IsFeatured   bool            `json:"is_featured"`
 	Rating       float64         `json:"rating"`
 	ReviewCount  int             `json:"review_count"`
 	Highlights   json.RawMessage `json:"highlights"`

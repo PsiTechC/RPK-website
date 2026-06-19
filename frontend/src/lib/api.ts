@@ -43,6 +43,7 @@ export type Product = {
   description: string;
   stock: number;
   is_active: boolean;
+  is_featured?: boolean;
   rating: number;
   review_count: number;
   highlights: { label: string; value: string }[];
@@ -145,10 +146,11 @@ export const api = {
   // public
   stats: () => request<{ products: number; categories: number; countries: number }>('/api/stats'),
   categories: () => request<Category[]>('/api/categories'),
-  products: (q?: { category?: string; q?: string }) => {
+  products: (q?: { category?: string; q?: string; featured?: boolean }) => {
     const params = new URLSearchParams();
     if (q?.category) params.set('category', q.category);
     if (q?.q) params.set('q', q.q);
+    if (q?.featured) params.set('featured', '1');
     const qs = params.toString();
     return request<Product[]>(`/api/products${qs ? `?${qs}` : ''}`);
   },
@@ -186,6 +188,9 @@ export const api = {
     items?: { product_id: number; name: string; unit: string; qty: number }[];
   }) => request<any>('/api/inquiries', { method: 'POST', body }),
 
+  createFeedback: (body: { rating: number; comment?: string }) =>
+    request<any>('/api/feedback', { method: 'POST', body }),
+
   // admin
   admin: {
     stats: (token: string) => request<any>('/api/admin/stats', { token }),
@@ -194,6 +199,8 @@ export const api = {
     createProduct: (body: any, token: string) => request<any>('/api/admin/products', { method: 'POST', body, token }),
     updateProduct: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/products/${id}`, { method: 'PUT', body, token }),
+    setFeatured: (id: number, featured: boolean, token: string) =>
+      request<any>(`/api/admin/products/${id}/featured`, { method: 'PATCH', body: { featured }, token }),
     deleteProduct: (id: number, token: string) => // soft-delete → archive
       request<any>(`/api/admin/products/${id}`, { method: 'DELETE', token }),
     archivedProducts: (token: string) => request<Product[]>('/api/admin/products/archived', { token }),
