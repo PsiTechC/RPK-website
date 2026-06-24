@@ -1,0 +1,692 @@
+[
+ {
+  "product": "ATD Coconut Oil",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Atd coconut oil smells fresh and natural, and it’s good for everyday cooking."
+ },
+ {
+  "product": "7UP",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "7UP tastes really refreshing and fizzy"
+ },
+ {
+  "product": "7UP",
+  "author_name": "RPK Admin",
+  "rating": 5,
+  "comment": ""
+ },
+ {
+  "product": "Al Tahi Olive Oil",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "light, clean oil that works well in cooking without making the food feel heavy"
+ },
+ {
+  "product": "Ajinomoto",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "It adds a nice tasty kick to food and makes simple dishes feel more flavourful"
+ },
+ {
+  "product": "All Purpose Flour",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for cakes, cookies, pancakes, and everyday kitchen recipes"
+ },
+ {
+  "product": "Armana Basmati Rice",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The rice cooks up nicely with long grains and a pleasant aroma"
+ },
+ {
+  "product": "Bajra Flour",
+  "author_name": "Daniel",
+  "rating": 2,
+  "comment": "Good for bhakri, rotla, and simple millet-based recipes"
+ },
+ {
+  "product": "Baking Soda",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The powder feels clean and mixes easily into batter or dough"
+ },
+ {
+  "product": "Basmati Rice 1121 Steam",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The rice cooks soft and fluffy with long grains and a gentle basmati aroma"
+ },
+ {
+  "product": "Basmati Rice 1509 Steam",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The grains come out smooth and fluffy, with a mild fragrance that feels fresh"
+ },
+ {
+  "product": "Boost",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "It has a rich chocolate taste and mixes well with milk"
+ },
+ {
+  "product": "Black Chana Loose",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "It has a good texture after soaking and works well for curries"
+ },
+ {
+  "product": "Basmati Rice 1509 Sella",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The rice has slender grains that cook evenly, with a light aroma and a firm texture"
+ },
+ {
+  "product": "Basmati Rice 1121 Sella",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The rice has long, firm grains that stay separate after cooking"
+ },
+ {
+  "product": "Black Salt Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The salt has a strong, tangy taste"
+ },
+ {
+  "product": "Basmati Rice Gautam",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "he grains come out soft and separate"
+ },
+ {
+  "product": "Brown Sugar",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It adds a deeper sweetness to cakes and cookies compared to regular white sugar"
+ },
+ {
+  "product": "Cashewnut LP",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "They taste fresh and work well for sweets"
+ },
+ {
+  "product": "Chana Dal Loose",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The dal looks clean and cooks well with a nice soft texture"
+ },
+ {
+  "product": "Charmagaz Melon Seed Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "They add a mild nutty flavour and good texture to dishes"
+ },
+ {
+  "product": "Coconut Powder Indonesia",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Fine coconut powder with a fresh aroma and a smooth texture"
+ },
+ {
+  "product": "Chick Peas",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good-sized chickpeas that cook well after soaking"
+ },
+ {
+  "product": "Ghee Rice Mix",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "The ghee flavour could be a little stronger"
+ },
+ {
+  "product": "Corn Flour",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Good for coating fried items, giving them a light crisp finish"
+ },
+ {
+  "product": "Crystal Salt Bag",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "The crystals look neat and work well for cooking, pickling, and seasoning"
+ },
+ {
+  "product": "Cooking Oil Tin",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The oil works well for frying and daily kitchen use without feeling too heavy"
+ },
+ {
+  "product": "Eastern Coconut Oil",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It has that simple homemade coconut oil smell that suits daily cooking"
+ },
+ {
+  "product": "Dalda Vegetable Ghee",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "A handy choice for making bakery items, halwa, and festive recipes"
+ },
+ {
+  "product": "Curd Chilly",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Crispy and spicy curd chillies that add a strong flavour to meals"
+ },
+ {
+  "product": "Double Spoon Shortening Pure",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It blends easily into dough and helps give a nice crumbly bite"
+ },
+ {
+  "product": "Horlicks",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good for people who like a mild, not-too-chocolaty milk drink"
+ },
+ {
+  "product": "Jeerakasala Nelvayal",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The rice feels light after cooking and carries flavours really well"
+ },
+ {
+  "product": "Jaggery",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The taste is rich and slightly caramel-like, giving dishes a more natural sweetness"
+ },
+ {
+  "product": "Golden Raisins",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Soft, chewy, and pleasant to eat straight or mix into recipes"
+ },
+ {
+  "product": "Himalayan Pink Salt",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for seasoning, cooking, and adding a neat finish to salads or snacks"
+ },
+ {
+  "product": "Green Chilly Sauce Chings",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good sauce for Indo-Chinese dishes, with a bold flavour that stands out"
+ },
+ {
+  "product": "Gram Flour (Besan) Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It mixes smoothly into batter without too many lumps"
+ },
+ {
+  "product": "Jeerakasala Rice",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "The grains stay clean and separate, carrying spices nicely in rice dishes"
+ },
+ {
+  "product": "Jowar Flour",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Fresh jowar flour with a mild earthy taste that makes soft, wholesome rotis"
+ },
+ {
+  "product": "Mayonnaise Hayat",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Creamy mayonnaise with a smooth texture and a mild, pleasant taste"
+ },
+ {
+  "product": "Ketchup Hayat",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Thick tomato ketchup with a nice sweet and tangy taste"
+ },
+ {
+  "product": "Kimball Chilly Sauce",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It adds a nice heat to noodles, fried rice, and evening snacks"
+ },
+ {
+  "product": "Maggi Coconut Milk Powder",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It mixes easily and brings a nice coconut flavour without much work"
+ },
+ {
+  "product": "Maple Syrup",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good for drizzling over breakfast items without feeling too heavy"
+ },
+ {
+  "product": "Masoor Dal Mellow",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "A good dal for quick cooking, with a soft bite and gentle flavour"
+ },
+ {
+  "product": "Matta Rice Mahila",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good matta rice with bold grains that feel filling and traditional"
+ },
+ {
+  "product": "Mirinda Soft Drink",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Bright orange flavour with a sweet, fizzy taste that feels refreshing cold"
+ },
+ {
+  "product": "Mustard Sauce",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good balance of tanginess and spice, especially for dips and marinades"
+ },
+ {
+  "product": "Nellara Rice Powder",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "The powder has a fresh rice smell and gives recipes a nice light finish"
+ },
+ {
+  "product": "Nescafe Tradicad",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The coffee blends well and has a pleasant roasted smell"
+ },
+ {
+  "product": "Nellara White Puttu Podi",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The podi feels clean and easy to mix, making the preparation smooth"
+ },
+ {
+  "product": "Moong Dal Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good quality moong dal with a fresh look and mild flavour"
+ },
+ {
+  "product": "Mustard Oil Pran-Mughal",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "A little goes a long way, giving dishes a warm and punchy flavour"
+ },
+ {
+  "product": "Mushroom Whole Ameri",
+  "author_name": "Daniel",
+  "rating": 2,
+  "comment": "Whole mushrooms with a soft bite and a mild earthy taste"
+ },
+ {
+  "product": "Nezo Salt Blue Packet",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Clean-tasting salt that blends well into cooking without feeling too strong"
+ },
+ {
+  "product": "Pure Honey",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It has a rich golden texture and adds a gentle sweetness without feeling too sharp"
+ },
+ {
+  "product": "Pumpkin Seeds Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "They have a mild flavour that blends well into breakfast bowls and recipes"
+ },
+ {
+  "product": "Peanuts Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The peanuts look clean and feel fresh when eaten"
+ },
+ {
+  "product": "Papad",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Crispy papad with a nice light crunch and a tasty traditional flavour"
+ },
+ {
+  "product": "Palada Nellara",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It gives desserts a rich, homely touch without being too heavy"
+ },
+ {
+  "product": "Pepsi Soft Drink",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Cold Pepsi has a strong fizzy kick with a sweet cola taste"
+ },
+ {
+  "product": "Pickle Mix",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It gives vegetables and mango pieces a rich, traditional pickle taste"
+ },
+ {
+  "product": "Pistachios Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for garnishing, baking, or enjoying as a light dry fruit snack"
+ },
+ {
+  "product": "R.K.G Ghee",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Rich ghee with a warm aroma that gives food a nice traditional flavour"
+ },
+ {
+  "product": "Rajma Chitra Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good for rajma masala, with a hearty flavour that feels filling"
+ },
+ {
+  "product": "Red Chowli Large Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Large red chowli with a firm bite and a nice earthy taste after cooking"
+ },
+ {
+  "product": "Rice Flour",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "The flour feels fresh and helps make batter or dough smooth"
+ },
+ {
+  "product": "Roasted Gram Split Loose",
+  "author_name": "Daniel",
+  "rating": 2,
+  "comment": "The quality is okay, but the roasted gram felt a bit dry"
+ },
+ {
+  "product": "Rose Water Kitchen Crow",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It is decent, but the rose smell could be a little richer"
+ },
+ {
+  "product": "Rock Salt Loose",
+  "author_name": "Daniel",
+  "rating": 2,
+  "comment": "Good for regular kitchen use, especially when crushed or ground fresh"
+ },
+ {
+  "product": "Salt Bag No.1",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good quantity and useful for daily kitchen or bulk cooking needs"
+ },
+ {
+  "product": "Sea Salt Fine",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It gives food a simple salty balance without feeling too harsh"
+ },
+ {
+  "product": "Sona Masuri Rice",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The grains cook evenly and work well for regular meals"
+ },
+ {
+  "product": "Shurooq Sunflower Oil",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Light cooking oil with a clean taste, works nicely for frying and daily recipes"
+ },
+ {
+  "product": "Sugar",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Clean sugar with a nice sweetness that works well for tea, coffee, and desserts"
+ },
+ {
+  "product": "Spaghetti",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The strands stay firm when cooked properly and don’t turn too soft quickly"
+ },
+ {
+  "product": "Soy Sauce",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Rich soy sauce with a deep salty flavour that lifts noodles, fried rice, and stir-fries"
+ },
+ {
+  "product": "Sugar Khaleej",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The crystals look good and feel easy to use for daily kitchen needs"
+ },
+ {
+  "product": "Sunflower Seeds Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good quality seeds with a firm bite and fresh feel"
+ },
+ {
+  "product": "Tamarind",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It has a nice tangy taste and blends well into traditional dishes"
+ },
+ {
+  "product": "Toor Dal Mellow",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It is decent, but it may need a little more cooking time to turn fully soft"
+ },
+ {
+  "product": "Cardamom Ahmad Gold",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "The pods smell nice and give a warm, pleasant taste when crushed"
+ },
+ {
+  "product": "Flour No.1 Grand Mill Paratha",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good flour for making soft, layered parathas with a neat bite"
+ },
+ {
+  "product": "Urad Dal",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The grains look fresh and soak well without taking too long"
+ },
+ {
+  "product": "White Vinegar Amal",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Clear vinegar with a sharp clean taste, good for pickles, sauces, and kitchen use"
+ },
+ {
+  "product": "Black Pepper Whole Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The peppercorns look clean and work well for curries, soups, and marinades"
+ },
+ {
+  "product": "Walnuts Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It is decent, but a few pieces could be slightly crunchier"
+ },
+ {
+  "product": "Watta Flour No.2 Grand Mill",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It kneads smoothly and feels easy to roll without cracking much"
+ },
+ {
+  "product": "Semolina (Rava) Loose",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Fresh rava with a clean texture, perfect for making soft upma and crispy snacks"
+ },
+ {
+  "product": "Coriander Powder Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The powder has a clean texture and doesn’t overpower the other spices"
+ },
+ {
+  "product": "Clove",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The cloves smell fresh and give a nice spicy touch when used in cooking"
+ },
+ {
+  "product": "Eastern Chicken Masala",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Rich and aromatic masala that gives chicken curry a deep, tasty flavour"
+ },
+ {
+  "product": "Cinnamon / Cassia Stick Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It has a pleasant woody aroma and works nicely in both sweet and savoury dishes"
+ },
+ {
+  "product": "Eastern Fish Masala",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It brings out the flavour of fish without making the spices feel too heavy"
+ },
+ {
+  "product": "Cumin Seeds",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for tempering, with a nice fragrance that comes out quickly in hot oil"
+ },
+ {
+  "product": "Coriander Seeds",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It is decent, but some seeds could have a slightly stronger aroma"
+ },
+ {
+  "product": "Eastern Meat Masala",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It is decent, but the spice punch could be a little stronger"
+ },
+ {
+  "product": "Kitchen King Masala",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It blends well into vegetables and gravies, adding a warm and balanced spice taste"
+ },
+ {
+  "product": "L.G. Asafoetida Powder",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "A small pinch gives food a nice traditional taste without overpowering it"
+ },
+ {
+  "product": "Fennel Seeds Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It is decent, but some seeds could have a stronger sweetness"
+ },
+ {
+  "product": "Green Cardamom",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for biryani, payasam, sweets, and milk tea where aroma matters"
+ },
+ {
+  "product": "Kashmiri Chilly Powder",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for tandoori items, gravies, and marinades where colour matters"
+ },
+ {
+  "product": "Eastern Sambar Powder",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The spice level feels just right and doesn’t overpower the vegetables"
+ },
+ {
+  "product": "L.G. Asafoetida Block",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Strong hing aroma that gives dals and curries a proper traditional flavour"
+ },
+ {
+  "product": "Long Chilly Whole",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "They give curries and chutneys a nice heat when roasted or ground"
+ },
+ {
+  "product": "Mustard Seeds Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "Good for tadka, with a bold smell that comes out quickly in hot oil"
+ },
+ {
+  "product": "Turmeric Powder",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good for dals, gravies, and masalas, with a mild taste that doesn’t overpower"
+ },
+ {
+  "product": "Red Chilly Powder Ameera Loose",
+  "author_name": "Daniel",
+  "rating": 5,
+  "comment": "Bright chilli powder with a strong colour and a good spicy kick for curries and masalas"
+ },
+ {
+  "product": "Turmeric",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It adds a nice natural colour to curries, dals, and masalas"
+ },
+ {
+  "product": "Sesame Seeds",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "Good for chutneys and snacks, with a simple flavour that blends nicely"
+ },
+ {
+  "product": "Turmeric Powder Loose",
+  "author_name": "Daniel",
+  "rating": 3,
+  "comment": "It blends smoothly into curries and gives dishes a nice natural yellow shade"
+ },
+ {
+  "product": "Nellara Mutton Masala",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It gives the curry a nice colour and flavour without needing too many extra spices"
+ },
+ {
+  "product": "Star Anise Loose",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "The pieces look neat and give a strong fragrance when used in cooking"
+ },
+ {
+  "product": "Turmeric Whole",
+  "author_name": "Daniel",
+  "rating": 4,
+  "comment": "It gives curries and masalas a warm colour with a mild natural flavour"
+ }
+]

@@ -49,6 +49,14 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	stats["pending_registrations"] = scalar(`SELECT COUNT(*) FROM import_export_registrations WHERE status='pending'`)
 	stats["total_registrations"] = scalar(`SELECT COUNT(*) FROM import_export_registrations`)
 
+	// B2B partner portal (Phases 1–8)
+	stats["total_partners"] = scalar(`SELECT COUNT(*) FROM users WHERE role IN ('import_partner','export_partner')`)
+	stats["total_rfqs"] = scalar(`SELECT COUNT(*) FROM rfqs`)
+	stats["open_rfqs"] = scalar(`SELECT COUNT(*) FROM rfqs WHERE status IN ('open','quoted')`)
+	stats["partner_orders"] = scalar(`SELECT COUNT(*) FROM partner_orders`)
+	stats["partner_orders_unpaid"] = scalar(`SELECT COUNT(*) FROM partner_orders WHERE payment_status <> 'paid'`)
+	stats["active_shipments"] = scalar(`SELECT COUNT(*) FROM shipments WHERE status='in_transit'`)
+
 	// Orders grouped by status for a simple chart.
 	byStatus := map[string]float64{}
 	rows, err := s.pool.Query(ctx, `SELECT status, COUNT(*) FROM orders GROUP BY status`)

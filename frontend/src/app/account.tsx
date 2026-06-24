@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { api, Order } from '../lib/api';
+import { api, Order, Registration } from '../lib/api';
 import { colors, radius } from '../lib/theme';
 import { useApp, money } from '../lib/store';
 import { fmtDate } from '../lib/date';
@@ -25,11 +25,13 @@ export default function Account() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const fits = width >= 720; // below this, tables scroll horizontally
-  const { user, token, ready, logout } = useApp();
+  const { user, token, ready } = useApp();
   const isAdmin = user?.role === 'admin'; // only the admin sees amounts
   const [orders, setOrders] = useState<Order[]>([]);
+  const [regs, setRegs] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<Order | null>(null);
+  const isPartner = user?.role === 'import_partner' || user?.role === 'export_partner';
 
   async function viewOrder(id: number) {
     if (!token) return;
@@ -46,6 +48,7 @@ export default function Account() {
       .then(setOrders)
       .catch(() => {})
       .finally(() => setLoading(false));
+    api.myRegistrations(token).then(setRegs).catch(() => {});
   }, [token]);
 
   if (ready && !user) {
@@ -63,19 +66,6 @@ export default function Account() {
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <Container style={{ marginTop: 26 }}>
-        <Card style={styles.profile}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() || '?'}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{user?.name}</Text>
-            <Text style={styles.email}>{user?.email}</Text>
-            <Badge text={user?.role || 'customer'} tone="orange" />
-          </View>
-          <Button label="Logout" variant="ghost" onPress={() => { logout(); router.replace('/'); }} />
-        </Card>
-
-        <View style={{ height: 26 }} />
         <SectionTitle title="My Orders" subtitle={`${orders.length} order${orders.length === 1 ? '' : 's'}`} />
         {loading ? (
           <ActivityIndicator color={colors.orange} />
@@ -112,6 +102,49 @@ export default function Account() {
           </Tbl>
         )}
 
+        {isPartner && (
+          <>
+            <View style={{ height: 26 }} />
+            <View style={styles.partnerCta}>
+              <Ionicons name="briefcase-outline" size={22} color={colors.red} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ctaTitle}>You're an approved {user?.role === 'export_partner' ? 'export' : 'import'} partner</Text>
+                <Text style={styles.empty}>Open your dashboard to request quotations and track trade.</Text>
+              </View>
+              <Button label="Open dashboard" onPress={() => router.push((user?.role === 'export_partner' ? '/partner/export' : '/partner/import') as any)} />
+            </View>
+          </>
+        )}
+
+        <View style={{ height: 26 }} />
+        <SectionTitle title="My Applications" subtitle={`${regs.length} import/export registration${regs.length === 1 ? '' : 's'}`} />
+        {regs.length === 0 ? (
+          <Text style={styles.empty}>No registrations yet. <Text style={{ color: colors.red, fontWeight: '800' }} onPress={() => router.push('/import-export')}>Apply to become a partner →</Text></Text>
+        ) : (
+          <Tbl fits={fits}>
+            <View style={[styles.table, fits ? styles.tableFull : styles.tableMin]}>
+              <View style={[styles.tr, styles.thead]}>
+                <Text style={[styles.th, styles.cApp]}>App</Text>
+                <Text style={[styles.th, styles.cCompany]}>Company</Text>
+                <Text style={[styles.th, styles.cType]}>Type</Text>
+                <Text style={[styles.th, styles.cCountry]}>Country</Text>
+                <Text style={[styles.th, styles.cDate]}>Applied</Text>
+                <Text style={[styles.th, styles.cStatus]}>Status</Text>
+              </View>
+              {regs.map((r, i) => (
+                <View key={r.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+                  <Text style={[styles.td, styles.tdStrong, styles.cApp]}>{r.id}</Text>
+                  <Text style={[styles.td, styles.cCompany]} numberOfLines={1}>{r.company_name}</Text>
+                  <Text style={[styles.td, styles.cType]}>{r.business_type}</Text>
+                  <Text style={[styles.td, styles.cCountry]} numberOfLines={1}>{r.country || '—'}</Text>
+                  <Text style={[styles.td, styles.cDate]}>{fmtDate(r.created_at)}</Text>
+                  <View style={styles.cStatus}><Badge text={r.status} tone={statusTone[r.status] || 'muted'} /></View>
+                </View>
+              ))}
+            </View>
+          </Tbl>
+        )}
+
         {detail && <OrderDetailModal order={detail} onClose={() => setDetail(null)} showPrices={isAdmin} />}
 
       </Container>
@@ -121,12 +154,9 @@ export default function Account() {
 }
 
 const styles = StyleSheet.create({
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatar: { width: 56, height: 56, borderRadius: 999, backgroundColor: colors.orange, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.white, fontWeight: '900', fontSize: 24 },
-  name: { fontSize: 20, fontWeight: '900', color: colors.ink },
-  email: { color: colors.muted, marginBottom: 6 },
   empty: { color: colors.muted, fontSize: 14 },
+  partnerCta: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.redSoft, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 16, paddingVertical: 14 },
+  ctaTitle: { fontWeight: '900', color: colors.ink, fontSize: 15 },
   // table
   table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.white },
   tableFull: { width: '100%' },

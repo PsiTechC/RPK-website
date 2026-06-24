@@ -2,12 +2,25 @@ package db
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// Full live catalogue + reviews, exported from production with
+// backend/gen_catalogue.js. Embedded so a fresh database reproduces the live
+// site exactly — same products, images, descriptions, nutrition, featured
+// flags and reviews. Regenerate these files when the live data changes.
+//
+//go:embed catalogue.json
+var catalogueJSON []byte
+
+//go:embed reviews.json
+var reviewsJSON []byte
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
 
@@ -16,16 +29,15 @@ func slug(s string) string {
 	return strings.Trim(slugRe.ReplaceAllString(s, "-"), "-")
 }
 
-// placehold.co tiles are on-brand and always load; the admin can replace each
-// image_url with a real photo later.
+// placehold.co tiles are on-brand and always load; used only as a fallback when
+// a product has no image in the catalogue.
 func img(label string) string {
 	enc := strings.ReplaceAll(label, " ", "+")
 	return "https://placehold.co/600x450/E2231A/FFFFFF/png?text=" + enc
 }
 
-// Verified real food photos (Unsplash CDN) per category name. Used for product
-// images so the storefront shows real groceries. Salt is intentionally blank so
-// those cards fall back to the on-brand 🧂 emoji tile.
+// Verified real food photos (Unsplash CDN) per category name. Used for category
+// tiles and as the image fallback for products with no own image.
 func unsplash(id string) string {
 	return "https://images.unsplash.com/photo-" + id + "?auto=format&fit=crop&w=700&q=70"
 }
@@ -49,11 +61,25 @@ type seedCat struct {
 	desc string
 }
 
+// seedProd mirrors a row in catalogue.json (the live export).
 type seedProd struct {
-	name string
-	cat  string
-	unit string
-	price float64
+	Name        string  `json:"name"`
+	Cat         string  `json:"category"`
+	Unit        string  `json:"unit"`
+	Price       float64 `json:"price"`
+	ImageURL    string  `json:"image_url"`
+	Description string  `json:"description"`
+	Nutrition   string  `json:"nutrition"`
+	Featured    bool    `json:"featured"`
+}
+
+// seedReview mirrors a row in reviews.json. Linked to a product by name (slug),
+// since live row ids don't carry across databases.
+type seedReview struct {
+	Product    string `json:"product"`
+	AuthorName string `json:"author_name"`
+	Rating     int    `json:"rating"`
+	Comment    string `json:"comment"`
 }
 
 var seedCategories = []seedCat{
@@ -70,125 +96,9 @@ var seedCategories = []seedCat{
 	{"Pantry & Others", "Pasta, mushrooms, coconut powder and more."},
 }
 
-var seedProducts = []seedProd{
-	// Rice & Grains
-	{"Basmati Rice Gautam 39KG", "Rice & Grains", "BAG", 165},
-	{"Matta Rice Mahila 20KG", "Rice & Grains", "BAG", 60},
-	{"Jeerakasala Nelvayal 18KG", "Rice & Grains", "BAG", 110},
-	{"Armana Basmati Rice 10KG", "Rice & Grains", "BAG", 55},
-	{"Nellara Rice Powder 1KG x 12PC", "Rice & Grains", "PC", 6},
-	{"Nellara White Puttu Podi 15KG", "Rice & Grains", "BAG", 48},
-
-	// Flour & Atta
-	{"Flour No.1 Grand Mill Paratha 50KG", "Flour & Atta", "BAG", 95},
-	{"Watta Flour No.2 Grand Mill 50KG", "Flour & Atta", "BAG", 85},
-	{"Gram Flour (Besan) Loose", "Flour & Atta", "KG", 5},
-	{"Semolina (Rava) Loose", "Flour & Atta", "KG", 4},
-
-	// Spices & Masala
-	{"Coriander Powder Loose", "Spices & Masala", "KG", 9},
-	{"Ajinomoto No.1 40PKT x 454GM", "Spices & Masala", "PKT", 9},
-	{"Nellara Mutton Masala", "Spices & Masala", "PKT", 5},
-	{"Eastern Meat Masala 1KG", "Spices & Masala", "PKT", 22},
-	{"Eastern Fish Masala 1KG", "Spices & Masala", "PKT", 22},
-	{"Eastern Sambar Powder 1KG", "Spices & Masala", "PKT", 20},
-	{"Eastern Chicken Masala 1KG", "Spices & Masala", "PKT", 22},
-	{"Kitchen King Masala 4 x 500GM", "Spices & Masala", "PKT", 18},
-	{"Turmeric Powder Loose", "Spices & Masala", "KG", 8},
-	{"Long Chilly Whole 10KG", "Spices & Masala", "BAG", 70},
-	{"Kashmiri Chilly Powder 15KG SMT", "Spices & Masala", "KG", 16},
-	{"Red Chilly Powder Ameera Loose", "Spices & Masala", "KG", 14},
-	{"Black Pepper Whole Loose", "Spices & Masala", "KG", 30},
-	{"Cardamom Ahmad Gold 6MM 10 x 1KG", "Spices & Masala", "PKT", 90},
-	{"Cinnamon / Cassia Stick Loose", "Spices & Masala", "KG", 14},
-	{"Mustard Seeds Loose", "Spices & Masala", "KG", 6},
-	{"Star Anise Loose", "Spices & Masala", "KG", 28},
-	{"Fennel Seeds Loose", "Spices & Masala", "KG", 12},
-	{"L.G. Asafoetida Powder 100GM", "Spices & Masala", "PC", 8},
-	{"L.G. Asafoetida Block 100GM", "Spices & Masala", "PC", 8},
-
-	// Pulses & Lentils
-	{"Moong Dal Loose", "Pulses & Lentils", "KG", 7},
-	{"Roasted Gram Split Loose", "Pulses & Lentils", "KG", 6},
-	{"Toor Dal Mellow 15KG", "Pulses & Lentils", "KG", 6},
-	{"Masoor Dal Mellow 15KG", "Pulses & Lentils", "BAG", 80},
-	{"Black Channa Loose", "Pulses & Lentils", "KG", 5},
-	{"Chana Dal Loose", "Pulses & Lentils", "KG", 5},
-	{"Black Chana Loose", "Pulses & Lentils", "KG", 5},
-	{"Red Chowli Large Loose", "Pulses & Lentils", "KG", 6},
-
-	// Dry Fruits & Nuts
-	{"Golden Raisins 10KG", "Dry Fruits & Nuts", "KG", 16},
-	{"Cashewnut LP 10KG", "Dry Fruits & Nuts", "BAG", 320},
-	{"Charmagaz Melon Seed Loose", "Dry Fruits & Nuts", "KG", 22},
-	{"Peanuts Loose", "Dry Fruits & Nuts", "KG", 7},
-
-	// Sweeteners & Honey
-	{"Sugar Khaleej 50KG", "Sweeteners & Honey", "BAG", 110},
-	{"Jaggery 10 x 1KG", "Sweeteners & Honey", "CAT", 30},
-	{"Pure Honey 3KG x 4", "Sweeteners & Honey", "PC", 45},
-	{"Tamarind 20 x 1KG", "Sweeteners & Honey", "PKT", 35},
-
-	// Cooking Oils & Ghee
-	{"R.K.G Ghee 12 x 900ML", "Cooking Oils & Ghee", "PC", 22},
-	{"Cooking Oil Tin 17 LTR", "Cooking Oils & Ghee", "TIN", 95},
-	{"Double Spoon Shortening Pure 11 LTR", "Cooking Oils & Ghee", "CAT", 60},
-	{"Dalda Vegetable Ghee 1KG x 16PC", "Cooking Oils & Ghee", "PC", 9},
-	{"Eastern Coconut Oil 6 x 2LTR", "Cooking Oils & Ghee", "PC", 28},
-	{"ATD Coconut Oil 6 x 2LTR", "Cooking Oils & Ghee", "PC", 26},
-	{"Al Tahi Olive Oil 12 x 1LTR", "Cooking Oils & Ghee", "PC", 30},
-	{"Shurooq Sunflower Oil 4 x 5LTR", "Cooking Oils & Ghee", "PC", 38},
-	{"Mustard Oil Pran-Mughal 6 x 1LTR", "Cooking Oils & Ghee", "PC", 12},
-
-	// Sauces & Condiments
-	{"Mayonnaise Hayat 4 x 3.78L", "Sauces & Condiments", "PC", 25},
-	{"Ketchup Hayat 4 x 5LTR", "Sauces & Condiments", "CAT", 55},
-	{"White Vinegar Amal 4 x 1 Gallon", "Sauces & Condiments", "CAT", 40},
-	{"Kimball Chilly Sauce 24 x 340GM", "Sauces & Condiments", "PC", 4},
-	{"Green Chilly Sauce Chings 24 x 680GM", "Sauces & Condiments", "PC", 5},
-	{"Rose Water Kitchen Crow 12 x 450ML", "Sauces & Condiments", "PC", 3},
-
-	// Salt
-	{"Nezo Salt Blue Packet 12 x 1KG", "Salt", "CAT", 8},
-	{"Black Salt Loose", "Salt", "KG", 4},
-	{"Salt Bag No.1 25KG", "Salt", "BAG", 18},
-
-	// Beverages
-	{"Horlicks 500GM", "Beverages", "PC", 12},
-	{"Boost 500GM", "Beverages", "PC", 12},
-	{"Nescafe Tradicad 200GM", "Beverages", "PC", 14},
-	{"7UP Soft Drink", "Beverages", "CAT", 18},
-	{"Pepsi Soft Drink", "Beverages", "CAT", 18},
-	{"Mirinda Soft Drink", "Beverages", "CAT", 18},
-
-	// Pantry & Others
-	{"Mushroom Whole Ameri 24 x 400GM", "Pantry & Others", "PC", 28},
-	{"Spaghetti 20 x 400GM", "Pantry & Others", "CAT", 20},
-	{"Maggi Coconut Milk Powder 1KG x 12", "Pantry & Others", "PKT", 14},
-	{"Palada Nellara 50 x 200GM", "Pantry & Others", "PKT", 4},
-	{"Curd Chilly 50 x 100GM", "Pantry & Others", "PKT", 9},
-	{"Coconut Powder Indonesia 7KG", "Pantry & Others", "BAG", 40},
-
-	// --- From "List of Products" document ---
-	{"Turmeric Whole", "Spices & Masala", "KG", 8},
-	{"Coriander Seeds", "Spices & Masala", "KG", 7},
-	{"Cumin Seeds", "Spices & Masala", "KG", 12},
-	{"Clove", "Spices & Masala", "KG", 40},
-	{"Sesame Seeds", "Spices & Masala", "KG", 14},
-	{"Green Cardamom", "Spices & Masala", "KG", 90},
-	{"All Purpose Flour", "Flour & Atta", "KG", 5},
-	{"Sugar", "Sweeteners & Honey", "KG", 4},
-	{"Chick Peas", "Pulses & Lentils", "KG", 6},
-	{"Basmati Rice 1121 Sella", "Rice & Grains", "BAG", 120},
-	{"Basmati Rice 1121 Steam", "Rice & Grains", "BAG", 125},
-	{"Basmati Rice 1509 Sella", "Rice & Grains", "BAG", 110},
-	{"Basmati Rice 1509 Steam", "Rice & Grains", "BAG", 115},
-	{"Sona Masuri Rice", "Rice & Grains", "BAG", 70},
-	{"Jeerakasala Rice", "Rice & Grains", "BAG", 110},
-}
-
-// Seed inserts the admin user, categories and products. Idempotent: existing
-// rows (matched by email/slug) are left untouched, so admin edits survive restarts.
+// Seed inserts the admin user, categories, products and reviews. Idempotent:
+// existing rows (matched by email/slug) are left untouched, so admin edits
+// survive restarts.
 func Seed(ctx context.Context, pool *pgxpool.Pool, adminHash string) error {
 	// Admin user
 	if _, err := pool.Exec(ctx,
@@ -223,10 +133,11 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, adminHash string) error {
 		catID[c.name] = id
 	}
 
-	// Products are seeded ONLY on a fresh database. On an existing DB a re-deploy
-	// must never touch products — otherwise any product an admin deleted would be
-	// re-inserted (its slug no longer exists), resurrecting "duplicates" on every
-	// deploy. After the first seed, products are managed solely via the dashboard.
+	// Products + reviews are seeded ONLY on a fresh database. On an existing DB a
+	// re-deploy must never touch them — otherwise any product an admin deleted
+	// would be re-inserted (its slug no longer exists), resurrecting "duplicates"
+	// on every deploy. After the first seed, the catalogue is managed solely via
+	// the dashboard.
 	var productCount int
 	if err := pool.QueryRow(ctx, `SELECT count(*) FROM products`).Scan(&productCount); err != nil {
 		return fmt.Errorf("count products: %w", err)
@@ -235,18 +146,67 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, adminHash string) error {
 		return nil // already populated — leave admin's catalogue untouched
 	}
 
-	for _, p := range seedProducts {
-		cid := catID[p.cat]
-		photo := categoryPhoto[p.cat] // "" for Salt -> emoji tile on the frontend
-		desc := fmt.Sprintf("%s — sold per %s. Wholesale & retail available from RPK Food Trading, Dubai.", p.name, p.unit)
+	var products []seedProd
+	if err := json.Unmarshal(catalogueJSON, &products); err != nil {
+		return fmt.Errorf("parse catalogue.json: %w", err)
+	}
+
+	for _, p := range products {
+		cid := catID[p.Cat]
+		image := p.ImageURL
+		if image == "" {
+			image = categoryPhoto[p.Cat] // "" for Salt -> emoji tile on the frontend
+		}
+		desc := p.Description
+		if desc == "" {
+			desc = fmt.Sprintf("%s — sold per %s. Wholesale & retail available from RPK Food Trading, Dubai.", p.Name, p.Unit)
+		}
 		if _, err := pool.Exec(ctx,
-			`INSERT INTO products (name, slug, category_id, unit, price, currency, image_url, description, stock, is_active)
-			 VALUES ($1,$2,$3,$4,$5,'AED',$6,$7,100,TRUE)
+			`INSERT INTO products (name, slug, category_id, unit, price, currency, image_url, description, nutrition, is_featured, stock, is_active)
+			 VALUES ($1,$2,$3,$4,$5,'AED',$6,$7,$8,$9,100,TRUE)
 			 ON CONFLICT (slug) DO NOTHING`,
-			p.name, slug(p.name), cid, p.unit, p.price, photo, desc,
+			p.Name, slug(p.Name), cid, p.Unit, p.Price, image, desc, p.Nutrition, p.Featured,
 		); err != nil {
-			return fmt.Errorf("seed product %s: %w", p.name, err)
+			return fmt.Errorf("seed product %s: %w", p.Name, err)
 		}
 	}
+
+	// Map product slug -> id so reviews can link by stable slug.
+	prodID := map[string]int64{}
+	rows, err := pool.Query(ctx, `SELECT id, slug FROM products`)
+	if err != nil {
+		return fmt.Errorf("load product ids: %w", err)
+	}
+	for rows.Next() {
+		var id int64
+		var sl string
+		if err := rows.Scan(&id, &sl); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan product id: %w", err)
+		}
+		prodID[sl] = id
+	}
+	rows.Close()
+
+	var reviews []seedReview
+	if err := json.Unmarshal(reviewsJSON, &reviews); err != nil {
+		return fmt.Errorf("parse reviews.json: %w", err)
+	}
+	for _, rv := range reviews {
+		pid, ok := prodID[slug(rv.Product)]
+		if !ok || rv.Rating < 1 || rv.Rating > 5 {
+			continue // product not in catalogue or invalid rating — skip
+		}
+		// user_id NULL: seeded reviews aren't tied to a local account. The
+		// UNIQUE(product_id, user_id) constraint allows multiple NULL rows.
+		if _, err := pool.Exec(ctx,
+			`INSERT INTO reviews (product_id, user_id, author_name, rating, comment)
+			 VALUES ($1, NULL, $2, $3, $4)`,
+			pid, rv.AuthorName, rv.Rating, rv.Comment,
+		); err != nil {
+			return fmt.Errorf("seed review for %s: %w", rv.Product, err)
+		}
+	}
+
 	return nil
 }

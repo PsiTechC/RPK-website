@@ -114,6 +114,7 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [current, setCurrent] = useState('English');
+  const [currentCode, setCurrentCode] = useState('en');
 
   useEffect(() => {
     loadGoogleTranslate();
@@ -127,6 +128,7 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
 
   const pick = (l: { code: string; label: string }) => {
     setCurrent(l.label.split(' (')[0]);
+    setCurrentCode(l.code);
     setOpen(false);
     setQ('');
     applyLanguage(l.code);
@@ -155,11 +157,15 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
               />
             </View>
             <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
-              {filtered.map((l) => (
-                <Pressable key={l.code} style={({ hovered }: any) => [styles.item, hovered && styles.itemHover]} onPress={() => pick(l)}>
-                  <Text style={styles.itemText} numberOfLines={1}>{l.label}</Text>
-                </Pressable>
-              ))}
+              {filtered.map((l) => {
+                const on = l.code === currentCode;
+                return (
+                  <Pressable key={l.code} style={({ hovered }: any) => [styles.item, hovered && styles.itemHover, on && styles.itemActive]} onPress={() => pick(l)}>
+                    <Text style={[styles.itemText, on && styles.itemTextActive]} numberOfLines={1}>{l.label}</Text>
+                    {on && <Ionicons name="checkmark" size={16} color={colors.red} />}
+                  </Pressable>
+                );
+              })}
               {filtered.length === 0 && <Text style={styles.noMatch}>No match</Text>}
             </ScrollView>
           </View>
@@ -178,13 +184,15 @@ const styles = StyleSheet.create({
     ? ({ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 } as any)
     : { position: 'absolute', top: 0, left: 0, right: 0, height: 2000, zIndex: 50 },
   dropdown: {
-    position: 'absolute' as any, top: 46, right: 0, width: 250, backgroundColor: colors.white,
+    position: 'absolute' as any, top: 46, right: 0, width: 272, backgroundColor: colors.white,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, zIndex: 70, ...shadow.card,
   },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 8, marginBottom: 6, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.offWhite, borderRadius: radius.sm },
   search: { flex: 1, color: colors.text, fontSize: 14, outlineStyle: 'none' as any },
-  item: { paddingHorizontal: 14, paddingVertical: 9 },
+  item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 14, paddingVertical: 10 },
   itemHover: { backgroundColor: colors.offWhite },
-  itemText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  itemActive: { backgroundColor: 'rgba(226,35,26,0.07)' },
+  itemText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' },
+  itemTextActive: { color: colors.red, fontWeight: '800' },
   noMatch: { color: colors.muted, fontSize: 13, padding: 12, textAlign: 'center' },
 });

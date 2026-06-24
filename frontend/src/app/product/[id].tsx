@@ -145,6 +145,8 @@ export default function ProductDetail() {
             )}
             <Badge text={product.stock > 0 ? 'In stock' : 'Out of stock'} tone={product.stock > 0 ? 'green' : 'red'} />
 
+            {!!product.description?.trim() && <Text style={styles.desc}>{product.description.trim()}</Text>}
+
             <View style={styles.qtyRow}>
               <Text style={styles.qtyLabel}>Quantity</Text>
               <View style={styles.stepper}>

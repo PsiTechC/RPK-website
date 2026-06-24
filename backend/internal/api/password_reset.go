@@ -11,10 +11,18 @@ import (
 	"log"
 	"net/http"
 	"net/smtp"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/rpkfood/backend/internal/auth"
+)
+
+// Regexes for htmlToText. Compiled once at package load.
+var (
+	hrefRe  = regexp.MustCompile(`(?is)<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>`)
+	blockRe = regexp.MustCompile(`(?i)</(p|div|tr|table|h1|h2|h3|li)>|<br\s*/?>`)
+	tagRe   = regexp.MustCompile(`(?s)<[^>]+>`)
 )
 
 // loginAuth implements the SMTP "LOGIN" auth mechanism. Some servers
@@ -49,6 +57,38 @@ func sha256hex(s string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// htmlToText produces a plain-text rendering of an HTML email body for the
+// text/plain MIME part. It keeps href URLs (so links survive in text-only
+// clients), turns block-level tags into line breaks, drops the rest, and
+// unescapes entities. Not a full HTML parser — just enough for our templates.
+func htmlToText(htmlBody string) string {
+	s := htmlBody
+	// Surface link targets as "text (url)" so reset/verify links aren't lost.
+	s = hrefRe.ReplaceAllString(s, "$2 ($1)")
+	// Block-level boundaries become newlines.
+	s = blockRe.ReplaceAllString(s, "\n")
+	// Strip every remaining tag.
+	s = tagRe.ReplaceAllString(s, "")
+	// Unescape entities (&amp; &lt; &#39; …).
+	s = html.UnescapeString(s)
+	// Collapse runs of blank lines and trim trailing spaces per line.
+	var out []string
+	blank := 0
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			blank++
+			if blank > 1 {
+				continue
+			}
+		} else {
+			blank = 0
+		}
+		out = append(out, line)
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
+}
+
 // sendMail sends an HTML email via the configured SMTP server (e.g. Gmail).
 // If SMTP isn't configured it logs the message instead of failing, so the
 // reset flow still works in dev (the link is also logged by the caller).
@@ -68,14 +108,32 @@ func (s *Server) sendMail(to, subject, htmlBody string) error {
 	if i := strings.LastIndex(cfg.SMTPUser, "@"); i >= 0 {
 		domain = cfg.SMTPUser[i+1:]
 	}
-	msg := []byte("From: " + from + "\r\n" +
-		"To: " + to + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
-		"Message-ID: <" + randomToken() + "@" + domain + ">\r\n" +
-		"MIME-Version: 1.0\r\n" +
-		"Content-Type: text/html; charset=UTF-8\r\n" +
-		"\r\n" + htmlBody)
+	// Send multipart/alternative (plain text + HTML). A text/plain part is one of
+	// the strongest content-level signals against spam classification — HTML-only
+	// messages built around a single link score highly on filters like Gmail's.
+	// The text part is derived from the HTML so existing callers stay unchanged.
+	boundary := randomToken()
+	textBody := htmlToText(htmlBody)
+	var b strings.Builder
+	b.WriteString("From: " + from + "\r\n")
+	b.WriteString("To: " + to + "\r\n")
+	b.WriteString("Reply-To: " + from + "\r\n")
+	b.WriteString("Subject: " + subject + "\r\n")
+	b.WriteString("Date: " + time.Now().Format(time.RFC1123Z) + "\r\n")
+	b.WriteString("Message-ID: <" + randomToken() + "@" + domain + ">\r\n")
+	b.WriteString("MIME-Version: 1.0\r\n")
+	b.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n")
+	b.WriteString("\r\n")
+	b.WriteString("--" + boundary + "\r\n")
+	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	b.WriteString("Content-Transfer-Encoding: 8bit\r\n\r\n")
+	b.WriteString(textBody + "\r\n\r\n")
+	b.WriteString("--" + boundary + "\r\n")
+	b.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	b.WriteString("Content-Transfer-Encoding: 8bit\r\n\r\n")
+	b.WriteString(htmlBody + "\r\n\r\n")
+	b.WriteString("--" + boundary + "--\r\n")
+	msg := []byte(b.String())
 
 	addr := cfg.SMTPHost + ":" + cfg.SMTPPort
 	tlsCfg := &tls.Config{ServerName: cfg.SMTPHost}

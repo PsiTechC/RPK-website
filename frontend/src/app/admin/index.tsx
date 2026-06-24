@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform, Linking, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { api, Product, Order, Registration, Category, User, News } from '../../lib/api';
+import { api, imageUri, Product, Order, Registration, Category, User, News, Feedback as FeedbackItem, RFQ, PartnerOrder } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
 import { fmtDate, fmtDateTime } from '../../lib/date';
@@ -25,6 +25,9 @@ const TAB_ICONS: Record<Tab, keyof typeof Ionicons.glyphMap> = {
   customers: 'people-outline',
   registrations: 'document-text-outline',
   inquiries: 'chatbubbles-outline',
+  rfqs: 'document-text-outline',
+  porders: 'cube-outline',
+  feedback: 'star-outline',
   news: 'newspaper-outline',
   archived: 'archive-outline',
 };
@@ -43,9 +46,9 @@ const PLACEHOLDER_TRENDS: Record<string, { dir: 'up' | 'down'; pct: string }> = 
 // TODO: wire to API — last 7 days of paid revenue. Placeholder shape only.
 const PLACEHOLDER_REVENUE_7D = [120, 240, 180, 360, 300, 520, 460];
 
-type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'news' | 'archived';
+type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'rfqs' | 'porders' | 'feedback' | 'news' | 'archived';
 
-const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'customers', 'registrations', 'inquiries', 'news', 'archived'];
+const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'rfqs', 'porders', 'feedback', 'news', 'archived'];
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
@@ -71,6 +74,9 @@ const TAB_LABELS: Record<Tab, string> = {
   customers: 'Customers',
   registrations: 'Registrations',
   inquiries: 'Inquiries',
+  rfqs: 'RFQ Requests',
+  porders: 'Partner Orders',
+  feedback: 'Feedback',
   news: 'News',
   archived: 'Archived',
 };
@@ -194,6 +200,9 @@ export default function Admin() {
             {token && tab === 'customers' && <Customers token={token} />}
             {token && tab === 'registrations' && <Registrations token={token} />}
             {token && tab === 'inquiries' && <Inquiries token={token} />}
+            {token && tab === 'rfqs' && <RFQAdmin token={token} />}
+            {token && tab === 'porders' && <PartnerOrdersAdmin token={token} />}
+            {token && tab === 'feedback' && <FeedbackAdmin token={token} />}
             {token && tab === 'news' && <NewsAdmin token={token} />}
             {token && tab === 'archived' && <Archived token={token} />}
           </View>
@@ -229,7 +238,10 @@ function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) 
     { label: 'Pending Orders', value: stats.pending_orders, tone: colors.red, icon: 'time-outline', to: 'orders', subtitle: 'Need attention' },
     { label: 'Products', value: stats.total_products, tone: colors.navy, icon: 'cube-outline', to: 'products', subtitle: 'In catalogue' },
     { label: 'Customers', value: stats.total_customers, tone: colors.navy, icon: 'people-outline', to: 'customers', subtitle: 'Registered users' },
-    { label: 'Registrations', value: stats.total_registrations, tone: colors.red, icon: 'document-text-outline', to: 'registrations', subtitle: 'Import / export' },
+    { label: 'Registrations', value: stats.total_registrations, tone: colors.red, icon: 'document-text-outline', to: 'registrations', subtitle: `${Number(stats.pending_registrations || 0)} pending` },
+    { label: 'Partners', value: stats.total_partners, tone: colors.navy, icon: 'briefcase-outline', to: 'registrations', subtitle: 'Import / export partners' },
+    { label: 'RFQ Requests', value: stats.total_rfqs, tone: colors.red, icon: 'create-outline', to: 'rfqs', subtitle: `${Number(stats.open_rfqs || 0)} awaiting reply` },
+    { label: 'Partner Orders', value: stats.partner_orders, tone: colors.navy, icon: 'cube-outline', to: 'porders', subtitle: `${Number(stats.partner_orders_unpaid || 0)} unpaid` },
     { label: 'Categories', value: stats.total_categories, tone: colors.navy, icon: 'pricetags-outline', to: 'arrange', subtitle: 'Product groups' },
   ];
 
@@ -1064,8 +1076,8 @@ function Registrations({ token }: { token: string }) {
     load().catch(() => setLoading(false));
   }, [token]);
 
-  async function setStatus(id: number, status: string) {
-    await api.admin.updateRegistration(id, { status }, token);
+  async function setStatus(id: number, status: string, partnerRole?: 'import_partner' | 'export_partner') {
+    await api.admin.updateRegistration(id, { status, partner_role: partnerRole }, token);
     setDetail((d) => (d && d.id === id ? { ...d, status } : d));
     load();
   }
@@ -1138,7 +1150,12 @@ function StatusPicker({ statuses, current, onPick }: { statuses: string[]; curre
   );
 }
 
-function RegistrationDetailModal({ reg: r, onClose, onStatus }: { reg: Registration; onClose: () => void; onStatus: (id: number, s: string) => void }) {
+function RegistrationDetailModal({ reg: r, onClose, onStatus }: { reg: Registration; onClose: () => void; onStatus: (id: number, s: string, partnerRole?: 'import_partner' | 'export_partner') => void }) {
+  const docs = [
+    { label: 'Trade License', url: r.trade_license_url },
+    { label: 'VAT / Tax Certificate', url: r.vat_certificate_url },
+    { label: 'Company Profile', url: r.company_profile_url },
+  ].filter((d) => !!d.url);
   const content = (
     <View style={styles.overlay}>
       <View style={styles.modal}>
@@ -1159,8 +1176,25 @@ function RegistrationDetailModal({ reg: r, onClose, onStatus }: { reg: Registrat
               <InfoRow label="Contact" value={r.contact_person || '—'} />
               <InfoRow label="Email" value={r.email || '—'} />
               <InfoRow label="Phone" value={r.phone || '—'} />
+              {!!r.whatsapp && <InfoRow label="WhatsApp" value={r.whatsapp} />}
+              {!!r.monthly_capacity && <InfoRow label="Monthly capacity" value={r.monthly_capacity} />}
+              {!!r.target_countries && <InfoRow label="Target countries" value={r.target_countries} />}
             </View>
           </View>
+
+          {docs.length > 0 && (
+            <View style={{ gap: 8 }}>
+              <Text style={styles.odSection}>Documents</Text>
+              <View style={styles.infoCard}>
+                {docs.map((d, idx) => (
+                  <Pressable key={d.label} style={[styles.infoRow, idx === 0 && { borderTopWidth: 0 }]} onPress={() => Linking.openURL(imageUri(d.url) as string)}>
+                    <Text style={styles.infoLabel}>{d.label}</Text>
+                    <Text style={[styles.infoValue, { color: colors.navy, fontWeight: '800' }]}>View ↗</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
 
           {Array.isArray(r.items) && r.items.length > 0 && (
             <View style={{ gap: 8 }}>
@@ -1195,6 +1229,20 @@ function RegistrationDetailModal({ reg: r, onClose, onStatus }: { reg: Registrat
           <View style={{ gap: 8 }}>
             <Text style={styles.odSection}>Status</Text>
             <StatusPicker statuses={REG_STATUSES} current={r.status} onPick={(s) => onStatus(r.id, s)} />
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Approve & grant partner access</Text>
+            <Text style={styles.muted}>Approves the application and gives the applicant's account a partner login & dashboard.</Text>
+            <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+              <Button label="Approve as Import Partner" onPress={() => onStatus(r.id, 'approved', 'import_partner')} style={{ flex: 1, minWidth: 200 }} />
+              <Button label="Approve as Export Partner" variant="outline" onPress={() => onStatus(r.id, 'approved', 'export_partner')} style={{ flex: 1, minWidth: 200 }} />
+            </View>
+            {!r.user_id && (
+              <Text style={[styles.muted, { color: colors.orange }]}>
+                Note: this application has no linked user account, so no login can be granted. Ask the applicant to register first.
+              </Text>
+            )}
           </View>
         </ScrollView>
 
@@ -1350,6 +1398,449 @@ function InquiryDetailModal({ inquiry: q, onClose, onStatus }: { inquiry: any; o
     return require('react-dom').createPortal(content, document.body);
   }
   return content;
+}
+
+const rfqTone: Record<string, any> = { open: 'orange', quoted: 'navy', approved: 'green', rejected: 'red', closed: 'muted' };
+
+function rfqItemsSummary(r: RFQ): string {
+  if (Array.isArray(r.items) && r.items.length > 0) return r.items.map((it: any) => `${it.name} ×${it.qty}`).join(', ');
+  return r.message || '—';
+}
+
+// Admin "RFQ Requests": list partner quotation requests and reply with a price.
+function RFQAdmin({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
+  const fits = width >= 1024;
+  const [items, setItems] = useState<RFQ[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<RFQ | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setItems(await api.admin.rfqs(token));
+    setLoading(false);
+  }
+  useEffect(() => {
+    load().catch(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+  if (items.length === 0) return <Text style={styles.muted}>No quotation requests yet.</Text>;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <Text style={styles.h}>{items.length} request{items.length === 1 ? '' : 's'}</Text>
+      <Tbl fits={fits}>
+        <View style={[styles.table, fits ? styles.tableFull : styles.inqTable]}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, { width: 70 }]}>RFQ</Text>
+            <Text style={[styles.th, { flex: 1 }]}>Partner</Text>
+            <Text style={[styles.th, { flex: 1.4 }]}>Requirement</Text>
+            <Text style={[styles.th, { width: 110 }]}>Destination</Text>
+            <Text style={[styles.th, { width: 90 }]}>Quotes</Text>
+            <Text style={[styles.th, { width: 110 }]}>Status</Text>
+            <Text style={[styles.th, { width: 56 }]}>View</Text>
+          </View>
+          {items.map((r, i) => (
+            <Pressable key={r.id} style={({ hovered }: any) => [styles.tr, i % 2 === 1 && styles.trAlt, hovered && styles.trHover]} onPress={() => setDetail(r)}>
+              <Text style={[styles.td, styles.tdStrong, { width: 70 }]}>#{r.id}</Text>
+              <Text style={[styles.td, { flex: 1 }]} numberOfLines={1}>{r.partner_name || r.partner_email || '—'}</Text>
+              <Text style={[styles.td, { flex: 1.4 }]} numberOfLines={1}>{rfqItemsSummary(r)}</Text>
+              <Text style={[styles.td, { width: 110 }]} numberOfLines={1}>{r.destination_country || '—'}</Text>
+              <Text style={[styles.td, { width: 90 }]}>{r.quotations.length}</Text>
+              <View style={{ width: 110 }}><Badge text={r.status} tone={rfqTone[r.status] || 'muted'} /></View>
+              <View style={{ width: 56, alignItems: 'center' }}>
+                <View style={styles.eyeBtn}><Ionicons name="eye-outline" size={18} color={colors.navy} /></View>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </Tbl>
+
+      {detail && <RFQDetailModal rfq={detail} token={token} onClose={() => setDetail(null)} onChanged={load} />}
+    </View>
+  );
+}
+
+function RFQDetailModal({ rfq: r, token, onClose, onChanged }: { rfq: RFQ; token: string; onClose: () => void; onChanged: () => void }) {
+  const [price, setPrice] = useState('');
+  const [currency, setCurrency] = useState('AED');
+  const [validity, setValidity] = useState('Valid 30 days');
+  const [notes, setNotes] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  function pickFile() {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf,image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      setError(''); setUploading(true);
+      try {
+        const { url } = await api.uploadDocument(file);
+        setFileUrl(url);
+      } catch (e: any) { setError(e.message || 'Upload failed'); }
+      finally { setUploading(false); }
+    };
+    input.click();
+  }
+
+  async function send() {
+    const p = parseFloat(price);
+    if (!(p > 0)) { setError('Enter a price.'); return; }
+    setBusy(true); setError('');
+    try {
+      await api.admin.createQuotation(r.id, { price: p, currency, validity, notes, file_url: fileUrl }, token);
+      onChanged();
+      onClose();
+    } catch (e: any) { setError(e.message || 'Could not send quotation'); }
+    finally { setBusy(false); }
+  }
+
+  const content = (
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        <View style={styles.modalHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modalTitle} numberOfLines={1}>RFQ #{r.id} · {r.partner_name || r.partner_email}</Text>
+            <Text style={styles.modalSub}>{fmtDate(r.created_at)}{r.destination_country ? ` · to ${r.destination_country}` : ''}</Text>
+          </View>
+          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}><Text style={styles.modalClose}>✕</Text></Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 18 }}>
+          {Array.isArray(r.items) && r.items.length > 0 && (
+            <View style={{ gap: 8 }}>
+              <Text style={styles.odSection}>Requirement</Text>
+              <View style={styles.infoCard}>
+                {r.items.map((it: any, idx: number) => (
+                  <View key={idx} style={[styles.reqRow, idx === 0 && { borderTopWidth: 0 }]}>
+                    <Text style={styles.reqName} numberOfLines={2}>{it.name}</Text>
+                    <Text style={styles.reqQty}>{it.qty} {it.unit}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {!!r.message && (
+            <View style={{ gap: 8 }}>
+              <Text style={styles.odSection}>Message</Text>
+              <View style={styles.quoteCard}><Text style={styles.quoteText}>{r.message}</Text></View>
+            </View>
+          )}
+
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Quotations ({r.quotations.length})</Text>
+            {r.quotations.length === 0 ? (
+              <Text style={styles.muted}>None sent yet.</Text>
+            ) : (
+              <View style={styles.infoCard}>
+                {r.quotations.map((q, idx) => (
+                  <View key={q.id} style={[styles.reqRow, idx === 0 && { borderTopWidth: 0 }]}>
+                    <Text style={styles.reqName}>{money(q.price, q.currency)} · {q.validity || '—'}</Text>
+                    <Badge text={q.status} tone={q.status === 'approved' ? 'green' : q.status === 'rejected' ? 'red' : 'navy'} />
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Send a quotation</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Field label="Price" value={price} onChangeText={setPrice} placeholder="0.00" keyboardType="decimal-pad" style={{ flex: 1 }} />
+              <Field label="Currency" value={currency} onChangeText={setCurrency} placeholder="AED" style={{ width: 110 }} />
+            </View>
+            <Field label="Validity" value={validity} onChangeText={setValidity} placeholder="Valid 30 days" />
+            <Field label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Terms, incoterms, lead time…" />
+            <Pressable style={styles.uploadBtn} onPress={pickFile} disabled={uploading}>
+              <Ionicons name={fileUrl ? 'checkmark-circle' : 'cloud-upload-outline'} size={18} color={fileUrl ? colors.green : colors.navy} />
+              <Text style={styles.uploadText}>{uploading ? 'Uploading…' : fileUrl ? 'Quotation PDF attached · Replace' : 'Attach quotation PDF (optional)'}</Text>
+            </Pressable>
+            {!!error && <Text style={styles.err}>{error}</Text>}
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFoot}>
+          <Button label="Close" variant="ghost" onPress={onClose} />
+          <Button label={busy ? 'Sending…' : 'Send quotation'} onPress={send} disabled={busy} />
+        </View>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
+}
+
+const PORDER_STATUSES = ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+const PAY_STATUSES = ['unpaid', 'paid'];
+
+// Admin "Partner Orders": orders created when partners approve a quotation.
+function PartnerOrdersAdmin({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
+  const fits = width >= 1024;
+  const [items, setItems] = useState<PartnerOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<PartnerOrder | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setItems(await api.admin.partnerOrders(token));
+    setLoading(false);
+  }
+  useEffect(() => {
+    load().catch(() => setLoading(false));
+  }, [token]);
+
+  async function update(id: number, body: { status?: string; payment_status?: string }) {
+    await api.admin.updatePartnerOrder(id, body, token);
+    setDetail((d) => (d && d.id === id ? { ...d, ...body } : d));
+    load();
+  }
+
+  // Reload the list and re-sync the open detail (used after shipment/doc edits).
+  async function refresh() {
+    const list = await api.admin.partnerOrders(token);
+    setItems(list);
+    setDetail((d) => (d ? list.find((x) => x.id === d.id) || null : null));
+  }
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+  if (items.length === 0) return <Text style={styles.muted}>No partner orders yet.</Text>;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <Text style={styles.h}>{items.length} order{items.length === 1 ? '' : 's'}</Text>
+      <Tbl fits={fits}>
+        <View style={[styles.table, fits ? styles.tableFull : styles.inqTable]}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, { width: 70 }]}>Order</Text>
+            <Text style={[styles.th, { flex: 1 }]}>Partner</Text>
+            <Text style={[styles.th, { flex: 1.4 }]}>Items</Text>
+            <Text style={[styles.th, { width: 110 }]}>Amount</Text>
+            <Text style={[styles.th, { width: 110 }]}>Status</Text>
+            <Text style={[styles.th, { width: 90 }]}>Payment</Text>
+            <Text style={[styles.th, { width: 56 }]}>View</Text>
+          </View>
+          {items.map((o, i) => (
+            <Pressable key={o.id} style={({ hovered }: any) => [styles.tr, i % 2 === 1 && styles.trAlt, hovered && styles.trHover]} onPress={() => setDetail(o)}>
+              <Text style={[styles.td, styles.tdStrong, { width: 70 }]}>#{o.id}</Text>
+              <Text style={[styles.td, { flex: 1 }]} numberOfLines={1}>{o.partner_name || o.partner_email || '—'}</Text>
+              <Text style={[styles.td, { flex: 1.4 }]} numberOfLines={1}>{Array.isArray(o.items) ? o.items.map((it: any) => `${it.name} ×${it.qty}`).join(', ') : '—'}</Text>
+              <Text style={[styles.td, { width: 110 }]}>{money(o.amount, o.currency)}</Text>
+              <View style={{ width: 110 }}><Badge text={o.status} tone={statusTone[o.status] || 'navy'} /></View>
+              <View style={{ width: 90 }}><Badge text={o.payment_status} tone={statusTone[o.payment_status] || 'muted'} /></View>
+              <View style={{ width: 56, alignItems: 'center' }}>
+                <View style={styles.eyeBtn}><Ionicons name="eye-outline" size={18} color={colors.navy} /></View>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </Tbl>
+
+      {detail && (
+        <PartnerOrderModal order={detail} token={token} onClose={() => setDetail(null)} onStatus={(s) => update(detail.id, { status: s })} onPay={(p) => update(detail.id, { payment_status: p })} onChanged={refresh} />
+      )}
+    </View>
+  );
+}
+
+const SHIPMENT_STATUSES = ['preparing', 'in_transit', 'arrived', 'delivered'];
+
+function PartnerOrderModal({ order: o, token, onClose, onStatus, onPay, onChanged }: { order: PartnerOrder; token: string; onClose: () => void; onStatus: (s: string) => void; onPay: (p: string) => void; onChanged: () => void }) {
+  const sh = o.shipment;
+  const [ship, setShip] = useState({
+    container_no: sh?.container_no || '', shipping_line: sh?.shipping_line || '',
+    etd: sh?.etd || '', eta: sh?.eta || '', status: sh?.status || 'preparing', notes: sh?.notes || '',
+  });
+  const [savingShip, setSavingShip] = useState(false);
+  const [docLabel, setDocLabel] = useState('');
+  const [docBusy, setDocBusy] = useState(false);
+  const setS = (k: keyof typeof ship) => (v: string) => setShip((s) => ({ ...s, [k]: v }));
+
+  async function saveShipment() {
+    setSavingShip(true);
+    try { await api.admin.upsertShipment(o.id, ship, token); onChanged(); } catch {} finally { setSavingShip(false); }
+  }
+
+  function addDocument() {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf,image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      setDocBusy(true);
+      try {
+        const { url } = await api.uploadDocument(file);
+        await api.admin.addOrderDocument(o.id, { label: docLabel || 'Document', file_url: url }, token);
+        setDocLabel('');
+        onChanged();
+      } catch {} finally { setDocBusy(false); }
+    };
+    input.click();
+  }
+
+  async function delDocument(id: number) {
+    await api.admin.deleteOrderDocument(id, token);
+    onChanged();
+  }
+
+  const content = (
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        <View style={styles.modalHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modalTitle} numberOfLines={1}>Order #{o.id} · {o.partner_name || o.partner_email}</Text>
+            <Text style={styles.modalSub}>{fmtDate(o.created_at)} · {money(o.amount, o.currency)}</Text>
+          </View>
+          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}><Text style={styles.modalClose}>✕</Text></Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 18, gap: 18 }}>
+          {Array.isArray(o.items) && o.items.length > 0 && (
+            <View style={{ gap: 8 }}>
+              <Text style={styles.odSection}>Items</Text>
+              <View style={styles.infoCard}>
+                {o.items.map((it: any, idx: number) => (
+                  <View key={idx} style={[styles.reqRow, idx === 0 && { borderTopWidth: 0 }]}>
+                    <Text style={styles.reqName} numberOfLines={2}>{it.name}</Text>
+                    <Text style={styles.reqQty}>{it.qty} {it.unit}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Order status</Text>
+            <StatusPicker statuses={PORDER_STATUSES} current={o.status} onPick={onStatus} />
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Payment</Text>
+            <StatusPicker statuses={PAY_STATUSES} current={o.payment_status} onPick={onPay} />
+          </View>
+
+          {/* Phase 7 — Shipment tracking */}
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Shipment</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Field label="Container no." value={ship.container_no} onChangeText={setS('container_no')} placeholder="MSKU1234567" style={{ flex: 1 }} />
+              <Field label="Shipping line" value={ship.shipping_line} onChangeText={setS('shipping_line')} placeholder="Maersk" style={{ flex: 1 }} />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Field label="ETD" value={ship.etd} onChangeText={setS('etd')} placeholder="2026-07-01" style={{ flex: 1 }} />
+              <Field label="ETA" value={ship.eta} onChangeText={setS('eta')} placeholder="2026-07-20" style={{ flex: 1 }} />
+            </View>
+            <Field label="Notes" value={ship.notes} onChangeText={setS('notes')} placeholder="Port, remarks…" />
+            <StatusPicker statuses={SHIPMENT_STATUSES} current={ship.status} onPick={setS('status')} />
+            <Button label={savingShip ? 'Saving…' : sh ? 'Update shipment' : 'Add shipment'} onPress={saveShipment} disabled={savingShip} />
+          </View>
+
+          {/* Phase 8 — Documents */}
+          <View style={{ gap: 8 }}>
+            <Text style={styles.odSection}>Documents</Text>
+            {(o.documents || []).length === 0 ? (
+              <Text style={styles.muted}>No documents attached.</Text>
+            ) : (
+              <View style={styles.infoCard}>
+                {(o.documents || []).map((d, idx) => (
+                  <View key={d.id} style={[styles.reqRow, idx === 0 && { borderTopWidth: 0 }]}>
+                    <Text style={styles.reqName} onPress={() => Linking.openURL(imageUri(d.file_url) as string)}>{d.label || 'Document'} ↗</Text>
+                    <Pressable onPress={() => delDocument(d.id)}><Ionicons name="trash-outline" size={18} color={colors.red} /></Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
+              <Field label="Label" value={docLabel} onChangeText={setDocLabel} placeholder="Invoice / Packing list / B/L" style={{ flex: 1 }} />
+              <Button label={docBusy ? 'Uploading…' : 'Upload'} onPress={addDocument} disabled={docBusy} />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFoot}>
+          <Button label="Close" variant="ghost" onPress={onClose} />
+        </View>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
+}
+
+// Inline 5-star display for a feedback rating.
+function Stars({ rating }: { rating: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Ionicons
+          key={n}
+          name={n <= rating ? 'star' : 'star-outline'}
+          size={16}
+          color={n <= rating ? colors.orange : colors.muted}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Website star-rating + comment feedback submitted from the Contact page.
+function FeedbackAdmin({ token }: { token: string }) {
+  const { width } = useWindowDimensions();
+  const fits = width >= 1024;
+  const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.admin.feedback(token).then(setItems).catch(() => {}).finally(() => setLoading(false));
+  }, [token]);
+
+  const avg = useMemo(
+    () => (items.length ? (items.reduce((s, f) => s + f.rating, 0) / items.length).toFixed(1) : '0.0'),
+    [items]
+  );
+
+  if (loading) return <Text style={styles.muted}>Loading…</Text>;
+  if (items.length === 0) return <Text style={styles.muted}>No feedback yet.</Text>;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <Text style={styles.h}>
+        {items.length} feedback {items.length === 1 ? 'entry' : 'entries'} · avg {avg}★
+      </Text>
+      <Tbl fits={fits}>
+        <View style={[styles.table, fits ? styles.tableFull : styles.inqTable]}>
+          <View style={[styles.tr, styles.thead]}>
+            <Text style={[styles.th, { width: 120 }]}>Rating</Text>
+            <Text style={[styles.th, { flex: 1 }]}>Comment</Text>
+            <Text style={[styles.th, { width: 140 }]}>Date</Text>
+          </View>
+          {items.map((f, i) => (
+            <View key={f.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
+              <View style={{ width: 120, justifyContent: 'center' }}><Stars rating={f.rating} /></View>
+              <Text style={[styles.td, { flex: 1 }]}>{f.comment || '—'}</Text>
+              <Text style={[styles.td, { width: 140 }]}>{fmtDate(f.created_at)}</Text>
+            </View>
+          ))}
+        </View>
+      </Tbl>
+    </View>
+  );
 }
 
 // Editable position number — type a new position and commit on blur/enter.
@@ -1689,6 +2180,9 @@ const styles = StyleSheet.create({
   reqQty: { color: colors.orangeDark, fontWeight: '800', fontSize: 13 },
   quoteCard: { backgroundColor: colors.soft, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.orange, paddingHorizontal: 14, paddingVertical: 12 },
   quoteText: { color: colors.text, fontSize: 14, lineHeight: 21, fontStyle: 'italic' },
+  err: { color: colors.red, fontSize: 13 },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 13, paddingVertical: 11, backgroundColor: colors.white },
+  uploadText: { fontWeight: '700', color: colors.text, fontSize: 13 },
   statusPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statusChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border },
   statusChipText: { fontSize: 13, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },

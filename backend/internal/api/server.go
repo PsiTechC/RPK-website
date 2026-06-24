@@ -74,6 +74,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/stats", s.handlePublicStats)                            // homepage counters
 		r.With(contactLimit.middleware).Post("/inquiries", s.handleCreateInquiry) // contact form → admin email
 		r.With(contactLimit.middleware).Post("/feedback", s.handleCreateFeedback) // website star-rating feedback
+		r.With(contactLimit.middleware).Post("/uploads/document", s.handleUploadDocument) // partner application docs (PDF/image)
 		r.Get("/news", s.handleListNews) // public news list
 
 		// Authenticated (any logged-in user)
@@ -85,6 +86,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/registrations", s.handleMyRegistrations)
+			r.Post("/rfqs", s.handleCreateRFQ)                      // partner: request a quotation
+			r.Get("/my/rfqs", s.handleMyRFQs)                       // partner: my RFQs + quotations
+			r.Patch("/my/quotations/{id}", s.handleRespondQuotation) // partner: approve/reject a quotation
+			r.Get("/my/partner-orders", s.handleMyPartnerOrders)    // partner: my orders
 		})
 
 		// Admin only
@@ -115,6 +120,15 @@ func (s *Server) Router() http.Handler {
 
 			r.Get("/registrations", s.handleAdminListRegistrations)
 			r.Patch("/registrations/{id}", s.handleAdminUpdateRegistration)
+
+			r.Get("/rfqs", s.handleAdminListRFQs)                       // all RFQ requests
+			r.Post("/rfqs/{id}/quotations", s.handleAdminCreateQuotation) // reply with a quotation
+
+			r.Get("/partner-orders", s.handleAdminListPartnerOrders)      // all partner orders
+			r.Patch("/partner-orders/{id}", s.handleAdminUpdatePartnerOrder)
+			r.Put("/partner-orders/{id}/shipment", s.handleAdminUpsertShipment)    // Phase 7
+			r.Post("/partner-orders/{id}/documents", s.handleAdminAddDocument)     // Phase 8
+			r.Delete("/partner-documents/{id}", s.handleAdminDeleteDocument)
 
 			r.Get("/inquiries", s.handleAdminListInquiries)
 			r.Patch("/inquiries/{id}", s.handleAdminUpdateInquiry)

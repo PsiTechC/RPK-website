@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, usePathname, useRouter } from 'expo-router';
@@ -26,6 +26,9 @@ export function Header() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets(); // keep the header clear of the notch / status bar
   const compact = width < 1024;
+  // Narrow-desktop range: nav still horizontal, but space is tight — pull in the
+  // padding and collapse the language pill to an icon so items don't overlap.
+  const tight = !compact && width < 1200;
 
   const [menuOpen, setMenuOpen] = useState(false); // mobile nav
   const [profileOpen, setProfileOpen] = useState(false); // account dropdown
@@ -59,7 +62,7 @@ export function Header() {
   return (
     <View style={[styles.bar, { paddingTop: insets.top }]}>
       <View style={styles.accent} />
-      <View style={styles.inner}>
+      <View style={[styles.inner, tight && styles.innerTight]}>
         {/* Left — logo */}
         <Link href="/" asChild>
           <Pressable style={styles.logoWrap} onPress={() => setMenuOpen(false)}>
@@ -80,6 +83,8 @@ export function Header() {
                   active={pathname === '/products'}
                   categories={categories}
                   onToggle={() => setCatOpen((o) => !o)}
+                  onOpen={() => setCatOpen(true)}
+                  onClose={() => setCatOpen(false)}
                   onOpenAll={() => goCategory('all')}
                   onSelect={goCategory}
                 />
@@ -92,7 +97,7 @@ export function Header() {
 
         {/* Right — actions */}
         <View style={styles.actions}>
-          <LanguageSelector compact={compact} />
+          <LanguageSelector compact={compact || tight} />
           <NotificationBell />
           <Pressable style={styles.cartBtn} onPress={() => go('/cart')}>
             <Ionicons name="cart-outline" size={25} color={colors.ink} />
@@ -263,6 +268,8 @@ function CategoryNavItem({
   open,
   categories,
   onToggle,
+  onOpen,
+  onClose,
   onOpenAll,
   onSelect,
 }: {
@@ -272,13 +279,45 @@ function CategoryNavItem({
   open: boolean;
   categories: Category[];
   onToggle: () => void;
+  onOpen: () => void;
+  onClose: () => void;
   onOpenAll: () => void;
   onSelect: (slug: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const color = active || hovered || open ? colors.red : colors.muted;
+  // Open the category menu on hover; close when the pointer leaves the whole
+  // wrapper (the dropdown is a descendant, so moving onto it keeps it open).
+  // The wrapper MUST stay a plain View — wrapping it in a Pressable nests the
+  // dropdown's Pressable items inside another pressable, which swallows their
+  // clicks on react-native-web (you can't select a category). pointerEnter /
+  // pointerLeave don't fire on child transitions, so they're safe here.
+  //
+  // Close on a short delay (hover intent): tiny pointer transitions between the
+  // label, the chevron and the menu briefly fire pointerLeave, and closing
+  // immediately would make the dropdown blink. The timer is cancelled the moment
+  // the pointer returns, so the menu only closes once the cursor has truly left.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const openNow = () => {
+    cancelClose();
+    onOpen();
+  };
+  const closeSoon = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      onClose();
+    }, 120);
+  };
+  useEffect(() => cancelClose, []); // clear any pending timer on unmount
   return (
-    <View style={styles.navItemWrap}>
+    <View style={styles.navItemWrap} onPointerEnter={openNow} onPointerLeave={closeSoon}>
       <View style={[styles.navItem, hovered && styles.navItemHover, open && styles.navItemActive]}>
         {/* Click the label -> open the "All Categories" page */}
         <Pressable
@@ -291,26 +330,22 @@ function CategoryNavItem({
           <Ionicons name={icon as any} size={18} color={color} />
           <Text style={[styles.navItemText, { color }]} numberOfLines={1}>{label}</Text>
         </Pressable>
-        {/* Click the chevron -> open the quick category dropdown */}
+        {/* Click the chevron -> toggle the quick category dropdown (touch fallback) */}
         <Pressable onPress={onToggle} hitSlop={8} accessibilityLabel="Show categories">
           <Text style={[styles.chevron, { color }]}>{open ? '▴' : '▾'}</Text>
         </Pressable>
       </View>
       {open && (
-        <>
-          {/* tap anywhere outside to close */}
-          <Pressable style={styles.scrim} onPress={onToggle} />
-          <View style={styles.catDropdown}>
-            <Pressable style={({ hovered }: any) => [styles.catDropItem, styles.catDropAll, hovered && styles.catDropItemHover]} onPress={() => onSelect('all')}>
-              <Text style={[styles.catDropText, { color: colors.red }]}>All Categories</Text>
+        <View style={styles.catDropdown}>
+          <Pressable style={({ hovered }: any) => [styles.catDropItem, styles.catDropAll, hovered && styles.catDropItemHover]} onPress={() => onSelect('all')}>
+            <Text style={[styles.catDropText, { color: colors.red }]}>All Categories</Text>
+          </Pressable>
+          {categories.map((c) => (
+            <Pressable key={c.id} style={({ hovered }: any) => [styles.catDropItem, hovered && styles.catDropItemHover]} onPress={() => onSelect(c.slug)}>
+              <Text style={styles.catDropText} numberOfLines={1}>{c.name}</Text>
             </Pressable>
-            {categories.map((c) => (
-              <Pressable key={c.id} style={({ hovered }: any) => [styles.catDropItem, hovered && styles.catDropItemHover]} onPress={() => onSelect(c.slug)}>
-                <Text style={styles.catDropText} numberOfLines={1}>{c.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -338,13 +373,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 12,
   },
+  innerTight: { paddingHorizontal: 10, gap: 6 },
   logoWrap: { flexShrink: 0, marginRight: 4 },
   nav: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
   navTextActive: { color: colors.red },
   navItemWrap: { position: 'relative' },
   navItem: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999,
+    paddingHorizontal: 8, paddingVertical: 8, borderRadius: 999,
     borderWidth: 1, borderColor: 'transparent',
   },
   navItemHover: { backgroundColor: colors.offWhite },
@@ -353,7 +389,12 @@ const styles = StyleSheet.create({
   catLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   catDropdown: {
     position: 'absolute' as any,
-    top: 52,
+    // Flush under the nav item (no gap) so the hover stays unbroken when the
+    // pointer moves from the label down onto the menu. The marginTop keeps a
+    // small visual offset while the transparent top border bridges the hover.
+    top: '100%',
+    borderTopWidth: 8,
+    borderTopColor: 'transparent',
     left: 0,
     width: 400,
     flexDirection: 'row',

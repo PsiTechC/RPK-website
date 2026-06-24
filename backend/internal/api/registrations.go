@@ -13,15 +13,21 @@ import (
 )
 
 type registrationReq struct {
-	CompanyName     string          `json:"company_name"`
-	BusinessType    string          `json:"business_type"` // import / export / both
-	Country         string          `json:"country"`
-	ContactPerson   string          `json:"contact_person"`
-	Phone           string          `json:"phone"`
-	Email           string          `json:"email"`
-	ProductInterest string          `json:"product_interest"`
-	Message         string          `json:"message"`
-	Items           json.RawMessage `json:"items"`
+	CompanyName       string          `json:"company_name"`
+	BusinessType      string          `json:"business_type"` // import / export / both
+	Country           string          `json:"country"`
+	ContactPerson     string          `json:"contact_person"`
+	Phone             string          `json:"phone"`
+	Email             string          `json:"email"`
+	ProductInterest   string          `json:"product_interest"`
+	Message           string          `json:"message"`
+	Items             json.RawMessage `json:"items"`
+	WhatsApp          string          `json:"whatsapp"`
+	MonthlyCapacity   string          `json:"monthly_capacity"`
+	TargetCountries   string          `json:"target_countries"`
+	TradeLicenseURL   string          `json:"trade_license_url"`
+	VATCertificateURL string          `json:"vat_certificate_url"`
+	CompanyProfileURL string          `json:"company_profile_url"`
 }
 
 func (s *Server) handleCreateRegistration(w http.ResponseWriter, r *http.Request) {
@@ -47,10 +53,13 @@ func (s *Server) handleCreateRegistration(w http.ResponseWriter, r *http.Request
 	var id int64
 	err := s.pool.QueryRow(r.Context(),
 		`INSERT INTO import_export_registrations
-		 (user_id, company_name, business_type, country, contact_person, phone, email, product_interest, message, items)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) RETURNING id`,
+		 (user_id, company_name, business_type, country, contact_person, phone, email, product_interest, message, items,
+		  whatsapp, monthly_capacity, target_countries, trade_license_url, vat_certificate_url, company_profile_url)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16) RETURNING id`,
 		userID, req.CompanyName, bt, req.Country, req.ContactPerson, req.Phone, req.Email,
 		req.ProductInterest, req.Message, normHighlights(req.Items),
+		req.WhatsApp, req.MonthlyCapacity, req.TargetCountries,
+		req.TradeLicenseURL, req.VATCertificateURL, req.CompanyProfileURL,
 	).Scan(&id)
 	if err != nil {
 		writeErr(w, 500, "could not submit registration")
@@ -117,7 +126,9 @@ func (s *Server) handleAdminListRegistrations(w http.ResponseWriter, r *http.Req
 func (s *Server) queryRegistrations(r *http.Request, where string, args ...interface{}) ([]models.Registration, error) {
 	rows, err := s.pool.Query(r.Context(),
 		`SELECT id, user_id, company_name, business_type, country, contact_person, phone, email,
-		        product_interest, message, items, status, created_at
+		        product_interest, message, items,
+		        whatsapp, monthly_capacity, target_countries, trade_license_url, vat_certificate_url, company_profile_url,
+		        status, created_at
 		 FROM import_export_registrations `+where+` ORDER BY created_at DESC`, args...)
 	if err != nil {
 		return nil, err
@@ -128,8 +139,10 @@ func (s *Server) queryRegistrations(r *http.Request, where string, args ...inter
 	for rows.Next() {
 		var g models.Registration
 		if err := rows.Scan(&g.ID, &g.UserID, &g.CompanyName, &g.BusinessType, &g.Country,
-			&g.ContactPerson, &g.Phone, &g.Email, &g.ProductInterest, &g.Message, &g.Items, &g.Status,
-			&g.CreatedAt); err != nil {
+			&g.ContactPerson, &g.Phone, &g.Email, &g.ProductInterest, &g.Message, &g.Items,
+			&g.WhatsApp, &g.MonthlyCapacity, &g.TargetCountries,
+			&g.TradeLicenseURL, &g.VATCertificateURL, &g.CompanyProfileURL,
+			&g.Status, &g.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, g)
@@ -141,20 +154,51 @@ func (s *Server) handleAdminUpdateRegistration(w http.ResponseWriter, r *http.Re
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	var req struct {
 		Status string `json:"status"` // approved / rejected / pending
+		// Optional: which partner role to grant on approval. When empty it is
+		// derived from the application's business_type.
+		PartnerRole string `json:"partner_role"` // import_partner / export_partner
 	}
 	if err := readJSON(r, &req); err != nil || req.Status == "" {
 		writeErr(w, 400, "status required")
 		return
 	}
-	ct, err := s.pool.Exec(r.Context(),
-		`UPDATE import_export_registrations SET status=$1 WHERE id=$2`, req.Status, id)
+
+	// Update status and read back the linked user + business type so we can
+	// promote the account to a partner role when approved.
+	var userID *int64
+	var businessType string
+	err := s.pool.QueryRow(r.Context(),
+		`UPDATE import_export_registrations SET status=$1 WHERE id=$2
+		 RETURNING user_id, business_type`, req.Status, id,
+	).Scan(&userID, &businessType)
 	if err != nil {
-		writeErr(w, 500, "update failed")
-		return
-	}
-	if ct.RowsAffected() == 0 {
 		writeErr(w, 404, "registration not found")
 		return
 	}
-	writeJSON(w, 200, map[string]string{"status": "updated"})
+
+	grantedRole := ""
+	if req.Status == "approved" && userID != nil {
+		grantedRole = partnerRoleFor(req.PartnerRole, businessType)
+		// Never demote an admin; only promote a regular account to a partner role.
+		if _, err := s.pool.Exec(r.Context(),
+			`UPDATE users SET role=$1 WHERE id=$2 AND role <> 'admin'`, grantedRole, *userID); err != nil {
+			writeErr(w, 500, "could not assign partner role")
+			return
+		}
+	}
+
+	writeJSON(w, 200, map[string]string{"status": "updated", "granted_role": grantedRole})
+}
+
+// partnerRoleFor resolves the partner role to grant. An explicit, valid choice
+// wins; otherwise it is derived from the application's business type (export ->
+// export_partner, anything else -> import_partner).
+func partnerRoleFor(explicit, businessType string) string {
+	if explicit == "import_partner" || explicit == "export_partner" {
+		return explicit
+	}
+	if businessType == "export" {
+		return "export_partner"
+	}
+	return "import_partner"
 }

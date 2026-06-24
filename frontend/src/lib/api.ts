@@ -53,6 +53,13 @@ export type Product = {
   updated_at?: string;
 };
 
+export type Feedback = {
+  id: number;
+  rating: number;
+  comment: string;
+  created_at: string;
+};
+
 export type News = {
   id: number;
   title: string;
@@ -74,12 +81,29 @@ export type Review = {
   created_at: string;
 };
 
+export type Role = 'customer' | 'business' | 'admin' | 'import_partner' | 'export_partner';
+
+// The landing route for a signed-in account, by role. One login page; the role
+// decides which dashboard/home the user is sent to.
+export function roleHome(role: Role): string {
+  switch (role) {
+    case 'admin':
+      return '/admin';
+    case 'import_partner':
+      return '/partner/import';
+    case 'export_partner':
+      return '/partner/export';
+    default:
+      return '/';
+  }
+}
+
 export type User = {
   id: number;
   name: string;
   email: string;
   phone: string;
-  role: 'customer' | 'business' | 'admin';
+  role: Role;
   created_at?: string;
 };
 
@@ -109,6 +133,7 @@ export type Order = {
 
 export type Registration = {
   id: number;
+  user_id?: number | null;
   company_name: string;
   business_type: string;
   country: string;
@@ -118,8 +143,75 @@ export type Registration = {
   product_interest: string;
   message: string;
   items?: { product_id: number; name: string; unit: string; qty: number }[];
+  whatsapp?: string;
+  monthly_capacity?: string;
+  target_countries?: string;
+  trade_license_url?: string;
+  vat_certificate_url?: string;
+  company_profile_url?: string;
   status: string;
   created_at: string;
+};
+
+export type Quotation = {
+  id: number;
+  rfq_id: number;
+  price: number;
+  currency: string;
+  validity: string;
+  notes: string;
+  file_url: string;
+  status: string; // sent / approved / rejected
+  created_at: string;
+};
+
+export type RFQ = {
+  id: number;
+  user_id?: number | null;
+  partner_name?: string;
+  partner_email?: string;
+  items?: { product_id: number; name: string; unit: string; qty: number }[];
+  destination_country: string;
+  message: string;
+  status: string; // open / quoted / approved / rejected / closed
+  created_at: string;
+  quotations: Quotation[];
+};
+
+export type Shipment = {
+  id: number;
+  container_no: string;
+  shipping_line: string;
+  etd: string;
+  eta: string;
+  status: string; // preparing/in_transit/arrived/delivered
+  notes: string;
+  updated_at: string;
+};
+
+export type PartnerDocument = {
+  id: number;
+  label: string;
+  file_url: string;
+  created_at: string;
+};
+
+export type PartnerOrder = {
+  id: number;
+  user_id?: number | null;
+  rfq_id?: number | null;
+  quotation_id?: number | null;
+  partner_name?: string;
+  partner_email?: string;
+  items?: { product_id: number; name: string; unit: string; qty: number }[];
+  amount: number;
+  currency: string;
+  status: string; // confirmed/processing/shipped/delivered/cancelled
+  payment_status: string; // unpaid/paid
+  created_at: string;
+  updated_at: string;
+  shipment?: Shipment | null;
+  documents?: PartnerDocument[];
 };
 
 async function request<T>(
@@ -187,6 +279,14 @@ export const api = {
     request<any>('/api/registrations', { method: 'POST', body, token }),
   myRegistrations: (token: string) => request<Registration[]>('/api/my/registrations', { token }),
 
+  // Partner RFQ / quotation flow (Phase 5)
+  createRFQ: (body: { items: any[]; destination_country?: string; message?: string }, token: string) =>
+    request<{ id: number; status: string }>('/api/rfqs', { method: 'POST', body, token }),
+  myRFQs: (token: string) => request<RFQ[]>('/api/my/rfqs', { token }),
+  respondQuotation: (id: number, status: 'approved' | 'rejected', token: string) =>
+    request<any>(`/api/my/quotations/${id}`, { method: 'PATCH', body: { status }, token }),
+  myPartnerOrders: (token: string) => request<PartnerOrder[]>('/api/my/partner-orders', { token }),
+
   chat: (messages: { role: string; content: string }[]) =>
     request<{ reply: string }>('/api/chat', { method: 'POST', body: { messages } }),
 
@@ -201,6 +301,17 @@ export const api = {
 
   createFeedback: (body: { rating: number; comment?: string }) =>
     request<any>('/api/feedback', { method: 'POST', body }),
+
+  // Upload a partner trade document (PDF or image). Public + rate-limited —
+  // applicants aren't logged in yet. Returns a server-relative URL.
+  uploadDocument: async (file: any): Promise<{ url: string }> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API_URL}/api/uploads/document`, { method: 'POST', body: fd });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.error) || `Upload failed (${res.status})`);
+    return data;
+  },
 
   news: () => request<News[]>('/api/news'),
 
@@ -253,5 +364,18 @@ export const api = {
     inquiries: (token: string) => request<any[]>('/api/admin/inquiries', { token }),
     updateInquiry: (id: number, body: any, token: string) =>
       request<any>(`/api/admin/inquiries/${id}`, { method: 'PATCH', body, token }),
+    feedback: (token: string) => request<Feedback[]>('/api/admin/feedback', { token }),
+    rfqs: (token: string) => request<RFQ[]>('/api/admin/rfqs', { token }),
+    createQuotation: (rfqId: number, body: { price: number; currency?: string; validity?: string; notes?: string; file_url?: string }, token: string) =>
+      request<{ id: number }>(`/api/admin/rfqs/${rfqId}/quotations`, { method: 'POST', body, token }),
+    partnerOrders: (token: string) => request<PartnerOrder[]>('/api/admin/partner-orders', { token }),
+    updatePartnerOrder: (id: number, body: { status?: string; payment_status?: string }, token: string) =>
+      request<any>(`/api/admin/partner-orders/${id}`, { method: 'PATCH', body, token }),
+    upsertShipment: (orderId: number, body: { container_no?: string; shipping_line?: string; etd?: string; eta?: string; status?: string; notes?: string }, token: string) =>
+      request<any>(`/api/admin/partner-orders/${orderId}/shipment`, { method: 'PUT', body, token }),
+    addOrderDocument: (orderId: number, body: { label?: string; file_url: string }, token: string) =>
+      request<any>(`/api/admin/partner-orders/${orderId}/documents`, { method: 'POST', body, token }),
+    deleteOrderDocument: (id: number, token: string) =>
+      request<any>(`/api/admin/partner-documents/${id}`, { method: 'DELETE', token }),
   },
 };

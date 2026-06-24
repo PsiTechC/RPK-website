@@ -22,10 +22,13 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 // header / chatbot are hidden there.
 function Shell() {
   const pathname = usePathname();
-  const isAdmin = (pathname || '').startsWith('/admin');
+  const p = pathname || '';
+  // Admin and partner routes get their own full-screen dashboard chrome, so the
+  // public header / chatbot are hidden there.
+  const fullScreen = p.startsWith('/admin') || p.startsWith('/partner');
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {!isAdmin && <Header />}
+      {!fullScreen && <Header />}
       <View style={{ flex: 1 }}>
         <Stack
           screenOptions={{
@@ -35,7 +38,7 @@ function Shell() {
           }}
         />
       </View>
-      {!isAdmin && <Chatbot />}
+      {!fullScreen && <Chatbot />}
     </View>
   );
 }

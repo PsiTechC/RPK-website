@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
@@ -15,6 +15,12 @@ const STATS: { icon: Ion; value: string; label: string }[] = [
   { icon: 'grid-outline', value: '11', label: 'Categories' },
   { icon: 'earth-outline', value: '20+', label: 'Countries served' },
   { icon: 'business-outline', value: 'Dubai', label: 'UAE headquarters' },
+];
+
+const HERO_CHIPS: { icon: Ion; text: string }[] = [
+  { icon: 'location-outline', text: 'Based in Dubai, UAE' },
+  { icon: 'earth-outline', text: '20+ countries served' },
+  { icon: 'storefront-outline', text: 'Wholesale & Retail' },
 ];
 
 const OFFERINGS: { icon: Ion; title: string; text: string }[] = [
@@ -58,6 +64,7 @@ export default function About() {
   const valueW = PCT[width < 720 ? 1 : 3];
   const statW = PCT[width < 560 ? 2 : 4];
   const halfW = width < 760 ? '100%' : '48%';
+  const h1Size = width < 600 ? 30 : width < 980 ? 42 : 52;
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
@@ -74,20 +81,34 @@ export default function About() {
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#aboutHero)" />
         </Svg>
 
+        {/* Decorative glows for depth */}
+        <View pointerEvents="none" style={styles.glow1} />
+        <View pointerEvents="none" style={styles.glow2} />
+
         <Container style={{ maxWidth: 1100, zIndex: 1 }}>
           <FadeInUp delay={60}>
-            <View style={styles.kickerRow}>
-              <Ionicons name="ellipse" size={8} color={colors.orange} />
+            <View style={styles.kickerPill}>
+              <Ionicons name="ellipse" size={7} color={colors.orange} />
               <Text style={styles.kicker}>ABOUT US</Text>
             </View>
           </FadeInUp>
           <FadeInUp delay={160}>
-            <Text style={styles.h1}>{BRAND.name}</Text>
+            <Text style={[styles.h1, { fontSize: h1Size, lineHeight: h1Size + 6 }]}>{BRAND.name}</Text>
           </FadeInUp>
           <FadeInUp delay={280}>
             <Text style={styles.lead}>{BRAND.tagline}</Text>
           </FadeInUp>
-          <FadeInUp delay={400}>
+          <FadeInUp delay={360}>
+            <View style={styles.heroChips}>
+              {HERO_CHIPS.map((c) => (
+                <View key={c.text} style={styles.chip}>
+                  <Ionicons name={c.icon} size={14} color={colors.orange} />
+                  <Text style={styles.chipText}>{c.text}</Text>
+                </View>
+              ))}
+            </View>
+          </FadeInUp>
+          <FadeInUp delay={460}>
             <View style={styles.heroBtns}>
               <Button label="Shop Products" icon="bag-handle" onPress={() => router.push('/products')} />
               <Button label="Import / Export" variant="navy" icon="globe" onPress={() => router.push('/import-export')} />
@@ -96,24 +117,28 @@ export default function About() {
         </Container>
       </View>
 
-      <Container style={{ marginTop: 24, maxWidth: 1100 }}>
-        {/* Stats strip */}
+      {/* Stats strip */}
+      <Container style={{ maxWidth: 1100, marginTop: 28 }}>
         <Reveal>
           <View style={styles.grid}>
-            {STATS.map((s, i) => (
+            {STATS.map((s) => (
               <HoverCard key={s.label} style={[styles.statCard, { width: statW }]}>
-                <Ionicons name={s.icon} size={24} color={colors.navy} />
+                <View style={styles.statIconWrap}>
+                  <Ionicons name={s.icon} size={22} color={colors.orange} />
+                </View>
                 <Text style={styles.statValue}>{s.value}</Text>
                 <Text style={styles.statLabel}>{s.label}</Text>
               </HoverCard>
             ))}
           </View>
         </Reveal>
+      </Container>
 
+      <Container style={{ marginTop: 36, maxWidth: 1100 }}>
         {/* Who we are */}
-        <Reveal style={{ marginTop: 32 }}>
+        <Reveal>
           <SectionTitle title="Who we are" subtitle={BRAND.legal} />
-          <Card style={{ gap: 12 }}>
+          <Card style={styles.whoCard}>
             <Text style={styles.body}>
               RPK For Food Trading is a Dubai-based food & grocery trading company supplying quality
               products to retailers, wholesalers and households across the region — and to import/export
@@ -129,11 +154,12 @@ export default function About() {
         </Reveal>
 
         {/* What we offer */}
-        <Reveal style={{ marginTop: 32 }}>
+        <Reveal style={{ marginTop: 36 }}>
           <SectionTitle title="What we offer" subtitle="Everything a food business needs" />
           <View style={styles.grid}>
-            {OFFERINGS.map((o) => (
+            {OFFERINGS.map((o, i) => (
               <HoverCard key={o.title} style={[styles.offer, { width: offerW }]}>
+                <Text style={styles.offerNum}>{String(i + 1).padStart(2, '0')}</Text>
                 <IconBadge name={o.icon} />
                 <Text style={styles.offerTitle}>{o.title}</Text>
                 <Text style={styles.offerText}>{o.text}</Text>
@@ -143,7 +169,7 @@ export default function About() {
         </Reveal>
 
         {/* Why choose us */}
-        <Reveal style={{ marginTop: 32 }}>
+        <Reveal style={{ marginTop: 36 }}>
           <SectionTitle title="Why choose us" subtitle="What our partners count on" />
           <View style={styles.grid}>
             {VALUES.map((v) => (
@@ -159,7 +185,7 @@ export default function About() {
         </Reveal>
 
         {/* Visit / contact */}
-        <Reveal style={{ marginTop: 32 }}>
+        <Reveal style={{ marginTop: 36 }}>
           <SectionTitle title="Visit us" subtitle="We're based in the heart of Dubai" />
           <View style={styles.grid}>
             <ContactRow icon="location-outline" label="Address" value={BRAND.address} width={halfW} onPress={() => {}} />
@@ -171,7 +197,7 @@ export default function About() {
         </Reveal>
 
         {/* CTA */}
-        <Reveal style={{ marginTop: 32 }}>
+        <Reveal style={{ marginTop: 40 }}>
           <View style={styles.ctaWrap}>
             <Svg width="100%" height="100%" style={StyleSheet.absoluteFill as any} preserveAspectRatio="none">
               <Defs>
@@ -182,6 +208,7 @@ export default function About() {
               </Defs>
               <Rect x="0" y="0" width="100%" height="100%" fill="url(#aboutCta)" />
             </Svg>
+            <View pointerEvents="none" style={styles.ctaGlow} />
             <View style={[styles.ctaInner, width < 760 && { flexDirection: 'column', alignItems: 'flex-start' }]}>
               <View style={{ flex: 1, gap: 6 }}>
                 <Text style={styles.ctaTitle}>Ready to work with us?</Text>
@@ -213,13 +240,23 @@ function ContactRow({ icon, label, value, width, onPress }: { icon: Ion; label: 
   );
 }
 
+const webBlur = (px: number) => (Platform.OS === 'web' ? ({ filter: `blur(${px}px)` } as any) : null);
+
 const styles = StyleSheet.create({
-  hero: { paddingVertical: 56, overflow: 'hidden', position: 'relative', backgroundColor: '#201A14' },
-  kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  kicker: { color: colors.orange, fontWeight: '800', letterSpacing: 1.5, fontSize: 12 },
-  h1: { color: colors.white, fontWeight: '900', fontSize: 36, marginTop: 10, lineHeight: 42 },
-  lead: { color: '#F0E2E0', fontSize: 16, marginTop: 10, maxWidth: 640, lineHeight: 24 },
-  heroBtns: { flexDirection: 'row', gap: 12, marginTop: 22, flexWrap: 'wrap' },
+  hero: { paddingTop: 60, paddingBottom: 56, overflow: 'hidden', position: 'relative', backgroundColor: '#201A14' },
+  glow1: { position: 'absolute', top: -90, right: -60, width: 320, height: 320, borderRadius: 999, backgroundColor: 'rgba(217,36,25,0.30)', ...webBlur(70) },
+  glow2: { position: 'absolute', bottom: -120, left: -80, width: 300, height: 300, borderRadius: 999, backgroundColor: 'rgba(255,140,60,0.16)', ...webBlur(80) },
+
+  kickerPill: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  kicker: { color: colors.white, fontWeight: '800', letterSpacing: 1.5, fontSize: 12 },
+  h1: { color: colors.white, fontWeight: '900', marginTop: 16 },
+  lead: { color: '#F0E2E0', fontSize: 17, marginTop: 12, maxWidth: 640, lineHeight: 26 },
+
+  heroChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  chipText: { color: '#F4ECEB', fontWeight: '700', fontSize: 13 },
+
+  heroBtns: { flexDirection: 'row', gap: 12, marginTop: 24, flexWrap: 'wrap' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
 
@@ -227,14 +264,18 @@ const styles = StyleSheet.create({
   hoverCard: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 18, ...shadow.soft, transitionDuration: '160ms' as any },
   hoverCardOn: { borderColor: colors.orange, transform: [{ translateY: -4 }], ...shadow.card },
 
-  statCard: { alignItems: 'center', gap: 6, paddingVertical: 20 },
-  statValue: { fontWeight: '900', fontSize: 24, color: colors.ink },
+  statCard: { alignItems: 'center', gap: 8, paddingVertical: 22, ...shadow.card },
+  statIconWrap: { width: 48, height: 48, borderRadius: 999, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center' },
+  statValue: { fontWeight: '900', fontSize: 26, color: colors.ink },
   statLabel: { color: colors.muted, fontSize: 13, textAlign: 'center' },
 
-  body: { color: colors.text, fontSize: 15, lineHeight: 24 },
+  body: { color: colors.text, fontSize: 15.5, lineHeight: 25 },
+
+  whoCard: { gap: 12, borderLeftWidth: 4, borderLeftColor: colors.orange },
 
   iconBadge: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center' },
-  offer: { gap: 10 },
+  offer: { gap: 10, overflow: 'hidden' },
+  offerNum: { position: 'absolute', top: 10, right: 14, fontSize: 34, fontWeight: '900', color: colors.soft, letterSpacing: -1 },
   offerTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
   offerText: { color: colors.muted, fontSize: 14, lineHeight: 21 },
 
@@ -246,7 +287,8 @@ const styles = StyleSheet.create({
   contactValue: { color: colors.ink, fontSize: 15, fontWeight: '700', marginTop: 2 },
 
   ctaWrap: { borderRadius: radius.lg, overflow: 'hidden', position: 'relative', backgroundColor: colors.orange },
-  ctaInner: { flexDirection: 'row', alignItems: 'center', gap: 18, padding: 24 },
-  ctaTitle: { fontWeight: '900', fontSize: 22, color: colors.white },
-  ctaText: { color: '#FFE3E1', fontSize: 14, lineHeight: 21 },
+  ctaGlow: { position: 'absolute', top: -60, right: -30, width: 220, height: 220, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', ...webBlur(50) },
+  ctaInner: { flexDirection: 'row', alignItems: 'center', gap: 18, padding: 28 },
+  ctaTitle: { fontWeight: '900', fontSize: 24, color: colors.white },
+  ctaText: { color: '#FFE3E1', fontSize: 14.5, lineHeight: 22 },
 });

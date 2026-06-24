@@ -62,6 +62,9 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+        {!!product.description?.trim() && (
+          <Text style={styles.desc} numberOfLines={2}>{product.description.trim()}</Text>
+        )}
         {product.review_count > 0 ? (
           <Stars value={product.rating} size={14} count={product.review_count} />
         ) : (
@@ -125,6 +128,7 @@ const styles = StyleSheet.create({
   unitText: { color: colors.white, fontSize: 11, fontWeight: '800' },
   body: { padding: 12, gap: 4 },
   name: { color: colors.text, fontSize: 14, fontWeight: '700', minHeight: 38 },
+  desc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   noRating: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   actions: { gap: 8, marginTop: 8 },
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

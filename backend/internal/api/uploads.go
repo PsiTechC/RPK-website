@@ -74,6 +74,58 @@ func detectImageExt(buf []byte) (string, bool) {
 	return ext, ok
 }
 
+// Allowed business-document types -> extension. PDFs plus the raster images
+// (trade licences / VAT certificates are often photos). Verified from magic
+// bytes, same as images.
+var documentExt = map[string]string{
+	"application/pdf": ".pdf",
+	"image/jpeg":      ".jpg",
+	"image/png":       ".png",
+	"image/webp":      ".webp",
+}
+
+// handleUploadDocument accepts a multipart "file" field (PDF or image) for
+// partner trade documents (trade licence, VAT certificate, company profile) and
+// returns a relative URL. Public but rate-limited — applicants aren't logged in
+// yet when they apply. Type is verified from the file's real bytes.
+func (s *Server) handleUploadDocument(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes+1024)
+	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+		writeErr(w, 400, "file too large or invalid form (max 8MB)")
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeErr(w, 400, "no file provided")
+		return
+	}
+	defer file.Close()
+
+	buf, err := io.ReadAll(file)
+	if err != nil {
+		writeErr(w, 400, "could not read file")
+		return
+	}
+	ext, ok := documentExt[http.DetectContentType(buf)]
+	if !ok {
+		writeErr(w, 400, "unsupported file type — please upload a PDF, JPEG, PNG or WEBP")
+		return
+	}
+
+	if err := os.MkdirAll(s.cfg.UploadsDir, 0o755); err != nil {
+		writeErr(w, 500, "could not prepare uploads dir")
+		return
+	}
+
+	name := "doc_" + randomHex(16) + ext
+	if err := os.WriteFile(filepath.Join(s.cfg.UploadsDir, name), buf, 0o644); err != nil {
+		writeErr(w, 500, "could not save file")
+		return
+	}
+
+	writeJSON(w, 201, map[string]string{"url": "/uploads/" + name})
+}
+
 func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)

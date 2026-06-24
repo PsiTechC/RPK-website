@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, radius } from '../lib/theme';
 import { useApp } from '../lib/store';
+import { roleHome } from '../lib/api';
 import { Footer } from '../components/Footer';
 import { Container, Button, Field, Card } from '../components/ui';
 import { PhoneField } from '../components/PhoneField';
@@ -52,8 +53,8 @@ export default function Login() {
         const fullPhone = form.phone ? `${country.dial} ${form.phone}` : '';
         signedIn = await register({ name: form.name, email: form.email, password: form.password, phone: fullPhone, role });
       }
-      // Admins land on the dashboard; everyone else on the home page.
-      router.replace(signedIn.role === 'admin' ? '/admin' : '/');
+      // Route to the right home for the account's role.
+      router.replace(roleHome(signedIn.role) as any);
     } catch (e: any) {
       setError(e.message || 'Something went wrong.');
     } finally {

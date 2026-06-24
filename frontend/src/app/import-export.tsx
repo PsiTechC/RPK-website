@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { api } from '../lib/api';
@@ -63,6 +63,20 @@ function UField({
   );
 }
 
+// One trade-document row: upload button + uploaded/empty state.
+function DocUpload({ label, url, busy, onPick }: { label: string; url: string; busy: boolean; onPick: () => void }) {
+  const done = !!url;
+  return (
+    <Pressable style={styles.docRow} onPress={onPick} disabled={busy}>
+      <Ionicons name={done ? 'checkmark-circle' : 'cloud-upload-outline'} size={18} color={done ? colors.green : colors.orange} />
+      <Text style={styles.docLabel} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.docAction, done && { color: colors.green }]}>
+        {busy ? 'Uploading…' : done ? 'Uploaded · Replace' : 'Upload'}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function ImportExport() {
   const { width } = useWindowDimensions();
   const { token, user } = useApp();
@@ -78,7 +92,12 @@ export default function ImportExport() {
     email: user?.email || '',
     product_interest: '',
     message: '',
+    whatsapp: '',
+    monthly_capacity: '',
+    target_countries: '',
   });
+  // Uploaded trade-document URLs (set by the document picker).
+  const [docs, setDocs] = useState({ trade_license_url: '', vat_certificate_url: '', company_profile_url: '' });
 
   const selectCountry = (c: Country) => {
     setCountryObj(c);
@@ -96,6 +115,31 @@ export default function ImportExport() {
     setForm((f) => ({ ...f, [k]: t }));
     setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
   };
+
+  const [uploadingDoc, setUploadingDoc] = useState<keyof typeof docs | null>(null);
+
+  // Pick a PDF/image trade document (web) and upload it; store the returned URL.
+  function pickDoc(field: keyof typeof docs) {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf,image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      setError('');
+      setUploadingDoc(field);
+      try {
+        const { url } = await api.uploadDocument(file);
+        setDocs((d) => ({ ...d, [field]: url }));
+      } catch (e: any) {
+        setError(e.message || 'Upload failed.');
+      } finally {
+        setUploadingDoc(null);
+      }
+    };
+    input.click();
+  }
 
   function validate(): boolean {
     const e: Record<string, string | null> = {
@@ -116,7 +160,7 @@ export default function ImportExport() {
       const summary = items.map((i) => `${i.name} ×${i.qty} ${i.unit}`).join(', ');
       const productInterest = [summary, form.product_interest.trim()].filter(Boolean).join(' | ');
       const res = await api.createRegistration(
-        { ...form, product_interest: productInterest, items, phone: form.phone ? `${country.dial} ${form.phone}` : '' },
+        { ...form, ...docs, product_interest: productInterest, items, phone: form.phone ? `${country.dial} ${form.phone}` : '' },
         token
       );
       setDone(res);
@@ -201,6 +245,20 @@ export default function ImportExport() {
 
                     <PhoneField label={`Phone * & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
 
+                    <View style={[styles.grid, colStack && { flexDirection: 'column' }]}>
+                      <UField label="WHATSAPP" icon="logo-whatsapp" value={form.whatsapp} onChangeText={set('whatsapp')} placeholder="+971 5x xxx xxxx" keyboardType="phone-pad" />
+                      <UField label="MONTHLY BUYING CAPACITY" icon="cube-outline" value={form.monthly_capacity} onChangeText={set('monthly_capacity')} placeholder="e.g. 2 containers / 5 tonnes" />
+                    </View>
+
+                    <UField label="TARGET COUNTRIES" icon="earth-outline" value={form.target_countries} onChangeText={set('target_countries')} placeholder="Countries you trade with…" />
+
+                    <View style={{ gap: 6 }}>
+                      <Text style={styles.uLabel}>BUSINESS DOCUMENTS (PDF / IMAGE)</Text>
+                      <DocUpload label="Trade License" url={docs.trade_license_url} busy={uploadingDoc === 'trade_license_url'} onPick={() => pickDoc('trade_license_url')} />
+                      <DocUpload label="VAT / Tax Certificate" url={docs.vat_certificate_url} busy={uploadingDoc === 'vat_certificate_url'} onPick={() => pickDoc('vat_certificate_url')} />
+                      <DocUpload label="Company Profile" url={docs.company_profile_url} busy={uploadingDoc === 'company_profile_url'} onPick={() => pickDoc('company_profile_url')} />
+                    </View>
+
                     <RequirementBuilder items={items} onChange={setItems} />
 
                     <View style={[styles.grid, colStack && { flexDirection: 'column' }]}>
@@ -264,6 +322,10 @@ const styles = StyleSheet.create({
   uWrapFocus: { backgroundColor: 'rgba(243,130,42,0.07)' },
   uInput: { flex: 1, fontSize: 14.5, color: '#1f1f1f', paddingVertical: 4, outlineStyle: 'none' as any },
   uErr: { color: colors.red, fontSize: 12, marginTop: 3 },
+
+  docRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.6)' },
+  docLabel: { flex: 1, fontWeight: '700', color: colors.text, fontSize: 13 },
+  docAction: { fontWeight: '800', color: colors.orange, fontSize: 12.5 },
 
   typeRow: { flexDirection: 'row', gap: 8 },
   type: { flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.6)' },
