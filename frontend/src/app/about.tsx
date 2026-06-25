@@ -1,294 +1,315 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
-import { colors, radius, shadow, BRAND } from '../lib/theme';
+import { Image } from 'expo-image';
+import { BRAND } from '../lib/theme';
 import { Footer } from '../components/Footer';
-import { Container, SectionTitle, Button, Card } from '../components/ui';
-import { FadeInUp, Reveal } from '../components/Motion';
+import { Container } from '../components/ui';
+import { Reveal, FadeInUp, CountUp } from '../components/Motion';
 
 type Ion = keyof typeof Ionicons.glyphMap;
 
-const STATS: { icon: Ion; value: string; label: string }[] = [
-  { icon: 'cube-outline', value: '100+', label: 'Products' },
-  { icon: 'grid-outline', value: '11', label: 'Categories' },
-  { icon: 'earth-outline', value: '20+', label: 'Countries served' },
-  { icon: 'business-outline', value: 'Dubai', label: 'UAE headquarters' },
+// ── Editorial palette (used exactly as specced for this page) ──────────────────
+const P = {
+  cream: '#F6F1E9',
+  espresso: '#1E1813',
+  red: '#E11D2A',
+  gold: '#C19A4B',
+  muted: '#57534E', // stone-600
+  band: '#EFE7D9',
+};
+
+// Each headline stat gets its own brand colour rather than a flat block of red.
+const STAT_COLORS = ['#E11D2A', '#1E1813', '#C19A4B', '#E11D2A'];
+
+// Unsplash placeholders — swap for real RPK photography.
+const IMG = (id: string, w = 1100) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
+// TODO: replace image — wide hero (warm food spread)
+const HERO_IMG = IMG('1504674900247-0877df9cc836', 1600);
+// TODO: replace image — story collage (Dubai warehouse / sacks of grain)
+const STORY_IMG_A = IMG('1601000938259-9e92002320b2', 800);
+// TODO: replace image — story collage (spices / market)
+const STORY_IMG_B = IMG('1596040033229-a9821ebd058d', 800);
+
+const STATS = [
+  { num: '100+', label: 'Grocery products' },
+  { num: '500+', label: 'Business clients' },
+  { num: '15+', label: 'Countries served' },
+  { num: '10+', label: 'Years of trust' },
 ];
 
-const HERO_CHIPS: { icon: Ion; text: string }[] = [
-  { icon: 'location-outline', text: 'Based in Dubai, UAE' },
-  { icon: 'earth-outline', text: '20+ countries served' },
-  { icon: 'storefront-outline', text: 'Wholesale & Retail' },
+const STEPS = [
+  { n: '01', title: 'Sourced with care', desc: 'We partner directly with trusted growers and mills for consistent, honest quality.' },
+  { n: '02', title: 'Checked for quality', desc: 'Every consignment is inspected and graded before it leaves our Dubai warehouse.' },
+  { n: '03', title: 'Traded worldwide', desc: 'Wholesale and retail supply, shipped reliably to markets across the globe.' },
 ];
-
-const OFFERINGS: { icon: Ion; title: string; text: string }[] = [
-  { icon: 'storefront-outline', title: 'Wholesale & Retail', text: 'Bulk supply for businesses and everyday packs for households — same trusted quality.' },
-  { icon: 'globe-outline', title: 'Import & Export', text: 'We trade food and groceries across borders, partnering with importers and exporters worldwide from Dubai.' },
-  { icon: 'basket-outline', title: 'Full Grocery Range', text: 'Rice, flour, spices & masala, pulses, oils & ghee, nuts, sauces, beverages and more — all under one roof.' },
-  { icon: 'shield-checkmark-outline', title: 'Quality You Can Trust', text: 'Carefully sourced brands and fresh stock, with consistent quality on every order.' },
-];
-
-const VALUES: { icon: Ion; title: string; text: string }[] = [
-  { icon: 'time-outline', title: 'Reliability', text: 'On-time supply and dependable stock for our partners.' },
-  { icon: 'pricetags-outline', title: 'Fair Pricing', text: 'Competitive wholesale rates with transparent dealing.' },
-  { icon: 'navigate-outline', title: 'Global Reach', text: 'A Dubai base connecting suppliers and buyers across continents.' },
-];
-
-function IconBadge({ name, size = 22 }: { name: Ion; size?: number }) {
-  return (
-    <View style={styles.iconBadge}>
-      <Ionicons name={name} size={size} color={colors.orange} />
-    </View>
-  );
-}
-
-// Card that lifts and highlights on hover (web) — gives the page life.
-function HoverCard({ children, style }: { children: React.ReactNode; style?: any }) {
-  return (
-    <Pressable style={({ hovered }: any) => [styles.hoverCard, style, hovered && styles.hoverCardOn]}>
-      {children}
-    </Pressable>
-  );
-}
 
 export default function About() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const gap = 16;
-  // Percentage widths keep cards on the same row without scrollbar/rounding
-  // overflow (which pushed cards onto their own line on mobile).
-  const PCT: Record<number, string> = { 1: '100%', 2: '47%', 3: '31%', 4: '23%' };
-  const offerW = PCT[width < 560 ? 1 : width < 900 ? 2 : width < 1180 ? 3 : 4];
-  const valueW = PCT[width < 720 ? 1 : 3];
-  const statW = PCT[width < 560 ? 2 : 4];
-  const halfW = width < 760 ? '100%' : '48%';
-  const h1Size = width < 600 ? 30 : width < 980 ? 42 : 52;
+  const narrow = width < 860;
+  const tight = width < 600;
+
+  const display = tight ? 28 : width < 980 ? 38 : 46;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
-      {/* Gradient hero */}
-      <View style={styles.hero}>
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill as any} preserveAspectRatio="none">
-          <Defs>
-            <SvgGradient id="aboutHero" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#201A14" />
-              <Stop offset="0.5" stopColor="#3E150E" />
-              <Stop offset="1" stopColor="#8A1610" />
-            </SvgGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#aboutHero)" />
-        </Svg>
+    <ScrollView style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
+      {/* ───────── 1 · HERO ───────── */}
+      <Container max={1180} style={{ paddingTop: tight ? 40 : 72 }}>
+        <FadeInUp delay={40}>
+          <View style={styles.kickerRow}>
+            <Text style={styles.kicker}>DUBAI · WORLDWIDE FOOD TRADE</Text>
+            <View style={styles.kickerLine} />
+          </View>
+        </FadeInUp>
 
-        {/* Decorative glows for depth */}
-        <View pointerEvents="none" style={styles.glow1} />
-        <View pointerEvents="none" style={styles.glow2} />
+        <View style={[styles.heroTop, narrow && { flexDirection: 'column', gap: 22 }]}>
+          {/* LEFT — display headline */}
+          <FadeInUp delay={120} style={{ flex: narrow ? undefined : 1.25 }}>
+            <Text style={[styles.display, { fontSize: display, lineHeight: display * 1.04 }]}>
+              We trade{'\n'}
+              <Text style={styles.displayItalic}>good food</Text>{'\n'}
+              worldwide.
+            </Text>
+          </FadeInUp>
 
-        <Container style={{ maxWidth: 1100, zIndex: 1 }}>
-          <FadeInUp delay={60}>
-            <View style={styles.kickerPill}>
-              <Ionicons name="ellipse" size={7} color={colors.orange} />
-              <Text style={styles.kicker}>ABOUT US</Text>
+          {/* RIGHT — intro + chips */}
+          <FadeInUp delay={220} style={{ flex: narrow ? undefined : 1, gap: 18 }}>
+            <Text style={styles.intro}>
+              <Text style={{ fontWeight: '800', color: P.espresso }}>{BRAND.legal}</Text> is a Dubai-based
+              importer and exporter of premium groceries — from aromatic basmati and spices to oils, pulses
+              and beverages — supplying wholesale and retail markets with quality you can rely on.
+            </Text>
+            <View style={styles.chipRow}>
+              <Chip icon="location-outline" label="Al Mankhool, Dubai" />
+              <Chip icon="globe-outline" label="15+ countries" />
             </View>
           </FadeInUp>
-          <FadeInUp delay={160}>
-            <Text style={[styles.h1, { fontSize: h1Size, lineHeight: h1Size + 6 }]}>{BRAND.name}</Text>
-          </FadeInUp>
-          <FadeInUp delay={280}>
-            <Text style={styles.lead}>{BRAND.tagline}</Text>
-          </FadeInUp>
-          <FadeInUp delay={360}>
-            <View style={styles.heroChips}>
-              {HERO_CHIPS.map((c) => (
-                <View key={c.text} style={styles.chip}>
-                  <Ionicons name={c.icon} size={14} color={colors.orange} />
-                  <Text style={styles.chipText}>{c.text}</Text>
+        </View>
+
+        {/* Full-width hero image + overlaid quote & rating */}
+        <Reveal style={{ marginTop: tight ? 28 : 44 }}>
+          <View style={[styles.heroImgWrap, { height: tight ? 280 : width < 980 ? 380 : 460 }]}>
+            <Image source={{ uri: HERO_IMG }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+            <View style={styles.heroImgShade} />
+            <View style={styles.heroImgContent}>
+              <Text style={[styles.heroQuote, { fontSize: tight ? 18 : 22 }]}>
+                “Quality food, traded worldwide from Dubai.”
+              </Text>
+              <View style={styles.ratingRow}>
+                <View style={{ flexDirection: 'row', gap: 2 }}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Ionicons key={i} name="star" size={18} color={P.gold} />
+                  ))}
+                </View>
+                <Text style={styles.ratingNum}>4.8</Text>
+              </View>
+            </View>
+          </View>
+        </Reveal>
+      </Container>
+
+      {/* ───────── 2 · EDITORIAL STATS ───────── */}
+      <Container max={1180} style={{ paddingVertical: tight ? 44 : 72 }}>
+        <Reveal>
+          <View style={[styles.statsRow, narrow && { flexWrap: 'wrap' }]}>
+            {STATS.map((s, i) => (
+              <View
+                key={s.label}
+                style={[
+                  styles.statItem,
+                  narrow ? { flexGrow: 0, flexBasis: '50%', paddingVertical: 16 } : i > 0 && styles.statDivider,
+                ]}
+              >
+                <CountUp value={s.num} duration={1800} style={[styles.statNum, { fontSize: tight ? 32 : 40, color: STAT_COLORS[i % STAT_COLORS.length] }] as any} />
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Reveal>
+      </Container>
+
+      {/* ───────── 3 · OUR STORY ───────── */}
+      <Container max={1180} style={{ paddingBottom: tight ? 48 : 88 }}>
+        <View style={[styles.storyRow, narrow && { flexDirection: 'column', gap: 40 }]}>
+          {/* LEFT — tilted collage */}
+          <Reveal style={{ flex: narrow ? undefined : 1 }}>
+            <View style={[styles.collage, { height: tight ? 360 : 460 }]}>
+              {/* TODO: replace image */}
+              <Image source={{ uri: STORY_IMG_A }} style={[styles.collageImg, styles.collageA]} contentFit="cover" transition={300} />
+              {/* TODO: replace image */}
+              <Image source={{ uri: STORY_IMG_B }} style={[styles.collageImg, styles.collageB]} contentFit="cover" transition={300} />
+              <View style={styles.badge}>
+                <Ionicons name="sparkles" size={20} color={P.cream} />
+                <Text style={styles.badgeText}>SINCE{'\n'}DAY ONE</Text>
+              </View>
+            </View>
+          </Reveal>
+
+          {/* RIGHT — story steps */}
+          <Reveal style={{ flex: narrow ? undefined : 1, gap: 18 }}>
+            <Text style={styles.sectionKicker}>OUR STORY</Text>
+            <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 30, lineHeight: (tight ? 24 : 30) * 1.12 }]}>
+              From a Dubai warehouse to <Text style={styles.displayItalic}>markets worldwide</Text>
+            </Text>
+            <View style={{ gap: 14, marginTop: 6 }}>
+              {STEPS.map((s) => (
+                <View key={s.n} style={styles.step}>
+                  <Text style={styles.stepNum}>{s.n}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.stepTitle}>{s.title}</Text>
+                    <Text style={styles.stepDesc}>{s.desc}</Text>
+                  </View>
                 </View>
               ))}
             </View>
-          </FadeInUp>
-          <FadeInUp delay={460}>
-            <View style={styles.heroBtns}>
-              <Button label="Shop Products" icon="bag-handle" onPress={() => router.push('/products')} />
-              <Button label="Import / Export" variant="navy" icon="globe" onPress={() => router.push('/import-export')} />
-            </View>
-          </FadeInUp>
+          </Reveal>
+        </View>
+      </Container>
+
+      {/* ───────── 4 · MISSION & VISION (dark band) ───────── */}
+      <View style={styles.darkBand}>
+        <Container max={1180} style={{ paddingVertical: tight ? 48 : 80 }}>
+          <View style={[styles.mvRow, narrow && { flexDirection: 'column', gap: 36 }]}>
+            <MV
+              icon="leaf-outline"
+              title="Our Mission"
+              body="To make quality food accessible — sourcing dependable groceries and delivering them with fairness, consistency and care, from Dubai to every market we serve."
+            />
+            <View style={narrow ? styles.mvDividerH : styles.mvDividerV} />
+            <MV
+              icon="boat-outline"
+              title="Our Vision"
+              body="To be the most trusted food trading house bridging producers and markets worldwide — known for integrity, reliability and the quality behind every shipment."
+            />
+          </View>
         </Container>
       </View>
 
-      {/* Stats strip */}
-      <Container style={{ maxWidth: 1100, marginTop: 28 }}>
-        <Reveal>
-          <View style={styles.grid}>
-            {STATS.map((s) => (
-              <HoverCard key={s.label} style={[styles.statCard, { width: statW }]}>
-                <View style={styles.statIconWrap}>
-                  <Ionicons name={s.icon} size={22} color={colors.orange} />
-                </View>
-                <Text style={styles.statValue}>{s.value}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
-              </HoverCard>
-            ))}
+      {/* ───────── 5 · CTA ───────── */}
+      <Container max={900} style={{ paddingVertical: tight ? 56 : 96, alignItems: 'center' }}>
+        <Reveal style={{ alignItems: 'center' }}>
+          <Text style={[styles.ctaHead, { fontSize: tight ? 26 : 34, lineHeight: (tight ? 26 : 34) * 1.1 }]}>
+            Let’s grow your business <Text style={styles.displayItalic}>together</Text>
+          </Text>
+          <Text style={styles.ctaSub}>
+            Request a quote, explore the catalogue, or talk to our team about import & export.
+          </Text>
+          <View style={[styles.ctaBtns, tight && { flexDirection: 'column', alignSelf: 'stretch' }]}>
+            <Pressable
+              style={({ hovered }: any) => [styles.btnRed, hovered && { opacity: 0.92 }]}
+              onPress={() => router.push('/contact')}
+            >
+              <Text style={styles.btnRedText}>Request a Quote</Text>
+              <Ionicons name="arrow-forward" size={18} color={P.cream} />
+            </Pressable>
+            <Pressable
+              style={({ hovered }: any) => [styles.btnOutline, hovered && { borderColor: P.espresso }]}
+              onPress={() => Linking.openURL(`tel:${BRAND.phone.replace(/\s/g, '')}`)}
+            >
+              <Ionicons name="call-outline" size={17} color={P.espresso} />
+              <Text style={styles.btnOutlineText}>+971 58 307 2132</Text>
+            </Pressable>
           </View>
         </Reveal>
       </Container>
 
-      <Container style={{ marginTop: 36, maxWidth: 1100 }}>
-        {/* Who we are */}
-        <Reveal>
-          <SectionTitle title="Who we are" subtitle={BRAND.legal} />
-          <Card style={styles.whoCard}>
-            <Text style={styles.body}>
-              RPK For Food Trading is a Dubai-based food & grocery trading company supplying quality
-              products to retailers, wholesalers and households across the region — and to import/export
-              partners worldwide. From premium basmati rice and bold spices to cooking oils, pulses, nuts
-              and beverages, we bring a complete pantry under one trusted name.
-            </Text>
-            <Text style={styles.body}>
-              Operating from Al Mankhool, Dubai, we combine competitive bulk pricing with consistent
-              quality and dependable supply — making us a reliable partner whether you're stocking a shop,
-              running a kitchen, or importing groceries to another country.
-            </Text>
-          </Card>
-        </Reveal>
-
-        {/* What we offer */}
-        <Reveal style={{ marginTop: 36 }}>
-          <SectionTitle title="What we offer" subtitle="Everything a food business needs" />
-          <View style={styles.grid}>
-            {OFFERINGS.map((o, i) => (
-              <HoverCard key={o.title} style={[styles.offer, { width: offerW }]}>
-                <Text style={styles.offerNum}>{String(i + 1).padStart(2, '0')}</Text>
-                <IconBadge name={o.icon} />
-                <Text style={styles.offerTitle}>{o.title}</Text>
-                <Text style={styles.offerText}>{o.text}</Text>
-              </HoverCard>
-            ))}
-          </View>
-        </Reveal>
-
-        {/* Why choose us */}
-        <Reveal style={{ marginTop: 36 }}>
-          <SectionTitle title="Why choose us" subtitle="What our partners count on" />
-          <View style={styles.grid}>
-            {VALUES.map((v) => (
-              <HoverCard key={v.title} style={[styles.value, { width: valueW }]}>
-                <View style={styles.valueHead}>
-                  <IconBadge name={v.icon} size={20} />
-                  <Text style={styles.offerTitle}>{v.title}</Text>
-                </View>
-                <Text style={styles.offerText}>{v.text}</Text>
-              </HoverCard>
-            ))}
-          </View>
-        </Reveal>
-
-        {/* Visit / contact */}
-        <Reveal style={{ marginTop: 36 }}>
-          <SectionTitle title="Visit us" subtitle="We're based in the heart of Dubai" />
-          <View style={styles.grid}>
-            <ContactRow icon="location-outline" label="Address" value={BRAND.address} width={halfW} onPress={() => {}} />
-            <View style={{ width: halfW, gap }}>
-              <ContactRow icon="call-outline" label="Call us" value={BRAND.phone} onPress={() => router.push('/contact')} />
-              <ContactRow icon="mail-outline" label="Email" value={BRAND.email} onPress={() => router.push('/contact')} />
-            </View>
-          </View>
-        </Reveal>
-
-        {/* CTA */}
-        <Reveal style={{ marginTop: 40 }}>
-          <View style={styles.ctaWrap}>
-            <Svg width="100%" height="100%" style={StyleSheet.absoluteFill as any} preserveAspectRatio="none">
-              <Defs>
-                <SvgGradient id="aboutCta" x1="0" y1="0" x2="1" y2="0">
-                  <Stop offset="0" stopColor="#E2231A" />
-                  <Stop offset="1" stopColor="#A8160F" />
-                </SvgGradient>
-              </Defs>
-              <Rect x="0" y="0" width="100%" height="100%" fill="url(#aboutCta)" />
-            </Svg>
-            <View pointerEvents="none" style={styles.ctaGlow} />
-            <View style={[styles.ctaInner, width < 760 && { flexDirection: 'column', alignItems: 'flex-start' }]}>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={styles.ctaTitle}>Ready to work with us?</Text>
-                <Text style={styles.ctaText}>Browse our catalogue or register your business for import/export.</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-                <Button label="Shop Products" variant="navy" onPress={() => router.push('/products')} />
-                <Button label="Register" variant="outline" onPress={() => router.push('/import-export')} />
-              </View>
-            </View>
-          </View>
-        </Reveal>
-      </Container>
-      <View style={{ height: 56 }} />
       <Footer />
     </ScrollView>
   );
 }
 
-function ContactRow({ icon, label, value, width, onPress }: { icon: Ion; label: string; value: string; width?: any; onPress: () => void }) {
+// ── pieces ─────────────────────────────────────────────────────────────────────
+function Chip({ icon, label }: { icon: Ion; label: string }) {
   return (
-    <Pressable onPress={onPress} style={({ hovered }: any) => [styles.contactRow, width ? { width } : { flex: 1 }, hovered && styles.hoverCardOn]}>
-      <IconBadge name={icon} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.contactLabel}>{label}</Text>
-        <Text style={styles.contactValue}>{value}</Text>
-      </View>
-    </Pressable>
+    <View style={styles.chip}>
+      <Ionicons name={icon} size={15} color={P.gold} />
+      <Text style={styles.chipText}>{label}</Text>
+    </View>
   );
 }
 
-const webBlur = (px: number) => (Platform.OS === 'web' ? ({ filter: `blur(${px}px)` } as any) : null);
+function MV({ icon, title, body }: { icon: Ion; title: string; body: string }) {
+  return (
+    <View style={{ flex: 1, gap: 14 }}>
+      <View style={styles.mvIcon}>
+        <Ionicons name={icon} size={24} color={P.gold} />
+      </View>
+      <Text style={styles.mvTitle}>{title}</Text>
+      <Text style={styles.mvBody}>{body}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-  hero: { paddingTop: 60, paddingBottom: 56, overflow: 'hidden', position: 'relative', backgroundColor: '#201A14' },
-  glow1: { position: 'absolute', top: -90, right: -60, width: 320, height: 320, borderRadius: 999, backgroundColor: 'rgba(217,36,25,0.30)', ...webBlur(70) },
-  glow2: { position: 'absolute', bottom: -120, left: -80, width: 300, height: 300, borderRadius: 999, backgroundColor: 'rgba(255,140,60,0.16)', ...webBlur(80) },
+  /* HERO */
+  kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  kicker: { color: P.red, fontWeight: '800', fontSize: 12, letterSpacing: 2 },
+  kickerLine: { height: 1.5, width: 56, backgroundColor: P.red, opacity: 0.6 },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 40, marginTop: 26 },
+  display: { color: P.espresso, fontWeight: '900', letterSpacing: -0.5 },
+  displayItalic: { color: P.red, fontWeight: '900' },
+  intro: { color: P.muted, fontSize: 16, lineHeight: 26 },
+  chipRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: P.gold, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  chipText: { color: P.espresso, fontWeight: '700', fontSize: 13.5 },
 
-  kickerPill: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
-  kicker: { color: colors.white, fontWeight: '800', letterSpacing: 1.5, fontSize: 12 },
-  h1: { color: colors.white, fontWeight: '900', marginTop: 16 },
-  lead: { color: '#F0E2E0', fontSize: 17, marginTop: 12, maxWidth: 640, lineHeight: 26 },
+  heroImgWrap: { width: '100%', borderRadius: 32, overflow: 'hidden', backgroundColor: P.band },
+  heroImgShade: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(180deg, rgba(20,15,11,0) 35%, rgba(20,15,11,0.82) 100%)' } as any)
+      : { backgroundColor: 'rgba(20,15,11,0.42)' }),
+  },
+  heroImgContent: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 28, gap: 14 },
+  heroQuote: { color: '#FFFFFF', fontWeight: '800', maxWidth: 560 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ratingNum: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
 
-  heroChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
-  chipText: { color: '#F4ECEB', fontWeight: '700', fontSize: 13 },
+  /* STATS */
+  statsRow: { flexDirection: 'row', alignItems: 'stretch' },
+  statItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, gap: 6 },
+  statDivider: { borderLeftWidth: 1, borderLeftColor: P.gold },
+  statNum: { color: P.red, fontWeight: '900', letterSpacing: -0.5 },
+  statLabel: { color: P.muted, fontSize: 13.5, fontWeight: '600', textAlign: 'center', letterSpacing: 0.3 },
 
-  heroBtns: { flexDirection: 'row', gap: 12, marginTop: 24, flexWrap: 'wrap' },
+  /* STORY */
+  storyRow: { flexDirection: 'row', alignItems: 'center', gap: 56 },
+  collage: { position: 'relative', width: '100%' },
+  collageImg: { position: 'absolute', width: '74%', height: '78%', borderRadius: 20, borderWidth: 6, borderColor: P.cream, ...{ shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 14 }, elevation: 6 } },
+  collageA: { top: 0, left: 0, transform: [{ rotate: '-4deg' }] },
+  collageB: { bottom: 0, right: 0, transform: [{ rotate: '4deg' }] },
+  badge: {
+    position: 'absolute', top: '50%', left: '50%', width: 104, height: 104, borderRadius: 999,
+    marginLeft: -52, marginTop: -52, backgroundColor: P.red, alignItems: 'center', justifyContent: 'center', gap: 4, zIndex: 5,
+    borderWidth: 4, borderColor: P.cream,
+    ...{ shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  },
+  badgeText: { color: P.cream, fontWeight: '900', fontSize: 11, letterSpacing: 1, textAlign: 'center', lineHeight: 14 },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  sectionKicker: { color: P.red, fontWeight: '800', fontSize: 12, letterSpacing: 2 },
+  sectionHead: { color: P.espresso, fontWeight: '900', letterSpacing: -0.3 },
+  step: { flexDirection: 'row', gap: 16, borderLeftWidth: 2, borderLeftColor: P.gold, paddingLeft: 16, paddingVertical: 4 },
+  stepNum: { color: P.gold, fontWeight: '900', fontSize: 22, width: 40 },
+  stepTitle: { color: P.espresso, fontWeight: '800', fontSize: 16 },
+  stepDesc: { color: P.muted, fontSize: 14, lineHeight: 21, marginTop: 3 },
 
-  // hover-lift card base (used for stats / offerings / values)
-  hoverCard: { backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 18, ...shadow.soft, transitionDuration: '160ms' as any },
-  hoverCardOn: { borderColor: colors.orange, transform: [{ translateY: -4 }], ...shadow.card },
+  /* MISSION & VISION */
+  darkBand: { backgroundColor: P.espresso },
+  mvRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 56 },
+  mvDividerV: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.12)' },
+  mvDividerH: { height: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.12)' },
+  mvIcon: { width: 54, height: 54, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(193,154,75,0.5)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(193,154,75,0.08)' },
+  mvTitle: { color: '#FFFFFF', fontWeight: '900', fontSize: 22 },
+  mvBody: { color: '#D6D3D1', fontSize: 15, lineHeight: 24 }, // stone-300
 
-  statCard: { alignItems: 'center', gap: 8, paddingVertical: 22, ...shadow.card },
-  statIconWrap: { width: 48, height: 48, borderRadius: 999, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center' },
-  statValue: { fontWeight: '900', fontSize: 26, color: colors.ink },
-  statLabel: { color: colors.muted, fontSize: 13, textAlign: 'center' },
-
-  body: { color: colors.text, fontSize: 15.5, lineHeight: 25 },
-
-  whoCard: { gap: 12, borderLeftWidth: 4, borderLeftColor: colors.orange },
-
-  iconBadge: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center' },
-  offer: { gap: 10, overflow: 'hidden' },
-  offerNum: { position: 'absolute', top: 10, right: 14, fontSize: 34, fontWeight: '900', color: colors.soft, letterSpacing: -1 },
-  offerTitle: { fontWeight: '900', fontSize: 16, color: colors.ink },
-  offerText: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-
-  value: { gap: 10 },
-  valueHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-
-  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, ...shadow.soft, transitionDuration: '160ms' as any },
-  contactLabel: { color: colors.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
-  contactValue: { color: colors.ink, fontSize: 15, fontWeight: '700', marginTop: 2 },
-
-  ctaWrap: { borderRadius: radius.lg, overflow: 'hidden', position: 'relative', backgroundColor: colors.orange },
-  ctaGlow: { position: 'absolute', top: -60, right: -30, width: 220, height: 220, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', ...webBlur(50) },
-  ctaInner: { flexDirection: 'row', alignItems: 'center', gap: 18, padding: 28 },
-  ctaTitle: { fontWeight: '900', fontSize: 24, color: colors.white },
-  ctaText: { color: '#FFE3E1', fontSize: 14.5, lineHeight: 22 },
+  /* CTA */
+  ctaHead: { color: P.espresso, fontWeight: '900', textAlign: 'center', letterSpacing: -0.3 },
+  ctaSub: { color: P.muted, fontSize: 16, lineHeight: 25, textAlign: 'center', maxWidth: 540, marginTop: 16 },
+  ctaBtns: { flexDirection: 'row', gap: 14, marginTop: 30 },
+  btnRed: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: P.red, paddingHorizontal: 26, paddingVertical: 15, borderRadius: 999 },
+  btnRedText: { color: P.cream, fontWeight: '800', fontSize: 15 },
+  btnOutline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderWidth: 1.5, borderColor: P.gold, paddingHorizontal: 26, paddingVertical: 15, borderRadius: 999 },
+  btnOutlineText: { color: P.espresso, fontWeight: '800', fontSize: 15 },
 });
