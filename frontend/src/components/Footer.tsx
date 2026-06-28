@@ -85,7 +85,8 @@ export function Footer() {
 
         {/* Centred brand + socials (compact) */}
         <View style={styles.brand}>
-          <Logo size={42} />
+          <Logo size={72} />
+          <Text style={styles.tag}>{BRAND.tagline}</Text>
           <View style={styles.social}>
             {SOCIAL.map((s) => (
               <Pressable key={s.icon} style={({ hovered }: any) => [styles.socialChip, hovered && styles.socialChipHover]} onPress={() => Linking.openURL(s.url)}>
@@ -130,7 +131,8 @@ const styles = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
 
-  brand: { alignItems: 'center', gap: 10 },
+  brand: { alignItems: 'center', gap: 12 },
+  tag: { color: colors.muted, fontSize: 13.5, textAlign: 'center', marginTop: 2 },
   social: { flexDirection: 'row', gap: 8 },
   socialChip: { width: 34, height: 34, borderRadius: 999, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   socialChipHover: { borderColor: colors.red, backgroundColor: colors.redSoft },
