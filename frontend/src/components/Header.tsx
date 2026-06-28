@@ -145,7 +145,7 @@ export function Header() {
       {!compact && profileOpen && user && (
         <>
           <Pressable style={styles.scrim} onPress={() => setProfileOpen(false)} />
-          <View style={[styles.dropdown, { top: insets.top + 64 }]}>
+          <Pop style={[styles.dropdown, { top: insets.top + 64 }]}>
             <View style={styles.ddHead}>
               <View style={styles.ddAvatar}>
                 <Text style={styles.avatarText}>{user.name?.[0]?.toUpperCase() || '?'}</Text>
@@ -162,7 +162,7 @@ export function Header() {
             <DDItem icon="cart-outline" label="My cart" onPress={() => go('/cart')} />
             <View style={styles.ddDivider} />
             <DDItem icon="log-out-outline" label="Log out" danger onPress={doLogout} />
-          </View>
+          </Pop>
         </>
       )}
 
@@ -390,6 +390,16 @@ function MegaMenu({
       </Animated.View>
     </View>
   );
+}
+
+// Shared entrance for header dropdowns: fade + slide-down on mount.
+function Pop({ style, children }: { style?: any; children: React.ReactNode }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: 1, duration: 160, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, []);
+  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] });
+  return <Animated.View style={[style, { opacity: v, transform: [{ translateY }] }]}>{children}</Animated.View>;
 }
 
 function DDItem({ icon, label, onPress, danger }: { icon: string; label: string; onPress: () => void; danger?: boolean }) {
