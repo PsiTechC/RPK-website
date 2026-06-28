@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import { BRAND } from '../lib/theme';
 import { Footer } from '../components/Footer';
 import { Container } from '../components/ui';
-import { Reveal, FadeInUp, CountUp } from '../components/Motion';
+import { Reveal, FadeInUp, CountUp, Float, Tilt, Marquee } from '../components/Motion';
 
 type Ion = keyof typeof Ionicons.glyphMap;
 
@@ -37,6 +37,21 @@ const STATS = [
   { num: '500+', label: 'Business clients' },
   { num: '15+', label: 'Countries served' },
   { num: '10+', label: 'Years of trust' },
+];
+
+// Floating grocery tags that overhang the hero image (web parallax + perpetual bob).
+const FLOATERS = [
+  { emoji: '🌶️', label: 'Spices', pos: 'fchipTL' as const, dist: 12, dur: 3000, delay: 0 },
+  { emoji: '🍚', label: 'Basmati', pos: 'fchipTR' as const, dist: 10, dur: 3600, delay: 300 },
+  { emoji: '🥜', label: 'Dry Fruits', pos: 'fchipBL' as const, dist: 9, dur: 3300, delay: 600 },
+  { emoji: '🫒', label: 'Oils & Ghee', pos: 'fchipBR' as const, dist: 12, dur: 3200, delay: 150 },
+];
+
+// Grocery ticker items for the scrolling band.
+const MARQUEE = [
+  { e: '🍚', t: 'Rice & Grains' }, { e: '🌶️', t: 'Spices & Masala' }, { e: '🫘', t: 'Pulses & Lentils' },
+  { e: '🥜', t: 'Dry Fruits & Nuts' }, { e: '🫒', t: 'Cooking Oils & Ghee' }, { e: '🍯', t: 'Sweeteners & Honey' },
+  { e: '🌾', t: 'Flour & Atta' }, { e: '🧂', t: 'Salt' }, { e: '🥤', t: 'Beverages' }, { e: '🥫', t: 'Sauces & Condiments' },
 ];
 
 const STEPS = [
@@ -88,27 +103,50 @@ export default function About() {
           </FadeInUp>
         </View>
 
-        {/* Full-width hero image + overlaid quote & rating */}
-        <Reveal style={{ marginTop: tight ? 28 : 44 }}>
-          <View style={[styles.heroImgWrap, { height: tight ? 280 : width < 980 ? 380 : 460 }]}>
-            <Image source={{ uri: HERO_IMG }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-            <View style={styles.heroImgShade} />
-            <View style={styles.heroImgContent}>
-              <Text style={[styles.heroQuote, { fontSize: tight ? 18 : 22 }]}>
-                “Quality food, traded worldwide from Dubai.”
-              </Text>
-              <View style={styles.ratingRow}>
-                <View style={{ flexDirection: 'row', gap: 2 }}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <Ionicons key={i} name="star" size={18} color={P.gold} />
-                  ))}
+        {/* Full-width hero image — 3D tilt on hover, with floating grocery tags */}
+        <Reveal style={{ marginTop: tight ? 28 : 56 }}>
+          <View style={styles.heroStage}>
+            <Tilt max={7} style={{ width: '100%' }}>
+              <View style={[styles.heroImgWrap, { height: tight ? 280 : width < 980 ? 380 : 460 }]}>
+                <Image source={{ uri: HERO_IMG }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+                <View style={styles.heroImgShade} />
+                <View style={styles.heroImgContent}>
+                  <Text style={[styles.heroQuote, { fontSize: tight ? 18 : 22 }]}>
+                    “Quality food, traded worldwide from Dubai.”
+                  </Text>
+                  <View style={styles.ratingRow}>
+                    <View style={{ flexDirection: 'row', gap: 2 }}>
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Ionicons key={i} name="star" size={18} color={P.gold} />
+                      ))}
+                    </View>
+                    <Text style={styles.ratingNum}>4.8</Text>
+                  </View>
                 </View>
-                <Text style={styles.ratingNum}>4.8</Text>
               </View>
-            </View>
+            </Tilt>
+
+            {!narrow && FLOATERS.map((f) => (
+              <Float key={f.label} style={[styles.fchip, styles[f.pos]]} distance={f.dist} duration={f.dur} delay={f.delay}>
+                <GChip emoji={f.emoji} label={f.label} />
+              </Float>
+            ))}
           </View>
         </Reveal>
       </Container>
+
+      {/* ───────── GROCERY TICKER ───────── */}
+      <View style={styles.marqueeBand}>
+        <Marquee gap={26} pxPerSec={48}>
+          {MARQUEE.map((m, i) => (
+            <View key={i} style={styles.mqItem}>
+              <Text style={styles.mqEmoji}>{m.e}</Text>
+              <Text style={styles.mqText}>{m.t}</Text>
+              <Text style={styles.mqDot}>✦</Text>
+            </View>
+          ))}
+        </Marquee>
+      </View>
 
       {/* ───────── 2 · EDITORIAL STATS ───────── */}
       <Container max={1180} style={{ paddingVertical: tight ? 44 : 72 }}>
@@ -133,18 +171,20 @@ export default function About() {
       {/* ───────── 3 · OUR STORY ───────── */}
       <Container max={1180} style={{ paddingBottom: tight ? 48 : 88 }}>
         <View style={[styles.storyRow, narrow && { flexDirection: 'column', gap: 40 }]}>
-          {/* LEFT — tilted collage */}
+          {/* LEFT — tilted collage with 3D parallax + floating badge */}
           <Reveal style={{ flex: narrow ? undefined : 1 }}>
-            <View style={[styles.collage, { height: tight ? 360 : 460 }]}>
-              {/* TODO: replace image */}
-              <Image source={{ uri: STORY_IMG_A }} style={[styles.collageImg, styles.collageA]} contentFit="cover" transition={300} />
-              {/* TODO: replace image */}
-              <Image source={{ uri: STORY_IMG_B }} style={[styles.collageImg, styles.collageB]} contentFit="cover" transition={300} />
-              <View style={styles.badge}>
-                <Ionicons name="sparkles" size={20} color={P.cream} />
-                <Text style={styles.badgeText}>SINCE{'\n'}DAY ONE</Text>
+            <Tilt max={8}>
+              <View style={[styles.collage, { height: tight ? 360 : 460 }]}>
+                {/* TODO: replace image */}
+                <Image source={{ uri: STORY_IMG_A }} style={[styles.collageImg, styles.collageA]} contentFit="cover" transition={300} />
+                {/* TODO: replace image */}
+                <Image source={{ uri: STORY_IMG_B }} style={[styles.collageImg, styles.collageB]} contentFit="cover" transition={300} />
+                <Float style={styles.badge} distance={8} duration={2800}>
+                  <Ionicons name="sparkles" size={20} color={P.cream} />
+                  <Text style={styles.badgeText}>SINCE{'\n'}DAY ONE</Text>
+                </Float>
               </View>
-            </View>
+            </Tilt>
           </Reveal>
 
           {/* RIGHT — story steps */}
@@ -230,6 +270,15 @@ function Chip({ icon, label }: { icon: Ion; label: string }) {
   );
 }
 
+function GChip({ emoji, label }: { emoji: string; label: string }) {
+  return (
+    <View style={styles.gchip}>
+      <Text style={styles.gchipEmoji}>{emoji}</Text>
+      <Text style={styles.gchipLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function MV({ icon, title, body }: { icon: Ion; title: string; body: string }) {
   return (
     <View style={{ flex: 1, gap: 14 }}>
@@ -255,7 +304,30 @@ const styles = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: P.gold, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { color: P.espresso, fontWeight: '700', fontSize: 13.5 },
 
+  heroStage: { position: 'relative', width: '100%' },
   heroImgWrap: { width: '100%', borderRadius: 32, overflow: 'hidden', backgroundColor: P.band },
+
+  /* floating grocery tags */
+  fchip: { position: 'absolute', zIndex: 6 },
+  fchipTL: { top: -22, left: -16 },
+  fchipTR: { top: -18, right: -10 },
+  fchipBL: { bottom: 30, left: -22 },
+  fchipBR: { bottom: -20, right: 24 },
+  gchip: {
+    flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FFFFFF',
+    paddingLeft: 10, paddingRight: 16, paddingVertical: 9, borderRadius: 999,
+    borderWidth: 1, borderColor: '#EFE3CF',
+    shadowColor: '#1E1813', shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 7,
+  },
+  gchipEmoji: { fontSize: 20 },
+  gchipLabel: { color: P.espresso, fontWeight: '800', fontSize: 13.5 },
+
+  /* grocery ticker */
+  marqueeBand: { backgroundColor: P.espresso, paddingVertical: 16 },
+  mqItem: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  mqEmoji: { fontSize: 18 },
+  mqText: { color: '#F6F1E9', fontWeight: '800', fontSize: 15, letterSpacing: 0.3 },
+  mqDot: { color: P.gold, fontSize: 13, marginLeft: 2 },
   heroImgShade: {
     ...StyleSheet.absoluteFillObject,
     ...(Platform.OS === 'web'

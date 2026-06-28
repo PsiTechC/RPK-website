@@ -171,6 +171,116 @@ export function Reveal({
   );
 }
 
+// Perpetual gentle bob (and optional drift): for decorative floating elements.
+// Runs on web + native; cleans up its loop on unmount.
+export function Float({
+  children,
+  distance = 10,
+  duration = 3200,
+  delay = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  distance?: number;
+  duration?: number;
+  delay?: number;
+  style?: ViewStyle;
+}) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration, delay, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [0, -distance] });
+  return <Animated.View style={[style, { transform: [{ translateY }] }]}>{children}</Animated.View>;
+}
+
+// Mouse-driven 3D tilt (web only). Tracks the pointer over the element and
+// rotates its child in perspective; springs back to flat on leave. On native it
+// renders the child unchanged.
+export function Tilt({
+  children,
+  max = 9,
+  perspective = 900,
+  style,
+}: {
+  children: React.ReactNode;
+  max?: number;
+  perspective?: number;
+  style?: ViewStyle;
+}) {
+  const rx = useRef(new Animated.Value(0)).current; // -1..1 (vertical)
+  const ry = useRef(new Animated.Value(0)).current; // -1..1 (horizontal)
+  if (Platform.OS !== 'web') return <View style={style}>{children}</View>;
+
+  const spring = (node: Animated.Value, toValue: number) =>
+    Animated.spring(node, { toValue, useNativeDriver: true, friction: 9, tension: 120 }).start();
+
+  const onMove = (e: any) => {
+    const t = e.currentTarget;
+    if (!t || !t.getBoundingClientRect) return;
+    const r = t.getBoundingClientRect();
+    spring(ry, ((e.clientX - r.left) / r.width - 0.5) * 2);
+    spring(rx, ((e.clientY - r.top) / r.height - 0.5) * 2);
+  };
+  const onLeave = () => {
+    spring(rx, 0);
+    spring(ry, 0);
+  };
+  const rotateX = rx.interpolate({ inputRange: [-1, 1], outputRange: [`${max}deg`, `-${max}deg`] });
+  const rotateY = ry.interpolate({ inputRange: [-1, 1], outputRange: [`-${max}deg`, `${max}deg`] });
+
+  return (
+    <View style={style} onPointerMove={onMove} onPointerLeave={onLeave}>
+      <Animated.View style={{ transform: [{ perspective }, { rotateX }, { rotateY }] as any }}>{children}</Animated.View>
+    </View>
+  );
+}
+
+// Infinite horizontal ticker: renders its row twice and scrolls left forever.
+// Measures the row so it works at any width; pauses cleanly on unmount.
+export function Marquee({
+  children,
+  gap = 40,
+  pxPerSec = 55,
+  style,
+}: {
+  children: React.ReactNode;
+  gap?: number;
+  pxPerSec?: number;
+  style?: ViewStyle;
+}) {
+  const [w, setW] = useState(0);
+  const x = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!w) return;
+    x.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(x, { toValue: -(w + gap), duration: ((w + gap) / pxPerSec) * 1000, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [w]);
+  return (
+    <View style={[{ overflow: 'hidden' }, style]}>
+      <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: x }] }}>
+        <View style={{ flexDirection: 'row', gap }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+          {children}
+        </View>
+        <View style={{ flexDirection: 'row', gap, marginLeft: gap }} aria-hidden>
+          {children}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
 // Hook that returns an animated scale + hover handlers for web hover-lift.
 export function useHoverScale(to = 1.04) {
   const scale = useRef(new Animated.Value(1)).current;
