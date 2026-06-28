@@ -23,39 +23,31 @@ const SOCIAL = [
   { icon: 'logo-whatsapp' as const, url: `https://wa.me/${WA}` },
 ];
 
-// Compact, light, professional footer matching the warm neutral theme.
+// Compact, light, professional footer — 3 info columns, then the brand logo
+// centred above the bottom bar.
 export function Footer() {
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const compact = width < 860;
+  const compact = width < 820;
 
   return (
     <View style={styles.wrap}>
       <View style={styles.inner}>
         <View style={[styles.cols, compact && { flexDirection: 'column', gap: 26 }]}>
-          {/* Brand */}
-          <View style={[styles.col, { gap: 12, maxWidth: compact ? undefined : 260 }]}>
-            <Logo size={44} />
-            <Text style={styles.tag}>{BRAND.tagline}</Text>
-            <View style={styles.social}>
-              {SOCIAL.map((s) => (
-                <Pressable key={s.icon} style={({ hovered }: any) => [styles.socialChip, hovered && styles.socialChipHover]} onPress={() => Linking.openURL(s.url)}>
-                  <Ionicons name={s.icon} size={16} color={colors.ink} />
+          {/* Quick links */}
+          <View style={styles.col}>
+            <Text style={styles.colTitle}>Quick Links</Text>
+            <View style={styles.linksGrid}>
+              {LINKS.map((l) => (
+                <Pressable key={l.href} style={({ hovered }: any) => [styles.linkRow, hovered && { opacity: 0.7 }]} onPress={() => router.push(l.href as any)}>
+                  <Ionicons name="chevron-forward" size={12} color={colors.red} />
+                  <Text style={styles.link}>{l.label}</Text>
                 </Pressable>
               ))}
             </View>
           </View>
 
-          {/* Quick links */}
-          <View style={styles.col}>
-            <Text style={styles.colTitle}>Quick Links</Text>
-            {LINKS.map((l) => (
-              <Pressable key={l.href} style={({ hovered }: any) => [styles.linkRow, hovered && { opacity: 0.7 }]} onPress={() => router.push(l.href as any)}>
-                <Ionicons name="chevron-forward" size={12} color={colors.red} />
-                <Text style={styles.link}>{l.label}</Text>
-              </Pressable>
-            ))}
-          </View>
+          {!compact && <View style={styles.vDivider} />}
 
           {/* Contact */}
           <View style={styles.col}>
@@ -79,6 +71,8 @@ export function Footer() {
             </View>
           </View>
 
+          {!compact && <View style={styles.vDivider} />}
+
           {/* Office */}
           <View style={styles.col}>
             <Text style={styles.colTitle}>Office</Text>
@@ -88,6 +82,18 @@ export function Footer() {
         </View>
 
         <View style={styles.divider} />
+
+        {/* Centred brand + socials (compact) */}
+        <View style={styles.brand}>
+          <Logo size={42} />
+          <View style={styles.social}>
+            {SOCIAL.map((s) => (
+              <Pressable key={s.icon} style={({ hovered }: any) => [styles.socialChip, hovered && styles.socialChipHover]} onPress={() => Linking.openURL(s.url)}>
+                <Ionicons name={s.icon} size={16} color={colors.ink} />
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
         <View style={[styles.bottom, compact && { flexDirection: 'column', gap: 6 }]}>
           <Text style={styles.copy}>© {new Date().getFullYear()} {BRAND.name}. All rights reserved.</Text>
@@ -100,18 +106,15 @@ export function Footer() {
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 'auto', backgroundColor: '#F2EFE9', borderTopWidth: 1, borderTopColor: colors.border },
-  inner: { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingTop: 32, paddingBottom: 16 },
+  inner: { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingTop: 30, paddingBottom: 16 },
 
   cols: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 36 },
-  col: { flex: 1, gap: 7, minWidth: 150 },
+  col: { flex: 1, gap: 7, minWidth: 160 },
   colTitle: { color: colors.ink, fontWeight: '900', fontSize: 12.5, letterSpacing: 0.6, marginBottom: 4, textTransform: 'uppercase' },
+  vDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
 
-  tag: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  social: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  socialChip: { width: 34, height: 34, borderRadius: 999, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  socialChipHover: { borderColor: colors.red, backgroundColor: colors.redSoft },
-
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
+  linksGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 20, rowGap: 0 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, width: '44%' },
   link: { color: colors.text, fontSize: 14, fontWeight: '600' },
 
   cRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 3 },
@@ -126,6 +129,12 @@ const styles = StyleSheet.create({
   ctaGhostText: { color: colors.ink, fontWeight: '800', fontSize: 12.5 },
 
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
-  bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+
+  brand: { alignItems: 'center', gap: 10 },
+  social: { flexDirection: 'row', gap: 8 },
+  socialChip: { width: 34, height: 34, borderRadius: 999, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  socialChipHover: { borderColor: colors.red, backgroundColor: colors.redSoft },
+
+  bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 },
   copy: { color: colors.muted, fontSize: 12.5 },
 });
