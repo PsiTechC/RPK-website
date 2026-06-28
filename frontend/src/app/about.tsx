@@ -32,7 +32,37 @@ const PHOTOS = {
   oils: IMG('1474979266404-7eaacbcd87c5'), // oils
   pulses: IMG('1610725664285-7c57e6eeac3f', 1100), // pulses & lentils
   warehouse: IMG('1601000938259-9e92002320b2', 1000), // sacks / warehouse
+  shelf: IMG('1583258292688-d0213dc5a3a8', 1100), // grocery store shelves
+  port: IMG('1494412574643-ff11b0a5c1c3', 1300), // container port (import/export)
+  truck: IMG('1601584115197-04ecc0da31d7', 1000), // cargo truck / logistics
 };
+
+// Company facts (verified, see BRAND).
+const FACTS: { icon: Ion; label: string; value: string }[] = [
+  { icon: 'business-outline', label: 'Legal entity', value: 'RPK For Food Trading Co. L.L.C' },
+  { icon: 'location-outline', label: 'Headquarters', value: 'Al Mankhool, Dubai — UAE' },
+  { icon: 'cube-outline', label: 'Product range', value: '100+ grocery & food lines' },
+  { icon: 'earth-outline', label: 'Markets served', value: '15+ countries worldwide' },
+  { icon: 'swap-horizontal-outline', label: 'Trade model', value: 'Import · Export · Wholesale & Retail' },
+  { icon: 'shield-checkmark-outline', label: 'Quality', value: 'Inspected & graded consignments' },
+];
+
+// How import / export works — 5-step process.
+const PROCESS: { n: string; icon: Ion; title: string; desc: string }[] = [
+  { n: '01', icon: 'chatbubbles-outline', title: 'Enquiry & requirements', desc: 'Tell us the product, grade, quantity and destination. Our team replies fast with the right options.' },
+  { n: '02', icon: 'pricetags-outline', title: 'Sourcing & quotation', desc: 'We source from trusted growers and mills and send a clear, competitive quotation.' },
+  { n: '03', icon: 'document-text-outline', title: 'Quality check & documents', desc: 'Every consignment is inspected and graded; export paperwork and certificates are prepared.' },
+  { n: '04', icon: 'boat-outline', title: 'Shipping & logistics', desc: 'Sea or air freight arranged from Dubai, with tracking and reliable timelines.' },
+  { n: '05', icon: 'checkmark-done-outline', title: 'Delivery & support', desc: 'Goods delivered to your market — with ongoing support for repeat and bulk orders.' },
+];
+
+// TODO: replace with real team members & photos.
+const TEAM: { name: string; role: string; photo: string }[] = [
+  { name: 'Managing Director', role: 'Founder & Strategy', photo: IMG('1500648767791-00dcc994a43e', 500) },
+  { name: 'Head of Operations', role: 'Sourcing & Quality', photo: IMG('1573496359142-b8d87734a5a2', 500) },
+  { name: 'Import / Export Manager', role: 'Logistics & Trade', photo: IMG('1507003211169-0a1dd7228f2d', 500) },
+  { name: 'Client Relations', role: 'Sales & Support', photo: IMG('1494790108377-be9c29b29330', 500) },
+];
 
 const STATS = [
   { num: '100+', label: 'Grocery products' },
@@ -144,6 +174,32 @@ export default function About() {
         </Reveal>
       </Container>
 
+      {/* ───────── COMPANY DETAILS ───────── */}
+      <Container max={1180} style={{ paddingBottom: tight ? 44 : 80 }}>
+        <View style={[styles.coRow, narrow && { flexDirection: 'column', gap: 28 }]}>
+          <Reveal style={{ flex: narrow ? undefined : 1 }}>
+            <View style={[styles.coImgWrap, { height: tight ? 280 : 420 }]}>
+              <PhotoTile uri={PHOTOS.shelf} style={StyleSheet.absoluteFill as any} tag="Wholesale & Retail" />
+            </View>
+          </Reveal>
+          <Reveal style={{ flex: narrow ? undefined : 1.05, gap: 16 }}>
+            <Text style={styles.sectionKicker}>WHO WE ARE</Text>
+            <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 30, lineHeight: (tight ? 24 : 30) * 1.12 }]}>
+              A Dubai trading house built on <Text style={styles.displayItalic}>trust</Text>
+            </Text>
+            <Text style={styles.intro}>
+              We bring dependable groceries from source to shelf — combining careful sourcing, honest pricing
+              and reliable logistics so businesses everywhere can stock quality food with confidence.
+            </Text>
+            <View style={styles.factGrid}>
+              {FACTS.map((f) => (
+                <FactCard key={f.label} icon={f.icon} label={f.label} value={f.value} half={!narrow} />
+              ))}
+            </View>
+          </Reveal>
+        </View>
+      </Container>
+
       {/* ───────── 4 · OUR STORY ───────── */}
       <Container max={1180} style={{ paddingBottom: tight ? 48 : 88 }}>
         <View style={[styles.storyRow, narrow && { flexDirection: 'column', gap: 36 }]}>
@@ -176,6 +232,68 @@ export default function About() {
               ))}
             </View>
           </Reveal>
+        </View>
+      </Container>
+
+      {/* ───────── HOW IMPORT / EXPORT WORKS ───────── */}
+      <View style={styles.processBand}>
+        <Container max={1180} style={{ paddingVertical: tight ? 48 : 84 }}>
+          <Reveal style={{ alignItems: 'center', gap: 10, marginBottom: tight ? 28 : 44 }}>
+            <Text style={styles.sectionKicker}>HOW IMPORT & EXPORT WORKS</Text>
+            <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 32, textAlign: 'center' }]}>
+              From your enquiry to <Text style={styles.displayItalic}>delivered worldwide</Text>
+            </Text>
+            <Text style={[styles.intro, { textAlign: 'center', maxWidth: 620 }]}>
+              A simple, transparent process — managed end to end by our Dubai team.
+            </Text>
+          </Reveal>
+
+          <View style={[styles.procRow, narrow && { flexDirection: 'column', gap: 28 }]}>
+            {/* Feature image */}
+            <Reveal style={{ flex: narrow ? undefined : 1 }}>
+              <View style={[styles.procImgWrap, { height: tight ? 300 : 460 }]}>
+                <PhotoTile uri={PHOTOS.port} style={StyleSheet.absoluteFill as any}>
+                  <View style={styles.procImgOverlay}>
+                    <Ionicons name="boat" size={22} color={P.cream} />
+                    <Text style={styles.procImgText}>Shipped from Dubai by sea & air</Text>
+                  </View>
+                </PhotoTile>
+              </View>
+            </Reveal>
+
+            {/* Steps timeline */}
+            <View style={{ flex: narrow ? undefined : 1.05, gap: 14 }}>
+              {PROCESS.map((s, i) => (
+                <Reveal key={s.n} delay={i * 70}>
+                  <View style={styles.pstep}>
+                    <View style={styles.pstepIcon}><Ionicons name={s.icon} size={19} color={P.cream} /></View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.pstepHead}>
+                        <Text style={styles.pstepN}>{s.n}</Text>
+                        <Text style={styles.pstepTitle}>{s.title}</Text>
+                      </View>
+                      <Text style={styles.pstepDesc}>{s.desc}</Text>
+                    </View>
+                  </View>
+                </Reveal>
+              ))}
+            </View>
+          </View>
+        </Container>
+      </View>
+
+      {/* ───────── MEET THE TEAM ───────── */}
+      <Container max={1180} style={{ paddingVertical: tight ? 48 : 84 }}>
+        <Reveal style={{ alignItems: 'center', gap: 10, marginBottom: tight ? 26 : 40 }}>
+          <Text style={styles.sectionKicker}>MEET THE TEAM</Text>
+          <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 32, textAlign: 'center' }]}>
+            The people behind <Text style={styles.displayItalic}>every shipment</Text>
+          </Text>
+        </Reveal>
+        <View style={styles.teamGrid}>
+          {TEAM.map((m, i) => (
+            <TeamCard key={m.name} m={m} i={i} width={narrow ? (tight ? '100%' : '47%') : 248} />
+          ))}
         </View>
       </Container>
 
@@ -233,6 +351,36 @@ function PhotoTile({ uri, tag, style, children }: { uri: string; tag?: string; s
         </View>
       ) : null}
     </Pressable>
+  );
+}
+
+function FactCard({ icon, label, value, half }: { icon: Ion; label: string; value: string; half?: boolean }) {
+  const { scale, onHoverIn, onHoverOut } = useHoverScale(1.03);
+  return (
+    <Pressable onHoverIn={onHoverIn} onHoverOut={onHoverOut} style={[styles.factCol, half && { width: '48%' }]}>
+      <Animated.View style={[styles.factCard, { transform: [{ scale }] }]}>
+        <View style={styles.factIcon}><Ionicons name={icon} size={18} color={P.red} /></View>
+        <Text style={styles.factLabel}>{label}</Text>
+        <Text style={styles.factValue}>{value}</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function TeamCard({ m, i, width }: { m: { name: string; role: string; photo: string }; i: number; width: number | string }) {
+  const { scale, onHoverIn, onHoverOut } = useHoverScale(1.04);
+  return (
+    <Reveal delay={i * 90} style={{ width: width as any }}>
+      <Pressable onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
+        <Animated.View style={[styles.teamCard, { transform: [{ scale }] }]}>
+          <View style={styles.teamPhoto}>
+            <Image source={{ uri: m.photo }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+          </View>
+          <Text style={styles.teamName}>{m.name}</Text>
+          <Text style={styles.teamRole}>{m.role}</Text>
+        </Animated.View>
+      </Pressable>
+    </Reveal>
   );
 }
 
@@ -295,6 +443,36 @@ const styles = StyleSheet.create({
   statDivider: { borderLeftWidth: 1, borderLeftColor: P.gold },
   statNum: { color: P.red, fontWeight: '900', letterSpacing: -0.5 },
   statLabel: { color: P.muted, fontSize: 13.5, fontWeight: '600', textAlign: 'center', letterSpacing: 0.3 },
+
+  /* COMPANY DETAILS */
+  coRow: { flexDirection: 'row', alignItems: 'center', gap: 48 },
+  coImgWrap: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: P.band },
+  factGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14, marginTop: 8 },
+  factCol: { width: '100%' },
+  factCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#ECE3D4', padding: 16, gap: 8, height: '100%' },
+  factIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#FBEAE8', alignItems: 'center', justifyContent: 'center' },
+  factLabel: { color: P.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  factValue: { color: P.espresso, fontSize: 14.5, fontWeight: '800', lineHeight: 20 },
+
+  /* PROCESS */
+  processBand: { backgroundColor: P.band },
+  procRow: { flexDirection: 'row', alignItems: 'stretch', gap: 48 },
+  procImgWrap: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: '#E3D8C6' },
+  procImgOverlay: { padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  procImgText: { color: P.cream, fontWeight: '800', fontSize: 15 },
+  pstep: { flexDirection: 'row', gap: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#ECE3D4', padding: 16 },
+  pstepIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: P.red, alignItems: 'center', justifyContent: 'center' },
+  pstepHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  pstepN: { color: P.gold, fontWeight: '900', fontSize: 15 },
+  pstepTitle: { color: P.espresso, fontWeight: '800', fontSize: 16, flexShrink: 1 },
+  pstepDesc: { color: P.muted, fontSize: 13.5, lineHeight: 20 },
+
+  /* TEAM */
+  teamGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, justifyContent: 'center' },
+  teamCard: { backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#ECE3D4', padding: 14, alignItems: 'center', gap: 4 },
+  teamPhoto: { width: '100%', aspectRatio: 1, borderRadius: 14, overflow: 'hidden', backgroundColor: P.band, marginBottom: 10 },
+  teamName: { color: P.espresso, fontWeight: '900', fontSize: 16, textAlign: 'center' },
+  teamRole: { color: P.red, fontWeight: '700', fontSize: 13, textAlign: 'center' },
 
   /* STORY */
   storyRow: { flexDirection: 'row', alignItems: 'center', gap: 56 },
