@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions, Platform, Animated, Easing } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
 import { api, Category } from '../lib/api';
+import { categoryVisual } from '../lib/foodVisuals';
 import { useApp } from '../lib/store';
 import { Logo } from './Logo';
 import { NotificationBell } from './NotificationBell';
@@ -335,18 +337,57 @@ function CategoryNavItem({
           <Text style={[styles.chevron, { color }]}>{open ? '▴' : '▾'}</Text>
         </Pressable>
       </View>
-      {open && (
-        <View style={styles.catDropdown}>
-          <Pressable style={({ hovered }: any) => [styles.catDropItem, styles.catDropAll, hovered && styles.catDropItemHover]} onPress={() => onSelect('all')}>
-            <Text style={[styles.catDropText, { color: colors.red }]}>All Categories</Text>
-          </Pressable>
-          {categories.map((c) => (
-            <Pressable key={c.id} style={({ hovered }: any) => [styles.catDropItem, hovered && styles.catDropItemHover]} onPress={() => onSelect(c.slug)}>
-              <Text style={styles.catDropText} numberOfLines={1}>{c.name}</Text>
-            </Pressable>
-          ))}
+      {open && <MegaMenu categories={categories} onSelect={onSelect} onOpenAll={onOpenAll} />}
+    </View>
+  );
+}
+
+const FEATURE_IMG = 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=520&q=70';
+
+// SAFCO-style mega-menu: a featured image panel + a multi-column category grid,
+// with a smooth fade/slide-in on open.
+function MegaMenu({
+  categories,
+  onSelect,
+  onOpenAll,
+}: {
+  categories: Category[];
+  onSelect: (slug: string) => void;
+  onOpenAll: () => void;
+}) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: 1, duration: 190, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, []);
+  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] });
+
+  return (
+    <View style={styles.megaWrap}>
+      <Animated.View style={[styles.mega, { opacity: v, transform: [{ translateY }] }]}>
+        {/* Featured panel */}
+        <Pressable style={styles.megaFeature} onPress={onOpenAll}>
+          <Image source={{ uri: FEATURE_IMG }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
+          <View style={styles.megaFeatureOverlay} />
+          <View style={styles.megaFeatureBody}>
+            <Text style={styles.megaKicker}>EXPLORE</Text>
+            <Text style={styles.megaTitle}>Shop by Category</Text>
+            <View style={styles.megaBtn}><Text style={styles.megaBtnText}>View all products →</Text></View>
+          </View>
+        </Pressable>
+
+        {/* Category grid */}
+        <View style={styles.megaGrid}>
+          {categories.map((c) => {
+            const vis = categoryVisual(c.slug);
+            return (
+              <Pressable key={c.id} style={({ hovered }: any) => [styles.megaItem, hovered && styles.megaItemHover]} onPress={() => onSelect(c.slug)}>
+                <Text style={styles.megaEmoji}>{vis.emoji}</Text>
+                <Text style={styles.megaItemText} numberOfLines={1}>{c.name}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-      )}
+      </Animated.View>
     </View>
   );
 }
@@ -387,31 +428,31 @@ const styles = StyleSheet.create({
   navItemActive: { backgroundColor: 'rgba(226,35,26,0.08)', borderColor: 'rgba(226,35,26,0.18)' },
   navItemText: { fontWeight: '800', fontSize: 13.5, letterSpacing: 0.1 },
   catLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  catDropdown: {
-    position: 'absolute' as any,
-    // Flush under the nav item (no gap) so the hover stays unbroken when the
-    // pointer moves from the label down onto the menu. The marginTop keeps a
-    // small visual offset while the transparent top border bridges the hover.
-    top: '100%',
-    borderTopWidth: 8,
-    borderTopColor: 'transparent',
-    left: 0,
-    width: 400,
+  // Mega-menu. The wrapper keeps a transparent top band so the hover bridge from
+  // the nav item to the panel is unbroken; the panel itself is the animated card.
+  megaWrap: { position: 'absolute' as any, top: '100%', left: 0, paddingTop: 10, zIndex: 220 },
+  mega: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    width: 700,
     backgroundColor: colors.white,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    zIndex: 220,
+    overflow: 'hidden',
     ...shadow.card,
   },
-  catDropItem: { width: '50%', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8 },
-  catDropItemHover: { backgroundColor: colors.offWhite },
-  catDropAll: { width: '100%', borderBottomWidth: 1, borderBottomColor: colors.line, borderRadius: 0, marginBottom: 4 },
-  catDropText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  megaFeature: { width: 212, justifyContent: 'flex-end', backgroundColor: colors.navy },
+  megaFeatureOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,14,11,0.46)' },
+  megaFeatureBody: { padding: 16, gap: 6 },
+  megaKicker: { color: 'rgba(255,255,255,0.85)', fontWeight: '800', fontSize: 10, letterSpacing: 1.4 },
+  megaTitle: { color: colors.white, fontWeight: '900', fontSize: 18, lineHeight: 22 },
+  megaBtn: { alignSelf: 'flex-start', backgroundColor: colors.red, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 6 },
+  megaBtnText: { color: colors.white, fontWeight: '800', fontSize: 12 },
+  megaGrid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', padding: 10, alignContent: 'flex-start' },
+  megaItem: { width: '33.33%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 11, borderRadius: 10 },
+  megaItemHover: { backgroundColor: colors.offWhite },
+  megaEmoji: { fontSize: 17 },
+  megaItemText: { color: colors.text, fontWeight: '700', fontSize: 13, flex: 1 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   cartBtn: { padding: 6 },
   cartIcon: { fontSize: 22 },
