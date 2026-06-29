@@ -71,10 +71,23 @@ const STATS = [
   { num: '10+', label: 'Years of trust' },
 ];
 
-const STEPS = [
-  { n: '01', title: 'Sourced with care', desc: 'We partner directly with trusted growers and mills for consistent, honest quality.' },
-  { n: '02', title: 'Checked for quality', desc: 'Every consignment is inspected and graded before it leaves our Dubai warehouse.' },
-  { n: '03', title: 'Traded worldwide', desc: 'Wholesale and retail supply, shipped reliably to markets across the globe.' },
+// Milestone timeline (editorial — adjust years/copy to the real history).
+const MILESTONES: { year: string; title: string; desc: string }[] = [
+  { year: '2014', title: 'Founded in Dubai', desc: 'RPK For Food Trading begins sourcing and supplying quality groceries from Al Mankhool, Dubai.' },
+  { year: '2016', title: 'First exports', desc: 'Expanded beyond the UAE — shipping rice, spices and pulses to neighbouring GCC markets.' },
+  { year: '2019', title: 'A wider range', desc: 'Grew the catalogue to 100+ grocery and food lines across 11 categories.' },
+  { year: '2022', title: 'Global reach', desc: 'Trusted supply to 15+ countries with reliable sea and air logistics.' },
+  { year: 'Today', title: 'Wholesale & retail', desc: 'Serving businesses and retail markets worldwide with quality you can rely on.' },
+];
+
+// Regions we trade with.
+const MARKETS: { icon: Ion; region: string; note: string }[] = [
+  { icon: 'business-outline', region: 'GCC & Middle East', note: 'UAE, KSA, Oman, Qatar, Bahrain, Kuwait' },
+  { icon: 'restaurant-outline', region: 'Indian Subcontinent', note: 'India, Pakistan, Sri Lanka' },
+  { icon: 'leaf-outline', region: 'Africa', note: 'East & West African markets' },
+  { icon: 'globe-outline', region: 'Europe', note: 'Selected EU importers' },
+  { icon: 'navigate-outline', region: 'Asia Pacific', note: 'Southeast Asian markets' },
+  { icon: 'earth-outline', region: 'Worldwide', note: 'Project & bulk orders on request' },
 ];
 
 export default function About() {
@@ -214,24 +227,32 @@ export default function About() {
             </View>
           </Reveal>
 
-          {/* RIGHT — story steps */}
-          <Reveal style={{ flex: narrow ? undefined : 1, gap: 18 }}>
-            <Text style={styles.sectionKicker}>OUR STORY</Text>
-            <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 30, lineHeight: (tight ? 24 : 30) * 1.12 }]}>
-              From a Dubai warehouse to <Text style={styles.displayItalic}>markets worldwide</Text>
-            </Text>
-            <View style={{ gap: 14, marginTop: 6 }}>
-              {STEPS.map((s) => (
-                <View key={s.n} style={styles.step}>
-                  <Text style={styles.stepNum}>{s.n}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.stepTitle}>{s.title}</Text>
-                    <Text style={styles.stepDesc}>{s.desc}</Text>
+          {/* RIGHT — milestone timeline */}
+          <View style={{ flex: narrow ? undefined : 1, gap: 18 }}>
+            <Reveal style={{ gap: 8 }}>
+              <Text style={styles.sectionKicker}>OUR STORY</Text>
+              <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 30, lineHeight: (tight ? 24 : 30) * 1.12 }]}>
+                From a Dubai warehouse to <Text style={styles.displayItalic}>markets worldwide</Text>
+              </Text>
+            </Reveal>
+            <View style={{ marginTop: 4 }}>
+              {MILESTONES.map((m, i) => (
+                <Reveal key={m.year} delay={i * 80}>
+                  <View style={styles.tlRow}>
+                    <View style={styles.tlRail}>
+                      <View style={styles.tlDot} />
+                      {i < MILESTONES.length - 1 && <View style={styles.tlLine} />}
+                    </View>
+                    <View style={styles.tlBody}>
+                      <Text style={styles.tlYear}>{m.year}</Text>
+                      <Text style={styles.tlTitle}>{m.title}</Text>
+                      <Text style={styles.tlDesc}>{m.desc}</Text>
+                    </View>
                   </View>
-                </View>
+                </Reveal>
               ))}
             </View>
-          </Reveal>
+          </View>
         </View>
       </Container>
 
@@ -297,16 +318,42 @@ export default function About() {
         </View>
       </Container>
 
-      {/* ───────── 5 · MISSION & VISION ───────── */}
+      {/* ───────── VISION · PURPOSE · FOUNDER QUOTE ───────── */}
       <View style={styles.darkBand}>
-        <Container max={1180} style={{ paddingVertical: tight ? 48 : 80 }}>
+        <Container max={1180} style={{ paddingVertical: tight ? 52 : 84 }}>
           <View style={[styles.mvRow, narrow && { flexDirection: 'column', gap: 36 }]}>
-            <MV icon="leaf-outline" title="Our Mission" body="To make quality food accessible — sourcing dependable groceries and delivering them with fairness, consistency and care, from Dubai to every market we serve." />
+            <MV icon="flag-outline" title="Our Vision" body="To be the most trusted food trading house bridging producers and markets worldwide — known for integrity, reliability and the quality behind every shipment." />
             <View style={narrow ? styles.mvDividerH : styles.mvDividerV} />
-            <MV icon="boat-outline" title="Our Vision" body="To be the most trusted food trading house bridging producers and markets worldwide — known for integrity, reliability and the quality behind every shipment." />
+            <MV icon="sparkles-outline" title="Our Purpose" body="To make quality food accessible — sourcing dependable groceries and delivering them with fairness, consistency and care, from Dubai to every market we serve." />
           </View>
+
+          <Reveal style={styles.quoteWrap}>
+            <Ionicons name="chatbox-ellipses-outline" size={28} color={P.gold} />
+            <Text style={[styles.quoteText, { fontSize: tight ? 19 : 26, lineHeight: (tight ? 19 : 26) * 1.35 }]}>
+              “Quality, trust and consistency — that’s what we put into every shipment.”
+            </Text>
+            <Text style={styles.quoteAttr}>— Founder, RPK For Food Trading Co. L.L.C</Text>
+          </Reveal>
         </Container>
       </View>
+
+      {/* ───────── MARKETS WE SERVE ───────── */}
+      <Container max={1180} style={{ paddingVertical: tight ? 48 : 84 }}>
+        <Reveal style={{ alignItems: 'center', gap: 10, marginBottom: tight ? 26 : 40 }}>
+          <Text style={styles.sectionKicker}>GLOBAL REACH</Text>
+          <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 32, textAlign: 'center' }]}>
+            Markets we <Text style={styles.displayItalic}>serve</Text>
+          </Text>
+          <Text style={[styles.intro, { textAlign: 'center', maxWidth: 620 }]}>
+            From our Dubai base we supply businesses across the globe — reliably and at the right price.
+          </Text>
+        </Reveal>
+        <View style={styles.marketGrid}>
+          {MARKETS.map((m, i) => (
+            <RegionCard key={m.region} icon={m.icon} region={m.region} note={m.note} i={i} width={narrow ? (tight ? '100%' : '47%') : '31%'} />
+          ))}
+        </View>
+      </Container>
 
       {/* ───────── 6 · CTA ───────── */}
       <Container max={900} style={{ paddingVertical: tight ? 56 : 96, alignItems: 'center' }}>
@@ -378,6 +425,23 @@ function TeamCard({ m, i, width }: { m: { name: string; role: string; photo: str
           </View>
           <Text style={styles.teamName}>{m.name}</Text>
           <Text style={styles.teamRole}>{m.role}</Text>
+        </Animated.View>
+      </Pressable>
+    </Reveal>
+  );
+}
+
+function RegionCard({ icon, region, note, i, width }: { icon: Ion; region: string; note: string; i: number; width: number | string }) {
+  const { scale, onHoverIn, onHoverOut } = useHoverScale(1.03);
+  return (
+    <Reveal delay={i * 70} style={{ width: width as any }}>
+      <Pressable onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
+        <Animated.View style={[styles.regionCard, { transform: [{ scale }] }]}>
+          <View style={styles.regionIcon}><Ionicons name={icon} size={20} color={P.red} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.regionTitle}>{region}</Text>
+            <Text style={styles.regionNote}>{note}</Text>
+          </View>
         </Animated.View>
       </Pressable>
     </Reveal>
@@ -485,10 +549,28 @@ const styles = StyleSheet.create({
   storyBadgeText: { color: P.cream, fontWeight: '900', fontSize: 11, letterSpacing: 1, lineHeight: 14 },
   sectionKicker: { color: P.red, fontWeight: '800', fontSize: 12, letterSpacing: 2 },
   sectionHead: { color: P.espresso, fontWeight: '900', letterSpacing: -0.3 },
-  step: { flexDirection: 'row', gap: 16, borderLeftWidth: 2, borderLeftColor: P.gold, paddingLeft: 16, paddingVertical: 4 },
-  stepNum: { color: P.gold, fontWeight: '900', fontSize: 22, width: 40 },
-  stepTitle: { color: P.espresso, fontWeight: '800', fontSize: 16 },
-  stepDesc: { color: P.muted, fontSize: 14, lineHeight: 21, marginTop: 3 },
+
+  /* TIMELINE */
+  tlRow: { flexDirection: 'row', gap: 16 },
+  tlRail: { width: 18, alignItems: 'center' },
+  tlDot: { width: 16, height: 16, borderRadius: 999, backgroundColor: P.red, borderWidth: 3, borderColor: P.cream, marginTop: 4, shadowColor: P.red, shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  tlLine: { width: 2, flex: 1, backgroundColor: '#E2D6C2', marginTop: 4 },
+  tlBody: { flex: 1, paddingBottom: 22 },
+  tlYear: { color: P.gold, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
+  tlTitle: { color: P.espresso, fontWeight: '800', fontSize: 16, marginTop: 2 },
+  tlDesc: { color: P.muted, fontSize: 14, lineHeight: 21, marginTop: 3 },
+
+  /* QUOTE */
+  quoteWrap: { alignItems: 'center', gap: 12, marginTop: 44, paddingTop: 40, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.12)' },
+  quoteText: { color: '#FFFFFF', fontWeight: '800', textAlign: 'center', maxWidth: 760, letterSpacing: -0.2 },
+  quoteAttr: { color: P.gold, fontWeight: '700', fontSize: 14 },
+
+  /* MARKETS */
+  marketGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center' },
+  regionCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#ECE3D4', padding: 16 },
+  regionIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FBEAE8', alignItems: 'center', justifyContent: 'center' },
+  regionTitle: { color: P.espresso, fontWeight: '900', fontSize: 15 },
+  regionNote: { color: P.muted, fontSize: 13, lineHeight: 18, marginTop: 2 },
 
   /* MISSION & VISION */
   darkBand: { backgroundColor: P.espresso },
