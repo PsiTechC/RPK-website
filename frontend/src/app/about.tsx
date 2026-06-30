@@ -108,7 +108,7 @@ export default function About() {
       {/* ───────── 1 · HERO (dark) ───────── */}
       <View style={styles.hero}>
         <Container max={1180} style={{ paddingVertical: tight ? 52 : 80 }}>
-          <View style={[styles.heroRow, narrow && { flexDirection: 'column', gap: 28 }]}>
+          <View style={[styles.heroRow, narrow && { flexDirection: 'column', gap: 28, alignItems: 'stretch' }]}>
             <View style={{ flex: narrow ? undefined : 1.1 }}>
               <FadeInUp delay={40}>
                 <View style={styles.kickerRow}>
@@ -136,8 +136,8 @@ export default function About() {
               </FadeInUp>
             </View>
 
-            <FadeInUp delay={220} style={{ flex: narrow ? undefined : 0.9, width: narrow ? '100%' : undefined }}>
-              <ImageTile uri={PIC.heroShip} caption="Shipped from Dubai by sea & air" style={[styles.heroImg, { height: tight ? 240 : 360 }]} />
+            <FadeInUp delay={220} style={{ flex: narrow ? undefined : 0.92, width: narrow ? '100%' : undefined, alignSelf: 'stretch' }}>
+              <ImageTile uri={PIC.port} caption="Trusted worldwide logistics" style={[styles.heroImg, narrow ? { height: tight ? 260 : 320 } : { flex: 1, minHeight: 440 }]} />
             </FadeInUp>
           </View>
 
@@ -254,7 +254,7 @@ export default function About() {
           </Reveal>
           <View style={[styles.procRow, narrow && { flexDirection: 'column', gap: 28 }]}>
             <Reveal style={{ flex: narrow ? undefined : 1, width: narrow ? '100%' : undefined }}>
-              <ImageTile uri={PIC.port} caption="Container shipping, worldwide" style={{ height: tight ? 300 : 470 }} />
+              <ImageTile uri={PIC.heroShip} caption="Container shipping, worldwide" style={{ height: tight ? 300 : 470 }} />
             </Reveal>
             <View style={{ flex: narrow ? undefined : 1.05, gap: 12 }}>
               {PROCESS.map((s, i) => (
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   tlDesc: { color: P.muted, fontSize: 14, lineHeight: 21, marginTop: 3 },
 
   /* HERO IMAGE */
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 44 },
+  heroRow: { flexDirection: 'row', alignItems: 'stretch', gap: 44 },
   heroImg: { width: '100%' },
 
   /* IMAGE TILES (operations / features) */
