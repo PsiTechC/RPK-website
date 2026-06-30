@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, Animated } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, Animated, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -21,6 +21,15 @@ const P = {
 };
 
 const IMG = (id: string, w = 500) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
+
+// Company / operations / transport photography (verified — no grocery products).
+const PIC = {
+  heroShip: IMG('1578575437130-527eed3abbec', 1100), // cargo ship at port
+  warehouse: IMG('1553413077-190dd305871c', 900), // warehouse aisle
+  trucks: IMG('1565891741441-64926e441838', 1000), // distribution centre + trucks
+  team: IMG('1600880292203-757bb62b4baf', 900), // team at work
+  port: IMG('1494412574643-ff11b0a5c1c3', 1100), // container port (import/export)
+};
 
 const STATS = [
   { num: '100+', label: 'Grocery products' },
@@ -96,33 +105,41 @@ export default function About() {
 
   return (
     <ScrollView style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
-      {/* ───────── 1 · HERO (dark, no photos) ───────── */}
+      {/* ───────── 1 · HERO (dark) ───────── */}
       <View style={styles.hero}>
-        <Container max={1180} style={{ paddingVertical: tight ? 52 : 84 }}>
-          <FadeInUp delay={40}>
-            <View style={styles.kickerRow}>
-              <Text style={styles.kickerOnDark}>DUBAI · WORLDWIDE FOOD TRADE</Text>
-              <View style={styles.kickerLineLight} />
+        <Container max={1180} style={{ paddingVertical: tight ? 52 : 80 }}>
+          <View style={[styles.heroRow, narrow && { flexDirection: 'column', gap: 28 }]}>
+            <View style={{ flex: narrow ? undefined : 1.1 }}>
+              <FadeInUp delay={40}>
+                <View style={styles.kickerRow}>
+                  <Text style={styles.kickerOnDark}>DUBAI · WORLDWIDE FOOD TRADE</Text>
+                  <View style={styles.kickerLineLight} />
+                </View>
+              </FadeInUp>
+              <FadeInUp delay={120}>
+                <Text style={[styles.displayOnDark, { fontSize: display, lineHeight: display * 1.05 }]}>
+                  We trade <Text style={styles.displayItalic}>good food</Text> worldwide.
+                </Text>
+              </FadeInUp>
+              <FadeInUp delay={210}>
+                <Text style={styles.introOnDark}>
+                  {BRAND.legal} is a Dubai-based importer and exporter of premium groceries — from aromatic
+                  basmati and spices to oils, pulses and beverages — supplying wholesale and retail markets worldwide.
+                </Text>
+              </FadeInUp>
+              <FadeInUp delay={290}>
+                <View style={styles.chipRow}>
+                  <Chip icon="location-outline" label="Al Mankhool, Dubai" />
+                  <Chip icon="globe-outline" label="15+ countries" />
+                  <Chip icon="cube-outline" label="100+ products" />
+                </View>
+              </FadeInUp>
             </View>
-          </FadeInUp>
-          <FadeInUp delay={120}>
-            <Text style={[styles.displayOnDark, { fontSize: display, lineHeight: display * 1.05 }]}>
-              We trade <Text style={styles.displayItalic}>good food</Text> worldwide.
-            </Text>
-          </FadeInUp>
-          <FadeInUp delay={210}>
-            <Text style={styles.introOnDark}>
-              {BRAND.legal} is a Dubai-based importer and exporter of premium groceries — from aromatic
-              basmati and spices to oils, pulses and beverages — supplying wholesale and retail markets worldwide.
-            </Text>
-          </FadeInUp>
-          <FadeInUp delay={290}>
-            <View style={styles.chipRow}>
-              <Chip icon="location-outline" label="Al Mankhool, Dubai" />
-              <Chip icon="globe-outline" label="15+ countries" />
-              <Chip icon="cube-outline" label="100+ products" />
-            </View>
-          </FadeInUp>
+
+            <FadeInUp delay={220} style={{ flex: narrow ? undefined : 0.9, width: narrow ? '100%' : undefined }}>
+              <ImageTile uri={PIC.heroShip} caption="Shipped from Dubai by sea & air" style={[styles.heroImg, { height: tight ? 240 : 360 }]} />
+            </FadeInUp>
+          </View>
 
           {/* Stats */}
           <FadeInUp delay={360}>
@@ -155,6 +172,27 @@ export default function About() {
           {FACTS.map((f, i) => (
             <FactCard key={f.label} icon={f.icon} label={f.label} value={f.value} i={i} width={narrow ? (tight ? '100%' : '48%') : '31.5%'} />
           ))}
+        </View>
+      </Container>
+
+      {/* ───────── OUR OPERATIONS (company photos) ───────── */}
+      <Container max={1180} style={{ paddingBottom: tight ? 48 : 80 }}>
+        <Reveal style={{ alignItems: 'center', gap: 10, marginBottom: tight ? 24 : 36 }}>
+          <Text style={styles.sectionKicker}>OUR OPERATIONS</Text>
+          <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 32, textAlign: 'center' }]}>
+            From our Dubai base to <Text style={styles.displayItalic}>your market</Text>
+          </Text>
+        </Reveal>
+        <View style={[styles.opsGrid, narrow && { flexDirection: 'column' }]}>
+          <Reveal delay={0} style={{ flex: narrow ? undefined : 1, width: narrow ? '100%' : undefined }}>
+            <ImageTile uri={PIC.warehouse} caption="Warehousing in Dubai" style={{ height: tight ? 220 : 300 }} />
+          </Reveal>
+          <Reveal delay={90} style={{ flex: narrow ? undefined : 1, width: narrow ? '100%' : undefined }}>
+            <ImageTile uri={PIC.trucks} caption="Logistics & transport" style={{ height: tight ? 220 : 300 }} />
+          </Reveal>
+          <Reveal delay={180} style={{ flex: narrow ? undefined : 1, width: narrow ? '100%' : undefined }}>
+            <ImageTile uri={PIC.team} caption="Our team at work" style={{ height: tight ? 220 : 300 }} />
+          </Reveal>
         </View>
       </Container>
 
@@ -214,10 +252,26 @@ export default function About() {
               A simple, transparent process — managed end to end by our Dubai team.
             </Text>
           </Reveal>
-          <View style={styles.procGrid}>
-            {PROCESS.map((s, i) => (
-              <ProcessCard key={s.n} step={s} i={i} width={narrow ? (tight ? '100%' : '47%') : '31.5%'} />
-            ))}
+          <View style={[styles.procRow, narrow && { flexDirection: 'column', gap: 28 }]}>
+            <Reveal style={{ flex: narrow ? undefined : 1, width: narrow ? '100%' : undefined }}>
+              <ImageTile uri={PIC.port} caption="Container shipping, worldwide" style={{ height: tight ? 300 : 470 }} />
+            </Reveal>
+            <View style={{ flex: narrow ? undefined : 1.05, gap: 12 }}>
+              {PROCESS.map((s, i) => (
+                <Reveal key={s.n} delay={i * 70}>
+                  <View style={styles.pstep}>
+                    <View style={styles.pstepIcon}><Ionicons name={s.icon} size={19} color={P.cream} /></View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.pstepHead}>
+                        <Text style={styles.pstepN}>{s.n}</Text>
+                        <Text style={styles.pstepTitle}>{s.title}</Text>
+                      </View>
+                      <Text style={styles.pstepDesc}>{s.desc}</Text>
+                    </View>
+                  </View>
+                </Reveal>
+              ))}
+            </View>
           </View>
         </Container>
       </View>
@@ -336,21 +390,23 @@ function FactCard({ icon, label, value, i, width }: { icon: Ion; label: string; 
   );
 }
 
-function ProcessCard({ step, i, width }: { step: { n: string; icon: Ion; title: string; desc: string }; i: number; width: number | string }) {
-  const { scale, onHoverIn, onHoverOut } = useHoverScale(1.03);
+// Company/operations photo tile with soft hover zoom + optional caption pill.
+function ImageTile({ uri, caption, style, children }: { uri: string; caption?: string; style?: any; children?: React.ReactNode }) {
+  const { scale, onHoverIn, onHoverOut } = useHoverScale(1.05);
   return (
-    <Reveal delay={i * 70} style={{ width: width as any }}>
-      <Pressable onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
-        <Animated.View style={[styles.procCard, { transform: [{ scale }] }]}>
-          <View style={styles.procTop}>
-            <View style={styles.procIcon}><Ionicons name={step.icon} size={20} color={P.cream} /></View>
-            <Text style={styles.procN}>{step.n}</Text>
-          </View>
-          <Text style={styles.procTitle}>{step.title}</Text>
-          <Text style={styles.procDesc}>{step.desc}</Text>
-        </Animated.View>
-      </Pressable>
-    </Reveal>
+    <Pressable style={[styles.imgTile, style]} onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
+      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale }] }]}>
+        <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+      </Animated.View>
+      <View style={styles.imgShade} />
+      {children}
+      {caption ? (
+        <View style={styles.imgCap}>
+          <View style={styles.imgCapDot} />
+          <Text style={styles.imgCapText}>{caption}</Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -448,14 +504,31 @@ const styles = StyleSheet.create({
   tlTitle: { color: P.espresso, fontWeight: '800', fontSize: 16, marginTop: 2 },
   tlDesc: { color: P.muted, fontSize: 14, lineHeight: 21, marginTop: 3 },
 
-  /* PROCESS */
-  procGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16 },
-  procCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#ECE3D4', padding: 20, gap: 8, minHeight: 170 },
-  procTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  procIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: P.red, alignItems: 'center', justifyContent: 'center' },
-  procN: { color: '#E7D8BE', fontWeight: '900', fontSize: 26 },
-  procTitle: { color: P.espresso, fontWeight: '800', fontSize: 16, marginTop: 4 },
-  procDesc: { color: P.muted, fontSize: 13.5, lineHeight: 20 },
+  /* HERO IMAGE */
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 44 },
+  heroImg: { width: '100%' },
+
+  /* IMAGE TILES (operations / features) */
+  imgTile: { borderRadius: 20, overflow: 'hidden', backgroundColor: P.band, justifyContent: 'flex-end' },
+  imgShade: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(180deg, rgba(16,11,8,0) 40%, rgba(16,11,8,0.7) 100%)' } as any)
+      : { backgroundColor: 'rgba(16,11,8,0.28)' }),
+  },
+  imgCap: { position: 'absolute', left: 14, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.94)', paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999 },
+  imgCapDot: { width: 7, height: 7, borderRadius: 999, backgroundColor: P.red },
+  imgCapText: { color: P.espresso, fontWeight: '800', fontSize: 12.5 },
+  opsGrid: { flexDirection: 'row', gap: 16, alignItems: 'stretch' },
+
+  /* PROCESS (steps beside feature image) */
+  procRow: { flexDirection: 'row', alignItems: 'stretch', gap: 44 },
+  pstep: { flexDirection: 'row', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#ECE3D4', padding: 16 },
+  pstepIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: P.red, alignItems: 'center', justifyContent: 'center' },
+  pstepHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  pstepN: { color: P.gold, fontWeight: '900', fontSize: 15 },
+  pstepTitle: { color: P.espresso, fontWeight: '800', fontSize: 16, flexShrink: 1 },
+  pstepDesc: { color: P.muted, fontSize: 13.5, lineHeight: 20 },
 
   /* MARKETS */
   marketGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center' },
