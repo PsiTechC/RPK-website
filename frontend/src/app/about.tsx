@@ -32,6 +32,7 @@ const PHOTOS = {
   oils: IMG('1474979266404-7eaacbcd87c5'), // oils
   pulses: IMG('1610725664285-7c57e6eeac3f', 1100), // pulses & lentils
   warehouse: IMG('1601000938259-9e92002320b2', 1000), // sacks / warehouse
+  heroBanner: IMG('1498837167922-ddd27525d352', 1700), // wide ingredients spread (hero)
   shelf: IMG('1583258292688-d0213dc5a3a8', 1100), // grocery store shelves
   port: IMG('1494412574643-ff11b0a5c1c3', 1300), // container port (import/export)
   truck: IMG('1601584115197-04ecc0da31d7', 1000), // cargo truck / logistics
@@ -95,7 +96,7 @@ export default function About() {
   const { width } = useWindowDimensions();
   const narrow = width < 860;
   const tight = width < 600;
-  const display = tight ? 28 : width < 980 ? 38 : 46;
+  const display = tight ? 30 : width < 980 ? 42 : 54;
 
   // Bento tile heights by breakpoint (left & right columns stay equal height).
   const big = narrow ? 210 : 300;
@@ -103,40 +104,46 @@ export default function About() {
 
   return (
     <ScrollView style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
-      {/* ───────── 1 · HERO TEXT ───────── */}
-      <Container max={1180} style={{ paddingTop: tight ? 40 : 72 }}>
-        <FadeInUp delay={40}>
-          <View style={styles.kickerRow}>
-            <Text style={styles.kicker}>DUBAI · WORLDWIDE FOOD TRADE</Text>
-            <View style={styles.kickerLine} />
-          </View>
-        </FadeInUp>
-
-        <View style={[styles.heroTop, narrow && { flexDirection: 'column', gap: 22 }]}>
-          <FadeInUp delay={120} style={{ flex: narrow ? undefined : 1.25 }}>
-            <Text style={[styles.display, { fontSize: display, lineHeight: display * 1.04 }]}>
-              We trade{'\n'}
-              <Text style={styles.displayItalic}>good food</Text>{'\n'}
-              worldwide.
-            </Text>
-          </FadeInUp>
-
-          <FadeInUp delay={220} style={{ flex: narrow ? undefined : 1, gap: 18 }}>
-            <Text style={styles.intro}>
-              <Text style={{ fontWeight: '800', color: P.espresso }}>{BRAND.legal}</Text> is a Dubai-based
-              importer and exporter of premium groceries — from aromatic basmati and spices to oils, pulses
-              and beverages — supplying wholesale and retail markets with quality you can rely on.
-            </Text>
-            <View style={styles.chipRow}>
-              <Chip icon="location-outline" label="Al Mankhool, Dubai" />
-              <Chip icon="globe-outline" label="15+ countries" />
+      {/* ───────── 1 · HERO BANNER ───────── */}
+      <View style={[styles.heroBanner, { minHeight: tight ? 400 : 560 }]}>
+        <Image source={{ uri: PHOTOS.heroBanner }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+        <View style={styles.heroShade} />
+        <Container max={1180} style={styles.heroInner}>
+          <FadeInUp delay={40}>
+            <View style={styles.kickerRow}>
+              <Text style={styles.kickerOnDark}>DUBAI · WORLDWIDE FOOD TRADE</Text>
+              <View style={styles.kickerLineLight} />
             </View>
           </FadeInUp>
-        </View>
-      </Container>
+          <FadeInUp delay={120}>
+            <Text style={[styles.displayOnDark, { fontSize: display, lineHeight: display * 1.05 }]}>
+              We trade <Text style={styles.displayItalic}>good food</Text> worldwide.
+            </Text>
+          </FadeInUp>
+          <FadeInUp delay={210}>
+            <Text style={styles.introOnDark}>
+              {BRAND.legal} is a Dubai-based importer and exporter of premium groceries — from aromatic
+              basmati and spices to oils, pulses and beverages — supplying wholesale and retail markets worldwide.
+            </Text>
+          </FadeInUp>
+          <FadeInUp delay={290}>
+            <View style={styles.chipRow}>
+              <Chip icon="location-outline" label="Al Mankhool, Dubai" dark />
+              <Chip icon="globe-outline" label="15+ countries" dark />
+              <Chip icon="cube-outline" label="100+ products" dark />
+            </View>
+          </FadeInUp>
+        </Container>
+      </View>
 
-      {/* ───────── 2 · BENTO PHOTO MOSAIC ───────── */}
-      <Container max={1180} style={{ paddingTop: tight ? 26 : 40 }}>
+      {/* ───────── 2 · WHAT WE TRADE (bento mosaic) ───────── */}
+      <Container max={1180} style={{ paddingTop: tight ? 40 : 64 }}>
+        <Reveal style={{ gap: 8, marginBottom: tight ? 20 : 28 }}>
+          <Text style={styles.sectionKicker}>WHAT WE TRADE</Text>
+          <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 30 }]}>
+            Our grocery <Text style={styles.displayItalic}>range</Text>
+          </Text>
+        </Reveal>
         <Reveal>
           <View style={[styles.bento, narrow && { flexDirection: 'column' }]}>
             {/* Left column */}
@@ -448,11 +455,11 @@ function RegionCard({ icon, region, note, i, width }: { icon: Ion; region: strin
   );
 }
 
-function Chip({ icon, label }: { icon: Ion; label: string }) {
+function Chip({ icon, label, dark }: { icon: Ion; label: string; dark?: boolean }) {
   return (
-    <View style={styles.chip}>
-      <Ionicons name={icon} size={15} color={P.gold} />
-      <Text style={styles.chipText}>{label}</Text>
+    <View style={[styles.chip, dark && styles.chipDark]}>
+      <Ionicons name={icon} size={15} color={dark ? '#E7C277' : P.gold} />
+      <Text style={[styles.chipText, dark && { color: '#FFFFFF' }]}>{label}</Text>
     </View>
   );
 }
@@ -480,7 +487,22 @@ const styles = StyleSheet.create({
   intro: { color: P.muted, fontSize: 16, lineHeight: 26 },
   chipRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: P.gold, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  chipDark: { borderColor: 'rgba(255,255,255,0.45)', backgroundColor: 'rgba(255,255,255,0.08)' },
   chipText: { color: P.espresso, fontWeight: '700', fontSize: 13.5 },
+
+  /* HERO BANNER */
+  heroBanner: { width: '100%', justifyContent: 'center', backgroundColor: P.espresso, overflow: 'hidden' },
+  heroShade: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(100deg, rgba(16,11,8,0.88) 0%, rgba(16,11,8,0.62) 48%, rgba(16,11,8,0.18) 100%)' } as any)
+      : { backgroundColor: 'rgba(16,11,8,0.6)' }),
+  },
+  heroInner: { paddingVertical: 44, gap: 18, alignItems: 'flex-start' },
+  kickerOnDark: { color: '#E7C277', fontWeight: '800', fontSize: 12, letterSpacing: 2 },
+  kickerLineLight: { height: 1.5, width: 56, backgroundColor: '#E7C277', opacity: 0.7 },
+  displayOnDark: { color: '#FFFFFF', fontWeight: '900', letterSpacing: -0.5, maxWidth: 740 },
+  introOnDark: { color: 'rgba(255,255,255,0.9)', fontSize: 16, lineHeight: 26, maxWidth: 600 },
 
   /* BENTO */
   bento: { flexDirection: 'row', gap: 16 },
