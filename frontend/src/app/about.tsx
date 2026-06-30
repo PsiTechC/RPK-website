@@ -105,41 +105,35 @@ export default function About() {
 
   return (
     <ScrollView style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
-      {/* ───────── 1 · HERO (dark) ───────── */}
-      <View style={styles.hero}>
-        <Container max={1180} style={{ paddingVertical: tight ? 52 : 80 }}>
-          <View style={[styles.heroRow, narrow && { flexDirection: 'column', gap: 28, alignItems: 'stretch' }]}>
-            <View style={{ flex: narrow ? undefined : 1.1 }}>
-              <FadeInUp delay={40}>
-                <View style={styles.kickerRow}>
-                  <Text style={styles.kickerOnDark}>DUBAI · WORLDWIDE FOOD TRADE</Text>
-                  <View style={styles.kickerLineLight} />
-                </View>
-              </FadeInUp>
-              <FadeInUp delay={120}>
-                <Text style={[styles.displayOnDark, { fontSize: display, lineHeight: display * 1.05 }]}>
-                  We trade <Text style={styles.displayItalic}>good food</Text> worldwide.
-                </Text>
-              </FadeInUp>
-              <FadeInUp delay={210}>
-                <Text style={styles.introOnDark}>
-                  {BRAND.legal} is a Dubai-based importer and exporter of premium groceries — from aromatic
-                  basmati and spices to oils, pulses and beverages — supplying wholesale and retail markets worldwide.
-                </Text>
-              </FadeInUp>
-              <FadeInUp delay={290}>
-                <View style={styles.chipRow}>
-                  <Chip icon="location-outline" label="Al Mankhool, Dubai" />
-                  <Chip icon="globe-outline" label="15+ countries" />
-                  <Chip icon="cube-outline" label="100+ products" />
-                </View>
-              </FadeInUp>
+      {/* ───────── 1 · HERO (full background image) ───────── */}
+      <View style={[styles.hero, { minHeight: tight ? 540 : 660 }]}>
+        <Image source={{ uri: PIC.port }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+        <View style={styles.heroShade} />
+        <Container max={1180} style={{ paddingVertical: tight ? 48 : 72 }}>
+          <FadeInUp delay={40}>
+            <View style={styles.kickerRow}>
+              <Text style={styles.kickerOnDark}>DUBAI · WORLDWIDE FOOD TRADE</Text>
+              <View style={styles.kickerLineLight} />
             </View>
-
-            <FadeInUp delay={220} style={{ flex: narrow ? undefined : 0.92, width: narrow ? '100%' : undefined, alignSelf: 'stretch' }}>
-              <ImageTile uri={PIC.port} caption="Trusted worldwide logistics" style={[styles.heroImg, narrow ? { height: tight ? 260 : 320 } : { flex: 1, minHeight: 440 }]} />
-            </FadeInUp>
-          </View>
+          </FadeInUp>
+          <FadeInUp delay={120}>
+            <Text style={[styles.displayOnDark, { fontSize: display, lineHeight: display * 1.05 }]}>
+              We trade <Text style={styles.displayItalic}>good food</Text> worldwide.
+            </Text>
+          </FadeInUp>
+          <FadeInUp delay={210}>
+            <Text style={styles.introOnDark}>
+              {BRAND.legal} is a Dubai-based importer and exporter of premium groceries — from aromatic
+              basmati and spices to oils, pulses and beverages — supplying wholesale and retail markets worldwide.
+            </Text>
+          </FadeInUp>
+          <FadeInUp delay={290}>
+            <View style={styles.chipRow}>
+              <Chip icon="location-outline" label="Al Mankhool, Dubai" />
+              <Chip icon="globe-outline" label="15+ countries" />
+              <Chip icon="cube-outline" label="100+ products" />
+            </View>
+          </FadeInUp>
 
           {/* Stats */}
           <FadeInUp delay={360}>
@@ -462,7 +456,13 @@ const styles = StyleSheet.create({
   sectionHead: { color: P.espresso, fontWeight: '900', letterSpacing: -0.3 },
 
   /* HERO */
-  hero: { backgroundColor: P.espresso },
+  hero: { backgroundColor: P.espresso, justifyContent: 'center', overflow: 'hidden' },
+  heroShade: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(95deg, rgba(14,10,7,0.92) 0%, rgba(14,10,7,0.82) 48%, rgba(14,10,7,0.62) 100%)' } as any)
+      : { backgroundColor: 'rgba(14,10,7,0.84)' }),
+  },
   kickerOnDark: { color: '#E7C277', fontWeight: '800', fontSize: 12, letterSpacing: 2 },
   kickerLineLight: { height: 1.5, width: 56, backgroundColor: '#E7C277', opacity: 0.7 },
   displayOnDark: { color: '#FFFFFF', fontWeight: '900', letterSpacing: -0.5, maxWidth: 760, marginTop: 22 },
