@@ -6,6 +6,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { api } from '../lib/api';
 import { colors, radius, shadow, BRAND } from '../lib/theme';
 import { Footer } from '../components/Footer';
+import { HeroVideo } from '../components/HeroVideo';
 import { Button, Badge, Container } from '../components/ui';
 import { FadeInUp, Reveal } from '../components/Motion';
 import { useToast } from '../components/Toast';
@@ -106,6 +107,9 @@ export default function Contact() {
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.page}>
+        {/* Rotating cinematic background — same as the home page hero */}
+        <HeroVideo showDots={false} />
+        <View style={styles.scrim} />
         <View style={[styles.hero, { paddingVertical: stacked ? 36 : 56 }]}>
         <View style={[styles.row, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
           {/* LEFT — headline + copy */}
@@ -265,12 +269,12 @@ const styles = StyleSheet.create({
   left: { flex: 1, paddingTop: 4 },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.redSoft, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999 },
   kickerText: { color: colors.red, fontWeight: '800', fontSize: 11.5, letterSpacing: 1.2 },
-  h1: { color: colors.ink, fontWeight: '900', letterSpacing: -1, marginTop: 16 },
-  lead: { color: '#57534E', fontSize: 15.5, lineHeight: 25, maxWidth: 440, marginTop: 16 },
+  h1: { color: '#FFFFFF', fontWeight: '900', letterSpacing: -1, marginTop: 16 },
+  lead: { color: '#F1E9DE', fontSize: 15.5, lineHeight: 25, maxWidth: 440, marginTop: 16 },
   trustRow: { marginTop: 24, gap: 6 },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  trustScore: { color: colors.ink, fontWeight: '900', fontSize: 16, marginLeft: 8 },
-  trustText: { color: '#6E6455', fontSize: 13 },
+  trustScore: { color: '#FFFFFF', fontWeight: '900', fontSize: 16, marginLeft: 8 },
+  trustText: { color: '#E7DED2', fontSize: 13 },
 
   // wide, low form
   cardWrap: { width: 640 },
