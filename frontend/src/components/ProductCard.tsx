@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 14, fontWeight: '700', minHeight: 38 },
   desc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   noRating: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
   // Primary "Add to cart" — filled brand red. Grows to fill the row; on a narrow
   // (2-col mobile) card it can't fit beside both icons, so it takes the full width
   // and the call/WhatsApp icons wrap to the line below instead of squishing the text.
