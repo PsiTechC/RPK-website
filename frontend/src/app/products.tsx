@@ -58,7 +58,10 @@ export default function Products() {
   const mainGap = 26;
   const mainW = useSidebar ? contentW - sidebarW - mainGap : contentW;
   const cols = width < 560 ? 2 : width < 860 ? 3 : useSidebar ? (mainW >= 900 ? 5 : 4) : width < 1180 ? 4 : 5;
-  const cardW = Math.floor((mainW - gap * (cols - 1)) / cols);
+  // Percentage widths (like the home page) keep exactly N cards per row regardless
+  // of scrollbar width or sub-pixel rounding — fixed-pixel widths dropped mobile to
+  // one card per row once the vertical scrollbar appeared.
+  const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%' } as Record<number, string>)[cols] ?? '47%';
 
   const activeName =
     active !== 'all'
