@@ -19,6 +19,9 @@ const INK = colors.ink;
 const RED = colors.red;
 const MUTED = colors.muted;
 const VISION_GRADIENT = 'linear-gradient(135deg, #E8231A 0%, #D92419 50%, #B8100C 100%)';
+// Shared red card gradient — matches the Founders card header, applied to the
+// Why RPK value cards and the Our Story timeline cards for a cohesive look.
+const CARD_GRADIENT = 'linear-gradient(135deg, #E8231A 0%, #B8100C 100%)';
 const MISSION_GRADIENT = 'linear-gradient(135deg, #FFFFFF 0%, #EEF1F6 100%)';
 
 // Founder card shape used by the UI (the API's image_url is mapped to `photo`).
@@ -325,7 +328,7 @@ function ValueCard({ v, i }: { v: { icon: Ion; title: string; desc: string }; i:
     <Reveal delay={i * 90} style={styles.valueCol}>
       <Pressable onHoverIn={onHoverIn} onHoverOut={onHoverOut} style={{ width: '100%' }}>
         <Animated.View style={[styles.valueCard, { transform: [{ scale }] }]}>
-          <View style={styles.valueIcon}><Ionicons name={v.icon} size={22} color={RED} /></View>
+          <View style={styles.valueIcon}><Ionicons name={v.icon} size={22} color={colors.white} /></View>
           <Text style={styles.valueTitle}>{v.title}</Text>
           <Text style={styles.valueDesc}>{v.desc}</Text>
         </Animated.View>
@@ -436,23 +439,31 @@ const styles = StyleSheet.create({
   /* OUR STORY — timeline */
   timelineWrap: { flexDirection: 'row', alignItems: 'flex-start' },
   timelineHead: { color: INK, fontWeight: '900', letterSpacing: -0.5, lineHeight: 46 },
-  tlItem: { flexDirection: 'row', gap: 20, marginBottom: 18 },
+  tlItem: { flexDirection: 'row', gap: 18, marginBottom: 16 },
   tlLeft: { alignItems: 'center', width: 14 },
-  tlDot: { width: 10, height: 10, borderRadius: 999, backgroundColor: RED, marginTop: 4 },
-  tlLine: { flex: 1, width: 2, backgroundColor: colors.border, marginTop: 6, minHeight: 26 },
-  tlContent: { flex: 1, paddingBottom: 4 },
-  tlYear: { color: RED, fontWeight: '800', fontSize: 12.5, letterSpacing: 1 },
-  tlTitle: { color: INK, fontWeight: '800', fontSize: 16, marginTop: 3, marginBottom: 5 },
-  tlDesc: { color: MUTED, fontSize: 14, lineHeight: 22 },
+  tlDot: { width: 10, height: 10, borderRadius: 999, backgroundColor: RED, marginTop: 20 },
+  tlLine: { flex: 1, width: 2, backgroundColor: 'rgba(217,36,25,0.25)', marginTop: 6, minHeight: 26 },
+  tlContent: {
+    flex: 1, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18,
+    ...(Platform.OS === 'web' ? ({ backgroundImage: CARD_GRADIENT } as any) : { backgroundColor: RED }),
+    shadowColor: '#7A0D08', shadowOpacity: 0.2, shadowRadius: 18, shadowOffset: { width: 0, height: 12 },
+  },
+  tlYear: { color: 'rgba(255,255,255,0.85)', fontWeight: '800', fontSize: 12.5, letterSpacing: 1 },
+  tlTitle: { color: colors.white, fontWeight: '800', fontSize: 16, marginTop: 3, marginBottom: 5 },
+  tlDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 22 },
 
   /* VALUES */
   sectionHead: { color: INK, fontWeight: '900', letterSpacing: -0.3 },
   valueGrid: { flexDirection: 'row', gap: 18 },
   valueCol: { flex: 1 },
-  valueCard: { backgroundColor: colors.white, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, gap: 8, height: '100%', ...shadow.card },
-  valueIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  valueTitle: { color: INK, fontWeight: '900', fontSize: 17, letterSpacing: -0.2 },
-  valueDesc: { color: MUTED, fontSize: 14, lineHeight: 21 },
+  valueCard: {
+    borderRadius: 16, padding: 20, gap: 8, height: '100%',
+    ...(Platform.OS === 'web' ? ({ backgroundImage: CARD_GRADIENT } as any) : { backgroundColor: RED }),
+    shadowColor: '#7A0D08', shadowOpacity: 0.22, shadowRadius: 22, shadowOffset: { width: 0, height: 14 },
+  },
+  valueIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  valueTitle: { color: colors.white, fontWeight: '900', fontSize: 17, letterSpacing: -0.2 },
+  valueDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 21 },
 
   /* VISION / MISSION — diagonal split (two rounded panels, white gap) */
   vmWrap: {
