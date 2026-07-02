@@ -47,10 +47,15 @@ const TIMELINE = [
   { year: 'Today', title: 'Wholesale & retail', desc: 'Serving businesses and retail markets worldwide with quality you can rely on.' },
 ];
 
-const VALUES: { icon: Ion; title: string; desc: string }[] = [
-  { icon: 'leaf-outline', title: 'Carefully sourced', desc: 'Every consignment is inspected and graded before it leaves Dubai.' },
-  { icon: 'boat-outline', title: 'Delivered worldwide', desc: 'Reliable sea & air logistics to 15+ countries, tracked end to end.' },
-  { icon: 'shield-checkmark-outline', title: 'Built on trust', desc: 'Honest pricing and consistency that keeps clients coming back.' },
+// What we trade — the grocery categories RPK sources and ships. (The "Why RPK"
+// value proposition lives on the Import/Export page, so it isn't repeated here.)
+const TRADE: { icon: Ion; title: string; desc: string }[] = [
+  { icon: 'nutrition-outline', title: 'Rice & Grains', desc: 'Basmati, sella and long-grain rice, sourced by the container.' },
+  { icon: 'flame-outline', title: 'Spices & Masala', desc: 'Whole and ground spices, blends and authentic masalas.' },
+  { icon: 'ellipse-outline', title: 'Pulses & Lentils', desc: 'Dal, chickpeas and beans — cleaned, graded and packed.' },
+  { icon: 'water-outline', title: 'Cooking Oils & Ghee', desc: 'Sunflower and vegetable oils and pure cow ghee.' },
+  { icon: 'leaf-outline', title: 'Dry Fruits & Nuts', desc: 'Almonds, cashews, raisins and premium dry fruits.' },
+  { icon: 'cafe-outline', title: 'Beverages & Pantry', desc: 'Drinks, flour, sweeteners and everyday staples.' },
 ];
 
 export default function About() {
@@ -170,16 +175,16 @@ export default function About() {
         </View>
       </Container>
 
-      {/* ───────── 3 · VALUES ───────── */}
+      {/* ───────── 3 · WHAT WE TRADE ───────── */}
       <Container max={1180} style={{ paddingTop: tight ? 20 : 44, paddingBottom: tight ? 20 : 40 }}>
         <Reveal style={{ alignItems: 'center', gap: 10, marginBottom: tight ? 16 : 26 }}>
-          <Text style={styles.kicker}>WHY RPK</Text>
+          <Text style={styles.kicker}>WHAT WE TRADE</Text>
           <Text style={[styles.sectionHead, { fontSize: tight ? 24 : 32, textAlign: 'center' }]}>
-            Quality you can <Text style={styles.displayAccent}>rely on</Text>
+            A full pantry, <Text style={styles.displayAccent}>one trusted source</Text>
           </Text>
         </Reveal>
         <View style={[styles.valueGrid, narrow && { flexDirection: 'column' }]}>
-          {VALUES.map((v, i) => (
+          {TRADE.map((v, i) => (
             <ValueCard key={v.title} v={v} i={i} />
           ))}
         </View>
@@ -454,8 +459,8 @@ const styles = StyleSheet.create({
 
   /* VALUES */
   sectionHead: { color: INK, fontWeight: '900', letterSpacing: -0.3 },
-  valueGrid: { flexDirection: 'row', gap: 18 },
-  valueCol: { flex: 1 },
+  valueGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 18 },
+  valueCol: { flexGrow: 1, flexBasis: '30%', minWidth: 230 },
   valueCard: {
     borderRadius: 16, padding: 20, gap: 8, height: '100%',
     ...(Platform.OS === 'web' ? ({ backgroundImage: CARD_GRADIENT } as any) : { backgroundColor: RED }),
