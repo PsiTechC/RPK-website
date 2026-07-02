@@ -106,16 +106,12 @@ export default function Contact() {
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.page}>
-        {/* one continuous backdrop for the whole page */}
-        <Image source={{ uri: BG }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-        <View style={styles.scrim} />
-
         <View style={[styles.hero, { paddingVertical: stacked ? 36 : 56 }]}>
         <View style={[styles.row, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
           {/* LEFT — headline + copy */}
           <FadeInUp delay={100} distance={26} style={[styles.left, stacked && { width: '100%' }]}>
             <View style={styles.kicker}>
-              <Ionicons name="earth" size={15} color={colors.white} />
+              <Ionicons name="earth" size={15} color={colors.red} />
               <Text style={styles.kickerText}>DUBAI · WORLDWIDE IMPORT & EXPORT</Text>
             </View>
             <Text style={[styles.h1, { fontSize: stacked ? 40 : 58 }]}>Global Food{'\n'}Trading</Text>
@@ -261,30 +257,28 @@ function FeedbackSection() {
 }
 
 const styles = StyleSheet.create({
-  page: { position: 'relative', overflow: 'hidden', backgroundColor: colors.navyDark },
+  page: { position: 'relative', overflow: 'hidden', backgroundColor: colors.bg },
   hero: { backgroundColor: 'transparent', paddingHorizontal: 18, alignItems: 'center' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,12,26,0.72)' },
   row: { width: '100%', maxWidth: 1280, flexDirection: 'row', gap: 40, alignItems: 'center', zIndex: 2 },
 
   left: { flex: 1, paddingTop: 4 },
-  kicker: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999 },
-  kickerText: { color: colors.white, fontWeight: '800', fontSize: 11.5, letterSpacing: 1.2 },
-  h1: { color: colors.white, fontWeight: '900', letterSpacing: -1, marginTop: 16 },
-  lead: { color: '#E7E3DF', fontSize: 15.5, lineHeight: 25, maxWidth: 440, marginTop: 16 },
+  kicker: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.redSoft, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999 },
+  kickerText: { color: colors.red, fontWeight: '800', fontSize: 11.5, letterSpacing: 1.2 },
+  h1: { color: colors.ink, fontWeight: '900', letterSpacing: -1, marginTop: 16 },
+  lead: { color: '#57534E', fontSize: 15.5, lineHeight: 25, maxWidth: 440, marginTop: 16 },
   trustRow: { marginTop: 24, gap: 6 },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  trustScore: { color: colors.white, fontWeight: '900', fontSize: 16, marginLeft: 8 },
-  trustText: { color: '#D9D4D0', fontSize: 13 },
+  trustScore: { color: colors.ink, fontWeight: '900', fontSize: 16, marginLeft: 8 },
+  trustText: { color: '#6E6455', fontSize: 13 },
 
   // wide, low form
   cardWrap: { width: 640 },
   card: {
-    backgroundColor: 'rgba(247,240,229,0.90)',
+    backgroundColor: colors.white,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(226,140,60,0.35)',
-    borderTopWidth: 4,
-    borderTopColor: colors.orange,
+    borderColor: colors.border,
     paddingHorizontal: 30,
     paddingVertical: 26,
     ...shadow.card,
@@ -297,7 +291,7 @@ const styles = StyleSheet.create({
   uLabel: { color: '#3a352e', fontWeight: '900', fontSize: 11.5, letterSpacing: 0.8, marginBottom: 3 },
   uWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1.5, borderBottomColor: '#b9b6ad', paddingVertical: 5, borderRadius: 4 },
   uWrapFocus: { backgroundColor: 'rgba(243,130,42,0.07)' },
-  uInput: { flex: 1, fontSize: 15, color: '#1f1f1f', paddingVertical: 5, outlineStyle: 'none' as any },
+  uInput: { flex: 1, fontSize: 15, fontWeight: '700', color: '#1f1f1f', paddingVertical: 5, outlineStyle: 'none' as any },
   uErr: { color: colors.red, fontSize: 12, marginTop: 3 },
 
   // feedback band — same backdrop as the hero
@@ -321,4 +315,5 @@ const styles = StyleSheet.create({
   waBtnText: { color: colors.white, fontWeight: '800', fontSize: 15 },
   note: { color: '#4a4a4a', fontSize: 12, textAlign: 'center' },
   success: { color: colors.text, textAlign: 'center', maxWidth: 420, lineHeight: 22, fontSize: 14.5 },
+
 });

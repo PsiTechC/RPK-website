@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { api, Product, Category, imageUri } from '../../lib/api';
@@ -6,6 +6,7 @@ import { colors, radius, shadow } from '../../lib/theme';
 import { Button, Field } from '../ui';
 import { useToast } from '../Toast';
 import { vProductName, vPrice, vStock, vImageUrl, isClean } from '../../lib/validate';
+import { PRODUCT_IMAGE, isProductImageSize, measureImage } from '../../lib/productImage';
 
 const UNITS = ['KG', 'GM', 'LTR', 'ML', 'BAG', 'PKT', 'BOX', 'DOZEN', 'CAT', 'PC', 'TIN'];
 
@@ -49,7 +50,22 @@ export function ProductForm({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string | null | undefined>>({});
+  // Natural pixel size of the current image, measured so we can warn when it
+  // isn't the standard product-image size. null = none / not yet measured.
+  const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
   const toast = useToast();
+
+  // Whenever the image changes (upload, pasted URL, or editing an existing
+  // product), measure it and flag a mismatch against the standard size.
+  useEffect(() => {
+    const src = form.image_url ? imageUri(form.image_url) : '';
+    if (!src) { setImgDims(null); return; }
+    let cancelled = false;
+    measureImage(src).then((d) => { if (!cancelled) setImgDims(d); });
+    return () => { cancelled = true; };
+  }, [form.image_url]);
+
+  const imgSizeOk = !imgDims || isProductImageSize(imgDims.w, imgDims.h);
 
   const set = (k: keyof typeof form) => (t: string) => {
     setForm((f) => ({ ...f, [k]: t }));
@@ -247,9 +263,23 @@ export function ProductForm({
                 {!!form.image_url && (
                   <Button label="Remove image" variant="ghost" onPress={() => setForm({ ...form, image_url: '' })} style={{ paddingVertical: 9 }} />
                 )}
-                <Text style={styles.hint}>JPG, PNG, GIF, WebP or SVG · up to 8MB</Text>
+                <Text style={styles.hint}>Required size {PRODUCT_IMAGE.width}×{PRODUCT_IMAGE.height}px (4:3) · JPG, PNG, GIF, WebP or SVG · up to 8MB</Text>
               </View>
             </View>
+            {/* Size warning — shown when the chosen image isn't the standard size.
+                Non-blocking: the product still saves, the card just normalises it. */}
+            {imgDims && !imgSizeOk && (
+              <View style={styles.warnBox}>
+                <Text style={styles.warnIcon}>⚠</Text>
+                <Text style={styles.warnText}>
+                  This image is {imgDims.w}×{imgDims.h}px, not the standard {PRODUCT_IMAGE.width}×{PRODUCT_IMAGE.height}px (4:3).
+                  It may look cropped or letter-boxed on the product card — please resize it for a consistent look.
+                </Text>
+              </View>
+            )}
+            {imgDims && imgSizeOk && (
+              <Text style={styles.okText}>✓ Image is the correct {PRODUCT_IMAGE.width}×{PRODUCT_IMAGE.height}px size.</Text>
+            )}
             <Field label="…or paste an image URL" value={form.image_url} onChangeText={set('image_url')} placeholder="https://…" error={errors.image_url} />
           </View>
           <Field label="Description" value={form.description} onChangeText={(t) => setForm({ ...form, description: t })} placeholder="Description" multiline />
@@ -327,6 +357,10 @@ const styles = StyleSheet.create({
   preview: { width: 92, height: 92, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cream, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   previewEmpty: { color: colors.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 12 },
+  warnBox: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#F4C77B', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 },
+  warnIcon: { fontSize: 15, lineHeight: 19, color: colors.orangeDark },
+  warnText: { flex: 1, color: colors.orangeDark, fontSize: 12.5, fontWeight: '600', lineHeight: 18 },
+  okText: { color: colors.green, fontSize: 12.5, fontWeight: '700' },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   checkboxOn: { backgroundColor: colors.green, borderColor: colors.green },

@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Platform, Linking, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { api, imageUri, Product, Order, Registration, Category, User, News, Feedback as FeedbackItem, RFQ, PartnerOrder } from '../../lib/api';
+import { api, imageUri, Product, Order, Registration, Category, User, News, Founder, Feedback as FeedbackItem, RFQ, PartnerOrder } from '../../lib/api';
 import { colors, radius, shadow } from '../../lib/theme';
 import { useApp, money } from '../../lib/store';
 import { fmtDate, fmtDateTime } from '../../lib/date';
+import { Image as ExpoImage } from 'expo-image';
 import { Container, SectionTitle, Button, Card, Badge, Field } from '../../components/ui';
 import { ProductForm } from '../../components/admin/ProductForm';
 import { ProductThumb } from '../../components/admin/ProductThumb';
@@ -29,6 +30,7 @@ const TAB_ICONS: Record<Tab, keyof typeof Ionicons.glyphMap> = {
   porders: 'cube-outline',
   feedback: 'star-outline',
   news: 'newspaper-outline',
+  founders: 'people-circle-outline',
   archived: 'archive-outline',
 };
 
@@ -46,9 +48,9 @@ const PLACEHOLDER_TRENDS: Record<string, { dir: 'up' | 'down'; pct: string }> = 
 // TODO: wire to API — last 7 days of paid revenue. Placeholder shape only.
 const PLACEHOLDER_REVENUE_7D = [120, 240, 180, 360, 300, 520, 460];
 
-type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'rfqs' | 'porders' | 'feedback' | 'news' | 'archived';
+type Tab = 'dashboard' | 'products' | 'arrange' | 'orders' | 'customers' | 'registrations' | 'inquiries' | 'rfqs' | 'porders' | 'feedback' | 'news' | 'founders' | 'archived';
 
-const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'rfqs', 'porders', 'feedback', 'news', 'archived'];
+const ALL_TABS: Tab[] = ['dashboard', 'products', 'arrange', 'orders', 'customers', 'registrations', 'inquiries', 'rfqs', 'porders', 'feedback', 'news', 'founders', 'archived'];
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const statusTone: Record<string, any> = {
   pending: 'orange', confirmed: 'navy', processing: 'navy', shipped: 'navy',
@@ -78,6 +80,7 @@ const TAB_LABELS: Record<Tab, string> = {
   porders: 'Partner Orders',
   feedback: 'Feedback',
   news: 'News',
+  founders: 'Founders',
   archived: 'Archived',
 };
 
@@ -204,6 +207,7 @@ export default function Admin() {
             {token && tab === 'porders' && <PartnerOrdersAdmin token={token} />}
             {token && tab === 'feedback' && <FeedbackAdmin token={token} />}
             {token && tab === 'news' && <NewsAdmin token={token} />}
+            {token && tab === 'founders' && <FoundersAdmin token={token} />}
             {token && tab === 'archived' && <Archived token={token} />}
           </View>
         </ScrollView>
@@ -2252,6 +2256,8 @@ const styles = StyleSheet.create({
   actionCell: { flexDirection: 'row', gap: 8 },
   smallBtn: { paddingHorizontal: 12, paddingVertical: 7 },
   starBtn: { paddingHorizontal: 6, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+  founderThumb: { width: 56, height: 56, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border },
+  founderPreview: { width: 92, height: 92, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   // grid
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridCard: { gap: 10, padding: 14, flexGrow: 1 },
@@ -2375,6 +2381,155 @@ function NewsForm({ token, article, onClose, onSaved }: { token: string; article
       </Pressable>
       {!!error && <Text style={{ color: colors.red, fontSize: 13 }}>{error}</Text>}
       <Button label={busy ? 'Saving…' : article ? 'Save changes' : 'Publish article'} onPress={save} disabled={busy} />
+    </View>
+  );
+}
+
+// ─── Founders (About-page team cards) ────────────────────────────────────────
+function FoundersAdmin({ token }: { token: string }) {
+  const [items, setItems] = useState<Founder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Founder | null | undefined>(undefined); // undefined=list, null=new
+  const [confirming, setConfirming] = useState<Founder | null>(null);
+  const toast = useToast();
+
+  async function load() {
+    setLoading(true);
+    try { setItems(await api.founders()); } catch {} finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, [token]);
+
+  async function del() {
+    const f = confirming;
+    if (!f) return;
+    setConfirming(null);
+    try { await api.admin.deleteFounder(f.id, token); toast('Founder removed', 'info'); load(); }
+    catch { toast('Could not remove founder', 'error'); }
+  }
+
+  if (editing !== undefined) {
+    return <FoundersForm token={token} founder={editing} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); load(); }} />;
+  }
+
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.muted}>Cards shown in the About page “Our Founders” row. Lower order numbers appear first.</Text>
+        <Button label="+ New founder" icon="add" onPress={() => setEditing(null)} />
+      </View>
+      {loading ? (
+        <Text style={styles.muted}>Loading…</Text>
+      ) : items.length === 0 ? (
+        <Text style={styles.muted}>No founders yet. Click “New founder” to add the first card.</Text>
+      ) : (
+        <View style={{ gap: 10 }}>
+          {items.map((f) => (
+            <Card key={f.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={styles.founderThumb}>
+                {!!f.image_url && <ExpoImage source={{ uri: imageUri(f.image_url) }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>{f.name}</Text>
+                  <Badge text={`#${f.sort_order}`} tone="muted" />
+                </View>
+                <Text style={[styles.rowMeta, { textTransform: 'none' }]}>{f.role}</Text>
+                <Text style={[styles.rowMeta, { textTransform: 'none' }]} numberOfLines={2}>{f.bio}</Text>
+              </View>
+              <Button label="Edit" variant="ghost" onPress={() => setEditing(f)} style={styles.smallBtn} />
+              <Button label="Delete" variant="danger" onPress={() => setConfirming(f)} style={styles.smallBtn} />
+            </Card>
+          ))}
+        </View>
+      )}
+      {confirming && (
+        <ConfirmDialog
+          title="Remove this founder?"
+          message={`“${confirming.name}” will be permanently removed from the About page.`}
+          confirmLabel="Delete"
+          onConfirm={del}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+    </View>
+  );
+}
+
+function FoundersForm({ token, founder, onClose, onSaved }: { token: string; founder: Founder | null; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    name: founder?.name || '',
+    role: founder?.role || '',
+    bio: founder?.bio || '',
+    image_url: founder?.image_url || '',
+    sort_order: String(founder?.sort_order ?? 0),
+  });
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const toast = useToast();
+  const set = (k: 'name' | 'role' | 'bio' | 'image_url') => (t: string) => setForm((f) => ({ ...f, [k]: t }));
+
+  function pickFile() {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      setError('');
+      setUploading(true);
+      try { const { url } = await api.admin.uploadImage(file, token); setForm((f) => ({ ...f, image_url: url })); }
+      catch (e: any) { setError(e.message || 'Upload failed.'); }
+      finally { setUploading(false); }
+    };
+    input.click();
+  }
+
+  async function save() {
+    setError('');
+    if (!form.name.trim()) { setError('Name is required.'); return; }
+    setBusy(true);
+    const body = { ...form, sort_order: parseInt(form.sort_order, 10) || 0 };
+    try {
+      if (founder) await api.admin.updateFounder(founder.id, body, token);
+      else await api.admin.createFounder(body, token);
+      toast('Founder saved', 'success');
+      onSaved();
+    } catch (e: any) {
+      setError(e.message || 'Could not save founder');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={{ gap: 14, maxWidth: 720 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.h}>{founder ? 'Edit founder' : 'New founder'}</Text>
+        <Button label="← Back" variant="ghost" onPress={onClose} style={styles.smallBtn} />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'flex-start' }}>
+        <View style={styles.founderPreview}>
+          {form.image_url
+            ? <ExpoImage source={{ uri: imageUri(form.image_url) }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            : <Text style={styles.muted}>No{'\n'}photo</Text>}
+        </View>
+        <View style={{ flex: 1, gap: 8 }}>
+          <Button label={uploading ? 'Uploading…' : '⬆ Choose photo'} variant="navy" onPress={pickFile} disabled={uploading} style={{ paddingVertical: 9 }} />
+          {!!form.image_url && <Button label="Remove photo" variant="ghost" onPress={() => setForm((f) => ({ ...f, image_url: '' }))} style={{ paddingVertical: 9 }} />}
+        </View>
+      </View>
+
+      <Field label="Name *" value={form.name} onChangeText={set('name')} placeholder="e.g. Managing Director" />
+      <Field label="Role / Title" value={form.role} onChangeText={set('role')} placeholder="e.g. Founder & Strategy" />
+      <Field label="…or paste a photo URL" value={form.image_url} onChangeText={set('image_url')} placeholder="https://…" />
+      <Field label="Short bio" value={form.bio} onChangeText={set('bio')} placeholder="One or two lines about this person…" multiline />
+      <Field label="Display order" value={form.sort_order} onChangeText={(t) => setForm((f) => ({ ...f, sort_order: t.replace(/\D/g, '') }))} placeholder="0" keyboardType="number-pad" />
+
+      {!!error && <Text style={{ color: colors.red, fontSize: 13 }}>{error}</Text>}
+      <Button label={busy ? 'Saving…' : founder ? 'Save changes' : 'Add founder'} onPress={save} disabled={busy} />
     </View>
   );
 }

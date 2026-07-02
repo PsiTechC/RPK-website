@@ -71,6 +71,17 @@ export type News = {
   updated_at: string;
 };
 
+export type Founder = {
+  id: number;
+  name: string;
+  role: string;
+  bio: string;
+  image_url: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Review = {
   id: number;
   product_id: number;
@@ -314,6 +325,7 @@ export const api = {
   },
 
   news: () => request<News[]>('/api/news'),
+  founders: () => request<Founder[]>('/api/founders'),
 
   // admin
   admin: {
@@ -329,6 +341,10 @@ export const api = {
     createNews: (body: any, token: string) => request<any>('/api/admin/news', { method: 'POST', body, token }),
     updateNews: (id: number, body: any, token: string) => request<any>(`/api/admin/news/${id}`, { method: 'PUT', body, token }),
     deleteNews: (id: number, token: string) => request<any>(`/api/admin/news/${id}`, { method: 'DELETE', token }),
+
+    createFounder: (body: any, token: string) => request<any>('/api/admin/founders', { method: 'POST', body, token }),
+    updateFounder: (id: number, body: any, token: string) => request<any>(`/api/admin/founders/${id}`, { method: 'PUT', body, token }),
+    deleteFounder: (id: number, token: string) => request<any>(`/api/admin/founders/${id}`, { method: 'DELETE', token }),
     deleteProduct: (id: number, token: string) => // soft-delete → archive
       request<any>(`/api/admin/products/${id}`, { method: 'DELETE', token }),
     archivedProducts: (token: string) => request<Product[]>('/api/admin/products/archived', { token }),

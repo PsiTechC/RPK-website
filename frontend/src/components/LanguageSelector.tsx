@@ -1,70 +1,91 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { colors, radius, shadow } from '../lib/theme';
 
 // A broad set of world languages (Google Translate supports 100+; this list
-// covers the major ones — the search box lets users find any of them).
-const LANGS: { code: string; label: string }[] = [
-  { code: 'en', label: 'English' },
-  { code: 'ar', label: 'العربية (Arabic)' },
-  { code: 'hi', label: 'हिन्दी (Hindi)' },
-  { code: 'ur', label: 'اردو (Urdu)' },
-  { code: 'bn', label: 'বাংলা (Bengali)' },
-  { code: 'ta', label: 'தமிழ் (Tamil)' },
-  { code: 'te', label: 'తెలుగు (Telugu)' },
-  { code: 'ml', label: 'മലയാളം (Malayalam)' },
-  { code: 'mr', label: 'मराठी (Marathi)' },
-  { code: 'gu', label: 'ગુજરાતી (Gujarati)' },
-  { code: 'pa', label: 'ਪੰਜਾਬੀ (Punjabi)' },
-  { code: 'fr', label: 'Français (French)' },
-  { code: 'es', label: 'Español (Spanish)' },
-  { code: 'de', label: 'Deutsch (German)' },
-  { code: 'it', label: 'Italiano (Italian)' },
-  { code: 'pt', label: 'Português (Portuguese)' },
-  { code: 'ru', label: 'Русский (Russian)' },
-  { code: 'tr', label: 'Türkçe (Turkish)' },
-  { code: 'fa', label: 'فارسی (Persian)' },
-  { code: 'zh-CN', label: '中文 (Chinese, Simplified)' },
-  { code: 'zh-TW', label: '中文 (Chinese, Traditional)' },
-  { code: 'ja', label: '日本語 (Japanese)' },
-  { code: 'ko', label: '한국어 (Korean)' },
-  { code: 'id', label: 'Bahasa Indonesia' },
-  { code: 'ms', label: 'Bahasa Melayu (Malay)' },
-  { code: 'th', label: 'ไทย (Thai)' },
-  { code: 'vi', label: 'Tiếng Việt (Vietnamese)' },
-  { code: 'nl', label: 'Nederlands (Dutch)' },
-  { code: 'pl', label: 'Polski (Polish)' },
-  { code: 'uk', label: 'Українська (Ukrainian)' },
-  { code: 'ro', label: 'Română (Romanian)' },
-  { code: 'el', label: 'Ελληνικά (Greek)' },
-  { code: 'he', label: 'עברית (Hebrew)' },
-  { code: 'sw', label: 'Kiswahili (Swahili)' },
-  { code: 'am', label: 'አማርኛ (Amharic)' },
-  { code: 'so', label: 'Soomaali (Somali)' },
-  { code: 'ha', label: 'Hausa' },
-  { code: 'yo', label: 'Yorùbá' },
-  { code: 'sw2', label: '' },
-  { code: 'fil', label: 'Filipino' },
-  { code: 'my', label: 'မြန်မာ (Burmese)' },
-  { code: 'km', label: 'ខ្មែរ (Khmer)' },
-  { code: 'si', label: 'සිංහල (Sinhala)' },
-  { code: 'ne', label: 'नेपाली (Nepali)' },
-  { code: 'ps', label: 'پښتو (Pashto)' },
-  { code: 'sv', label: 'Svenska (Swedish)' },
-  { code: 'da', label: 'Dansk (Danish)' },
-  { code: 'no', label: 'Norsk (Norwegian)' },
-  { code: 'fi', label: 'Suomi (Finnish)' },
-  { code: 'cs', label: 'Čeština (Czech)' },
-  { code: 'hu', label: 'Magyar (Hungarian)' },
-  { code: 'bg', label: 'Български (Bulgarian)' },
-  { code: 'sr', label: 'Српски (Serbian)' },
-  { code: 'hr', label: 'Hrvatski (Croatian)' },
-  { code: 'af', label: 'Afrikaans' },
-  { code: 'zu', label: 'isiZulu (Zulu)' },
+// covers the major ones — the search box lets users find any of them). Each
+// carries a representative ISO country code (`cc`) used to show its flag.
+const LANGS: { code: string; label: string; cc: string }[] = [
+  { code: 'en', label: 'English', cc: 'gb' },
+  { code: 'ar', label: 'العربية (Arabic)', cc: 'sa' },
+  { code: 'hi', label: 'हिन्दी (Hindi)', cc: 'in' },
+  { code: 'ur', label: 'اردو (Urdu)', cc: 'pk' },
+  { code: 'bn', label: 'বাংলা (Bengali)', cc: 'bd' },
+  { code: 'ta', label: 'தமிழ் (Tamil)', cc: 'in' },
+  { code: 'te', label: 'తెలుగు (Telugu)', cc: 'in' },
+  { code: 'ml', label: 'മലയാളം (Malayalam)', cc: 'in' },
+  { code: 'mr', label: 'मराठी (Marathi)', cc: 'in' },
+  { code: 'gu', label: 'ગુજરાતી (Gujarati)', cc: 'in' },
+  { code: 'pa', label: 'ਪੰਜਾਬੀ (Punjabi)', cc: 'in' },
+  { code: 'fr', label: 'Français (French)', cc: 'fr' },
+  { code: 'es', label: 'Español (Spanish)', cc: 'es' },
+  { code: 'de', label: 'Deutsch (German)', cc: 'de' },
+  { code: 'it', label: 'Italiano (Italian)', cc: 'it' },
+  { code: 'pt', label: 'Português (Portuguese)', cc: 'pt' },
+  { code: 'ru', label: 'Русский (Russian)', cc: 'ru' },
+  { code: 'tr', label: 'Türkçe (Turkish)', cc: 'tr' },
+  { code: 'fa', label: 'فارسی (Persian)', cc: 'ir' },
+  { code: 'zh-CN', label: '中文 (Chinese, Simplified)', cc: 'cn' },
+  { code: 'zh-TW', label: '中文 (Chinese, Traditional)', cc: 'tw' },
+  { code: 'ja', label: '日本語 (Japanese)', cc: 'jp' },
+  { code: 'ko', label: '한국어 (Korean)', cc: 'kr' },
+  { code: 'id', label: 'Bahasa Indonesia', cc: 'id' },
+  { code: 'ms', label: 'Bahasa Melayu (Malay)', cc: 'my' },
+  { code: 'th', label: 'ไทย (Thai)', cc: 'th' },
+  { code: 'vi', label: 'Tiếng Việt (Vietnamese)', cc: 'vn' },
+  { code: 'nl', label: 'Nederlands (Dutch)', cc: 'nl' },
+  { code: 'pl', label: 'Polski (Polish)', cc: 'pl' },
+  { code: 'uk', label: 'Українська (Ukrainian)', cc: 'ua' },
+  { code: 'ro', label: 'Română (Romanian)', cc: 'ro' },
+  { code: 'el', label: 'Ελληνικά (Greek)', cc: 'gr' },
+  { code: 'he', label: 'עברית (Hebrew)', cc: 'il' },
+  { code: 'sw', label: 'Kiswahili (Swahili)', cc: 'ke' },
+  { code: 'am', label: 'አማርኛ (Amharic)', cc: 'et' },
+  { code: 'so', label: 'Soomaali (Somali)', cc: 'so' },
+  { code: 'ha', label: 'Hausa', cc: 'ng' },
+  { code: 'yo', label: 'Yorùbá', cc: 'ng' },
+  { code: 'fil', label: 'Filipino', cc: 'ph' },
+  { code: 'my', label: 'မြန်မာ (Burmese)', cc: 'mm' },
+  { code: 'km', label: 'ខ្មែរ (Khmer)', cc: 'kh' },
+  { code: 'si', label: 'සිංහල (Sinhala)', cc: 'lk' },
+  { code: 'ne', label: 'नेपाली (Nepali)', cc: 'np' },
+  { code: 'ps', label: 'پښتو (Pashto)', cc: 'af' },
+  { code: 'sv', label: 'Svenska (Swedish)', cc: 'se' },
+  { code: 'da', label: 'Dansk (Danish)', cc: 'dk' },
+  { code: 'no', label: 'Norsk (Norwegian)', cc: 'no' },
+  { code: 'fi', label: 'Suomi (Finnish)', cc: 'fi' },
+  { code: 'cs', label: 'Čeština (Czech)', cc: 'cz' },
+  { code: 'hu', label: 'Magyar (Hungarian)', cc: 'hu' },
+  { code: 'bg', label: 'Български (Bulgarian)', cc: 'bg' },
+  { code: 'sr', label: 'Српски (Serbian)', cc: 'rs' },
+  { code: 'hr', label: 'Hrvatski (Croatian)', cc: 'hr' },
+  { code: 'af', label: 'Afrikaans', cc: 'za' },
+  { code: 'zu', label: 'isiZulu (Zulu)', cc: 'za' },
 ].filter((l) => l.label);
 
 const isWeb = Platform.OS === 'web' && typeof document !== 'undefined';
+
+// Flag image (flagcdn) — renders a real flag on every platform, unlike flag
+// emoji which Windows shows as plain letter codes. Falls back silently if a
+// flag can't load.
+function Flag({ cc, size = 20 }: { cc: string; size?: number }) {
+  return (
+    <Image
+      source={{ uri: `https://flagcdn.com/w40/${cc}.png` }}
+      style={{ width: size, height: Math.round(size * 0.72), borderRadius: 3, backgroundColor: colors.offWhite }}
+      contentFit="cover"
+      transition={120}
+    />
+  );
+}
+
+const ccFor = (code: string) => LANGS.find((l) => l.code === code)?.cc || 'gb';
+
+// Short language letters shown on the button instead of a flag, e.g. "EN".
+// Takes the part before any region suffix and upper-cases it.
+const lettersFor = (code: string) => code.split('-')[0].toUpperCase();
 
 function loadGoogleTranslate() {
   if (!isWeb) return;
@@ -137,7 +158,7 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
   return (
     <View style={styles.wrap}>
       <Pressable style={styles.btn} onPress={() => setOpen((o) => !o)} accessibilityLabel="Select language">
-        <Ionicons name="language" size={18} color={colors.ink} />
+        <Text style={styles.langCode}>{lettersFor(currentCode)}</Text>
         {!compact && <Text style={styles.btnText} numberOfLines={1}>{current}</Text>}
         <Text style={styles.chev}>▾</Text>
       </Pressable>
@@ -161,6 +182,7 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
                 const on = l.code === currentCode;
                 return (
                   <Pressable key={l.code} style={({ hovered }: any) => [styles.item, hovered && styles.itemHover, on && styles.itemActive]} onPress={() => pick(l)}>
+                    <Flag cc={l.cc} size={22} />
                     <Text style={[styles.itemText, on && styles.itemTextActive]} numberOfLines={1}>{l.label}</Text>
                     {on && <Ionicons name="checkmark" size={16} color={colors.red} />}
                   </Pressable>
@@ -179,6 +201,7 @@ const styles = StyleSheet.create({
   wrap: { position: 'relative', zIndex: 60 },
   btn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.border },
   btnText: { color: colors.ink, fontWeight: '800', fontSize: 13, maxWidth: 84 },
+  langCode: { color: colors.ink, fontWeight: '900', fontSize: 13, letterSpacing: 0.5 },
   chev: { color: colors.muted, fontSize: 11, fontWeight: '900' },
   scrim: Platform.OS === 'web'
     ? ({ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 } as any)

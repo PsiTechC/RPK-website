@@ -145,8 +145,8 @@ const styles = StyleSheet.create({
   accent: { width: 5, height: 22, borderRadius: 3, backgroundColor: colors.orange },
   title: { fontSize: 22, fontWeight: '900', color: colors.ink },
   subtitle: { color: colors.muted, marginTop: 4, fontSize: 14 },
-  btn: { paddingHorizontal: 18, paddingVertical: 12, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  btnText: { fontWeight: '800', fontSize: 15 },
+  btn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  btnText: { fontWeight: '800', fontSize: 14.5 },
   label: { color: colors.text, fontWeight: '700', fontSize: 13 },
   input: {
     backgroundColor: colors.white,

@@ -237,3 +237,26 @@ CREATE TABLE IF NOT EXISTS password_resets (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);
+
+-- Admin-managed founder / team cards shown on the About page.
+CREATE TABLE IF NOT EXISTS founders (
+    id          BIGSERIAL PRIMARY KEY,
+    name        TEXT NOT NULL DEFAULT '',
+    role        TEXT NOT NULL DEFAULT '',
+    bio         TEXT NOT NULL DEFAULT '',
+    image_url   TEXT NOT NULL DEFAULT '',
+    sort_order  INT  NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_founders_sort ON founders(sort_order);
+
+-- Seed the default founder cards once (only when the table is empty).
+INSERT INTO founders (name, role, bio, image_url, sort_order)
+SELECT * FROM (VALUES
+  ('Managing Director','Founder & Strategy','Sets RPK''s direction — building trusted supplier relationships across the globe.','https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=75',0),
+  ('Head of Operations','Sourcing & Quality','Oversees sourcing and grading so every consignment meets our standard.','https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=500&q=75',1),
+  ('Import / Export Lead','Logistics & Trade','Manages shipping and documentation for reliable delivery worldwide.','https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=500&q=75',2),
+  ('Client Relations','Sales & Support','Looks after partners from first enquiry to repeat bulk orders.','https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=75',3)
+) AS v(name, role, bio, image_url, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM founders);

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow } from '../lib/theme';
-import { api, Category } from '../lib/api';
+import { api, Category, imageUri } from '../lib/api';
 import { categoryVisual } from '../lib/foodVisuals';
 import { useApp } from '../lib/store';
 import { Logo } from './Logo';
@@ -318,8 +318,12 @@ function CategoryNavItem({
     }, 120);
   };
   useEffect(() => cancelClose, []); // clear any pending timer on unmount
+  // Ref to the wrapper so the dropdown can measure where the button sits and
+  // centre itself in the window (the button is left-of-centre, so a CSS-only
+  // anchor can't give equal left/right margins).
+  const wrapRef = useRef<any>(null);
   return (
-    <View style={styles.navItemWrap} onPointerEnter={openNow} onPointerLeave={closeSoon}>
+    <View ref={wrapRef} style={styles.navItemWrap} onPointerEnter={openNow} onPointerLeave={closeSoon}>
       <View style={[styles.navItem, hovered && styles.navItemHover, open && styles.navItemActive]}>
         {/* Click the label -> open the "All Categories" page */}
         <Pressable
@@ -337,12 +341,18 @@ function CategoryNavItem({
           <Text style={[styles.chevron, { color }]}>{open ? '▴' : '▾'}</Text>
         </Pressable>
       </View>
-      {open && <MegaMenu categories={categories} onSelect={onSelect} onOpenAll={onOpenAll} />}
+      {open && <MegaMenu categories={categories} onSelect={onSelect} onOpenAll={onOpenAll} triggerRef={wrapRef} />}
     </View>
   );
 }
 
-const FEATURE_IMG = 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=520&q=70';
+// Featured-panel backdrop — a packaged-groceries shot (RPK sells pantry
+// groceries, not fresh produce). Not reused by any category thumbnail.
+const FEATURE_IMG = 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=560&q=70';
+
+// Mega-menu panel width and the minimum gap it keeps from either window edge.
+const MEGA_W = 820;
+const MEGA_EDGE_GAP = 16;
 
 // SAFCO-style mega-menu: a featured image panel + a multi-column category grid,
 // with a smooth fade/slide-in on open.
@@ -350,10 +360,12 @@ function MegaMenu({
   categories,
   onSelect,
   onOpenAll,
+  triggerRef,
 }: {
   categories: Category[];
   onSelect: (slug: string) => void;
   onOpenAll: () => void;
+  triggerRef: React.RefObject<any>;
 }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -361,8 +373,29 @@ function MegaMenu({
   }, []);
   const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] });
 
+  // Centre the panel in the window: measure the trigger's viewport x, work out
+  // where a window-centred panel should start, and offset from the trigger by
+  // the difference. Clamped so it never overruns either edge. Recomputed on
+  // resize. `offsetLeft` stays null until measured (panel is invisible then).
+  const [offsetLeft, setOffsetLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const compute = () => {
+      const node = triggerRef?.current;
+      const rect = node && node.getBoundingClientRect ? node.getBoundingClientRect() : null;
+      if (!rect) return;
+      const maxLeft = window.innerWidth - MEGA_W - MEGA_EDGE_GAP;
+      const viewportLeft = Math.max(MEGA_EDGE_GAP, Math.min((window.innerWidth - MEGA_W) / 2, maxLeft));
+      setOffsetLeft(viewportLeft - rect.left);
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <View style={styles.megaWrap}>
+    <View style={[styles.megaWrap, offsetLeft != null && { left: offsetLeft }]}>
       <Animated.View style={[styles.mega, { opacity: v, transform: [{ translateY }] }]}>
         {/* Featured panel */}
         <Pressable style={styles.megaFeature} onPress={onOpenAll}>
@@ -377,18 +410,38 @@ function MegaMenu({
 
         {/* Category grid */}
         <View style={styles.megaGrid}>
-          {categories.map((c) => {
-            const vis = categoryVisual(c.slug);
-            return (
-              <Pressable key={c.id} style={({ hovered }: any) => [styles.megaItem, hovered && styles.megaItemHover]} onPress={() => onSelect(c.slug)}>
-                <Text style={styles.megaEmoji}>{vis.emoji}</Text>
-                <Text style={styles.megaItemText} numberOfLines={1}>{c.name}</Text>
-              </Pressable>
-            );
-          })}
+          <Text style={styles.megaGridHead}>All Categories</Text>
+          <View style={styles.megaGridRows}>
+            {categories.map((c) => (
+              <MegaItem key={c.id} category={c} onSelect={onSelect} />
+            ))}
+          </View>
         </View>
       </Animated.View>
     </View>
+  );
+}
+
+// One category row in the mega-menu: a small category thumbnail, the name, and
+// a chevron that fades in on hover. Thumbnails make the menu feel premium and
+// give every category enough width that names no longer truncate.
+function MegaItem({ category, onSelect }: { category: Category; onSelect: (slug: string) => void }) {
+  const [hovered, setHovered] = useState(false);
+  const vis = categoryVisual(category.slug);
+  // Use the category's own image from the database so the menu reflects the real
+  // categories; fall back to the per-slug visual only if a category has no image.
+  const thumb = category.image_url ? imageUri(category.image_url) : vis.photo;
+  return (
+    <Pressable
+      style={[styles.megaItem, hovered && styles.megaItemHover]}
+      onPress={() => onSelect(category.slug)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+    >
+      <Image source={{ uri: thumb }} style={styles.megaThumb} contentFit="cover" transition={150} />
+      <Text style={[styles.megaItemText, hovered && styles.megaItemTextHover]} numberOfLines={1}>{category.name}</Text>
+      <Ionicons name="chevron-forward" size={16} color={colors.red} style={{ opacity: hovered ? 1 : 0 }} />
+    </Pressable>
   );
 }
 
@@ -440,10 +493,13 @@ const styles = StyleSheet.create({
   catLabelBtn: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   // Mega-menu. The wrapper keeps a transparent top band so the hover bridge from
   // the nav item to the panel is unbroken; the panel itself is the animated card.
+  // Base anchor only. The real horizontal position is set at runtime via a
+  // measured `left` (see MegaMenu) so the panel is centred in the window with
+  // equal left/right margins, regardless of where the button sits.
   megaWrap: { position: 'absolute' as any, top: '100%', left: 0, paddingTop: 10, zIndex: 220 },
   mega: {
     flexDirection: 'row',
-    width: 700,
+    width: MEGA_W,
     backgroundColor: colors.white,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -451,18 +507,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadow.card,
   },
-  megaFeature: { width: 212, justifyContent: 'flex-end', backgroundColor: colors.navy },
+  megaFeature: { width: 280, justifyContent: 'flex-end', backgroundColor: colors.navy },
   megaFeatureOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,14,11,0.46)' },
-  megaFeatureBody: { padding: 16, gap: 6 },
-  megaKicker: { color: 'rgba(255,255,255,0.85)', fontWeight: '800', fontSize: 10, letterSpacing: 1.4 },
-  megaTitle: { color: colors.white, fontWeight: '900', fontSize: 18, lineHeight: 22 },
-  megaBtn: { alignSelf: 'flex-start', backgroundColor: colors.red, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginTop: 6 },
-  megaBtnText: { color: colors.white, fontWeight: '800', fontSize: 12 },
-  megaGrid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', padding: 10, alignContent: 'flex-start' },
-  megaItem: { width: '33.33%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 11, borderRadius: 10 },
+  megaFeatureBody: { padding: 22, gap: 8 },
+  megaKicker: { color: 'rgba(255,255,255,0.85)', fontWeight: '800', fontSize: 11, letterSpacing: 1.6 },
+  megaTitle: { color: colors.white, fontWeight: '900', fontSize: 24, lineHeight: 28 },
+  megaBtn: { alignSelf: 'flex-start', backgroundColor: colors.red, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, marginTop: 10 },
+  megaBtnText: { color: colors.white, fontWeight: '800', fontSize: 13 },
+  megaGrid: { flex: 1, paddingVertical: 16, paddingHorizontal: 14 },
+  megaGridHead: { color: colors.muted, fontWeight: '800', fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', paddingHorizontal: 10, marginBottom: 8 },
+  megaGridRows: { flexDirection: 'row', flexWrap: 'wrap', alignContent: 'flex-start' },
+  megaItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 10, paddingVertical: 9, borderRadius: 12 },
   megaItemHover: { backgroundColor: colors.offWhite },
-  megaEmoji: { fontSize: 17 },
-  megaItemText: { color: colors.text, fontWeight: '700', fontSize: 13, flex: 1 },
+  megaThumb: { width: 42, height: 42, borderRadius: 10, backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.border, flexShrink: 0 },
+  megaItemText: { color: colors.text, fontWeight: '700', fontSize: 14, flex: 1 },
+  megaItemTextHover: { color: colors.red, fontWeight: '800' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   cartBtn: { padding: 6 },
   cartIcon: { fontSize: 22 },

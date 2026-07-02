@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, TextInput, Platform, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { api } from '../lib/api';
+import { Image } from 'expo-image';
 import { colors, radius, shadow, BRAND } from '../lib/theme';
 import { useApp } from '../lib/store';
 import { Footer } from '../components/Footer';
-import { Button, Badge, Container } from '../components/ui';
+import { Button, Badge } from '../components/ui';
 import { FadeInUp, Reveal, useHoverScale } from '../components/Motion';
 import { PhoneField } from '../components/PhoneField';
 import { RequirementBuilder, ReqItem } from '../components/RequirementBuilder';
@@ -14,7 +14,15 @@ import { useLocalSearchParams } from 'expo-router';
 import { parsePhone, Country } from '../lib/countries';
 import { vEmail, vName, vPhoneLen, vRequired, isClean, sanitizeName } from '../lib/validate';
 
-type Ion = keyof typeof Ionicons.glyphMap;
+
+// Hero background — uploaded import/export artwork.
+const IE_HOME_IMG = require('../../assets/images/importexporthome.png');
+
+// Hero headline split into a white line + a tomato-red accent line (for the typewriter).
+const HEAD_SEGMENTS = [
+  { text: 'Global grocery trade,\n' },
+  { text: 'from Dubai.', accent: true },
+];
 
 // Editorial palette — shared with the About page so the two read as one family.
 const P = {
@@ -26,12 +34,6 @@ const P = {
   band: '#EFE7D9',
 };
 
-// Right-hand hero videos (split layout) — cycle through both, repeating.
-// Exclusive to this page (About uses different clips).
-const HERO_VIDEOS = [
-  require('../../assets/videos/about-who.mp4'),
-  require('../../assets/videos/about-reach.mp4'),
-];
 
 const TYPES = [
   { key: 'import', label: 'Import', desc: 'Buy & import from RPK', icon: 'arrow-down-circle-outline' },
@@ -44,6 +46,22 @@ const BENEFITS = [
   { t: 'Wholesale bulk pricing', d: 'Container and pallet rates built for importers and exporters.', icon: 'pricetags-outline' },
   { t: 'Verified & compliant', d: 'Full trade documentation, customs and quality compliance.', icon: 'shield-checkmark-outline' },
   { t: 'Dedicated partner team', d: 'A named account contact and full logistics support from Dubai.', icon: 'people-outline' },
+] as const;
+
+const HOW_STEPS = [
+  { n: '01', t: 'Register', d: 'Fill out the short partner form with your business details and trade requirements — it takes under 3 minutes.', icon: 'create-outline' as const },
+  { n: '02', t: 'Review', d: 'Our team reviews your application and connects you with the right suppliers or buyers within 24 hours.', icon: 'search-outline' as const },
+  { n: '03', t: 'Connect', d: 'We introduce you to vetted partners, help negotiate terms, and align on pricing and logistics scope.', icon: 'people-circle-outline' as const },
+  { n: '04', t: 'Ship', d: 'We manage all trade documentation, customs compliance, and end-to-end freight from our Dubai hub.', icon: 'boat-outline' as const },
+] as const;
+
+const FAQS = [
+  { q: 'What documents do I need to start?', a: 'A trade license and company profile are helpful but not mandatory to register. You can upload documents after initial sign-up — they just speed up the review.' },
+  { q: 'What is the minimum order quantity?', a: 'We work with businesses of all sizes. Minimums vary by category — typically 1 pallet (≈ 500 kg) for most lines, with full container rates for bulk orders.' },
+  { q: 'Which countries do you ship to?', a: 'We serve 40+ countries across the GCC, South & Southeast Asia, East Africa, Europe and the Americas. Our Dubai hub gives direct access to major sea and air freight corridors.' },
+  { q: 'How fast will I get a quote?', a: 'We aim to respond within 24 hours on business days. Complex multi-SKU RFQs may take up to 48 hours to price accurately.' },
+  { q: 'Do you handle customs and documentation?', a: 'Yes — our team prepares all trade documents including certificates of origin, halal certificates, phytosanitary certificates and customs declarations.' },
+  { q: 'Can I export my products through RPK?', a: "Absolutely. If you produce food or grocery goods, we can connect you with RPK's buyer network across the GCC and beyond. Select \"Export\" or \"Both\" in the registration form." },
 ] as const;
 
 // Boxed input (label above, icon on the right) — unified with the phone field.
@@ -113,56 +131,6 @@ function SectionLabel({ text }: { text: string }) {
   );
 }
 
-// Gold-bordered pill used in the hero (matches the About page).
-function Chip({ icon, label }: { icon: Ion; label: string }) {
-  return (
-    <View style={styles.chip}>
-      <Ionicons name={icon} size={15} color={P.gold} />
-      <Text style={styles.chipText}>{label}</Text>
-    </View>
-  );
-}
-
-// Muted, cover-fit video that cycles through a list of clips and repeats.
-// Each clip plays to the end, then the next loads; wraps back to the first.
-function RotatingVideo({ sources, style }: { sources: any[]; style?: any }) {
-  const idx = useRef(0);
-  const player = useVideoPlayer(sources[0], (p) => {
-    p.loop = sources.length <= 1; // single clip → loop; multiple → advance on end
-    p.muted = true;
-  });
-  useEffect(() => {
-    if (!player) return;
-    player.muted = true;
-    const play = () => { try { player.play(); } catch {} };
-    play();
-    const advance = () => {
-      if (sources.length <= 1) return;
-      idx.current = (idx.current + 1) % sources.length;
-      try {
-        player.replace(sources[idx.current]);
-        player.muted = true;
-        player.play();
-      } catch {}
-    };
-    const subStatus = player.addListener('statusChange', (e: any) => {
-      if (e?.status === 'readyToPlay') play();
-    });
-    const subEnd = player.addListener('playToEnd', advance);
-    // Nudge the initial autoplay (web starts reliably once ready).
-    const iv = setInterval(play, 700);
-    const stop = setTimeout(() => clearInterval(iv), 4000);
-    return () => { subStatus?.remove?.(); subEnd?.remove?.(); clearInterval(iv); clearTimeout(stop); };
-  }, [player]);
-  return (
-    <View style={[style, { overflow: 'hidden' }]}>
-      <VideoView player={player} style={{ width: '100%', height: '100%' }} contentFit="cover" nativeControls={false} />
-    </View>
-  );
-}
-
-const webBlur = (px: number) => (Platform.OS === 'web' ? ({ filter: `blur(${px}px)` } as any) : null);
-
 // Dramatic scroll-reveal: slides in from the left or right with a scale + tilt.
 function SlideReveal({ children, from, delay = 0, style }: { children: React.ReactNode; from: 'left' | 'right'; delay?: number; style?: any }) {
   const isWeb = Platform.OS === 'web';
@@ -191,27 +159,125 @@ function SlideReveal({ children, from, delay = 0, style }: { children: React.Rea
   );
 }
 
-// Benefit card: slides in from left/right (first two left, last two right) and lifts on hover.
-function BenefitCard({ b, index, sizeStyle }: { b: (typeof BENEFITS)[number]; index: number; sizeStyle: any }) {
-  const hov = useHoverScale(1.05);
-  const from = index < 2 ? 'left' : 'right';
+
+// Premium gold "podium" card — metallic gradient, glowing icon, subtle top shine.
+// Staggered vertically on wide screens to echo the render's raised-plinth layout.
+function LuxCard({ b, index, narrow, colStack }: { b: (typeof BENEFITS)[number]; index: number; narrow: boolean; colStack: boolean }) {
+  const hov = useHoverScale(1.035);
+  const width = colStack ? '100%' : '47%';
+  // Raise the 2nd & 4th cards for the staggered plinth effect (wide screens only).
+  const raise = !narrow && index % 2 === 1 ? 34 : 0;
   return (
-    <SlideReveal from={from} delay={(index % 2) * 80} style={sizeStyle}>
+    <SlideReveal from="right" delay={index * 90} style={{ width, marginTop: raise }}>
       <Pressable onHoverIn={hov.onHoverIn} onHoverOut={hov.onHoverOut} style={{ width: '100%' }}>
-        <Animated.View style={[styles.benefit, { transform: [{ scale: hov.scale }] }]}>
-          <View style={styles.benefitIcon}>
-            <Ionicons name={b.icon as any} size={24} color={P.gold} />
+        <Animated.View style={[styles.luxCard, { transform: [{ scale: hov.scale }] }]}>
+          <View style={styles.luxIcon}>
+            <Ionicons name={b.icon as any} size={24} color="#FFFFFF" />
           </View>
-          <Text style={styles.benefitTitle}>{b.t}</Text>
-          <Text style={styles.benefitDesc}>{b.d}</Text>
+          <Text style={styles.luxTitle}>{b.t}</Text>
+          <Text style={styles.luxDesc}>{b.d}</Text>
         </Animated.View>
       </Pressable>
     </SlideReveal>
   );
 }
 
+// Continuous typewriter — types the headline letter by letter, holds, deletes, repeats.
+// Keeps per-segment colours (white line + tomato-red accent) and a blinking cursor.
+function Typewriter({ segments, textStyle, accentStyle, sizeStyle, speed = 62, hold = 1600 }: {
+  segments: { text: string; accent?: boolean }[];
+  textStyle: any; accentStyle: any; sizeStyle: any; speed?: number; hold?: number;
+}) {
+  const full = segments.reduce((n, s) => n + s.text.length, 0);
+  const [count, setCount] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    let t: any;
+    if (!deleting) {
+      if (count < full) t = setTimeout(() => setCount((c) => c + 1), speed);
+      else t = setTimeout(() => setDeleting(true), hold);
+    } else {
+      if (count > 0) t = setTimeout(() => setCount((c) => c - 1), speed * 0.45);
+      else t = setTimeout(() => setDeleting(false), 450);
+    }
+    return () => clearTimeout(t);
+  }, [count, deleting, full, speed, hold]);
+
+  let rem = count;
+  const pieces = segments.map((s, i) => {
+    const shown = Math.max(0, Math.min(s.text.length, rem));
+    rem -= s.text.length;
+    return <Text key={i} style={s.accent ? accentStyle : undefined}>{s.text.slice(0, shown)}</Text>;
+  });
+
+  return (
+    <Text style={[textStyle, sizeStyle]}>
+      {pieces}
+    </Text>
+  );
+}
+
+// "How it works" step card — premium red-gradient card matching the Why-RPK LuxCards.
+// Equal heights (fills the stretched row), fades in, lifts + glows on hover.
+function HowCard({ s, index, narrow, colStack }: { s: (typeof HOW_STEPS)[number]; index: number; narrow: boolean; colStack: boolean }) {
+  const [hovered, setHovered] = useState(false);
+  const hov = useHoverScale(1.05);
+  return (
+    <FadeInUp delay={index * 90} style={colStack ? { width: '100%' } : narrow ? { width: '47%' } : { flex: 1, minWidth: 210 }}>
+      <Pressable
+        onHoverIn={() => { setHovered(true); hov.onHoverIn(); }}
+        onHoverOut={() => { setHovered(false); hov.onHoverOut(); }}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <Animated.View style={[styles.howCard, hovered && styles.howCardHover, { transform: [{ scale: hov.scale }] }]}>
+          <View style={[styles.howIcon, hovered && styles.howIconHover]}>
+            <Ionicons name={s.icon as any} size={22} color={hovered ? '#FFFFFF' : P.red} />
+          </View>
+          <Text style={[styles.howTitle, hovered && { color: '#FFFFFF' }]}>{s.t}</Text>
+          <Text style={[styles.howDesc, hovered && { color: 'rgba(255,255,255,0.85)' }]}>{s.d}</Text>
+        </Animated.View>
+      </Pressable>
+    </FadeInUp>
+  );
+}
+
+// FAQ accordion row — numbered badge, rotating red chevron, hover lift, fade-in answer.
+function FaqItem({ f, index, open, onToggle }: { f: { q: string; a: string }; index: number; open: boolean; onToggle: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  const rot = useRef(new Animated.Value(open ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(rot, { toValue: open ? 1 : 0, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [open]);
+  const rotate = rot.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  const num = String(index + 1).padStart(2, '0');
+  return (
+    <Pressable
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      onPress={onToggle}
+      style={[styles.faqRow, hovered && !open && styles.faqRowHover, open && styles.faqRowOpen]}
+    >
+      <View style={styles.faqQ}>
+        <View style={[styles.faqNum, open && styles.faqNumOpen]}>
+          <Text style={[styles.faqNumTxt, open && { color: '#fff' }]}>{num}</Text>
+        </View>
+        <Text style={[styles.faqQText, open && { color: P.red }]}>{f.q}</Text>
+        <Animated.View style={[styles.faqChev, open && styles.faqChevOpen, { transform: [{ rotate }] }]}>
+          <Ionicons name="chevron-down" size={16} color={open ? '#fff' : P.red} />
+        </Animated.View>
+      </View>
+      {open && (
+        <FadeInUp duration={340} style={styles.faqAWrap}>
+          <Text style={styles.faqA}>{f.a}</Text>
+        </FadeInUp>
+      )}
+    </Pressable>
+  );
+}
+
 export default function ImportExport() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { token, user } = useApp();
   const initPhone = parsePhone(user?.phone);
   const [country, setCountryObj] = useState<Country>(initPhone.country);
@@ -241,9 +307,11 @@ export default function ImportExport() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<any>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const narrow = width < 760;
   const colStack = width < 620;
+  const tight = width < 600;
   const ctaHover = useHoverScale(1.02);
 
   // Gently floating rocket on the CTA — a lively, non-static touch.
@@ -264,6 +332,7 @@ export default function ImportExport() {
   const scrollRef = useRef<ScrollView>(null);
   const bodyY = useRef(0);
   const regY = useRef(0);
+  const benY = useRef(0);
 
   function scrollToForm() {
     const run = () => {
@@ -280,6 +349,16 @@ export default function ImportExport() {
     } else {
       setTimeout(run, 80);
     }
+  }
+
+  // "How it works" jumps to the "Why partner with RPK" benefits block.
+  function scrollToBenefits() {
+    const run = () => {
+      const y = Math.max(0, bodyY.current + benY.current - 80);
+      scrollRef.current?.scrollTo({ y, animated: true });
+    };
+    if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(run);
+    else run();
   }
 
   // Reveal the form, then scroll to it so the user is taken straight there.
@@ -362,76 +441,107 @@ export default function ImportExport() {
 
   return (
     <ScrollView ref={scrollRef} style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
-      {/* ───────── HERO (editorial, cream — matches the About page) ───────── */}
-      <Container max={1180} style={{ paddingTop: colStack ? 36 : 64 }}>
-        <FadeInUp delay={40}>
-          <View style={styles.kickerRow}>
-            <Text style={styles.kicker}>IMPORT & EXPORT · BECOME A PARTNER</Text>
-            <View style={styles.kickerLine} />
+      {/* ───────── HERO — dark section (fills the viewport) ───────── */}
+      <View style={[styles.darkHero, { minHeight: Math.max(560, height), justifyContent: 'flex-start', paddingTop: tight ? 28 : 44 }]}>
+        {/* Full-width background artwork */}
+        <Image source={IE_HOME_IMG} style={StyleSheet.absoluteFillObject as any} contentFit="cover" />
+        {/* Dark overlay for text legibility */}
+        <View pointerEvents="none" style={styles.dhOverlay} />
+
+        {/* Warm gold glow behind the heading (the "network of light" feel) */}
+        <View pointerEvents="none" style={styles.dhGoldGlow} />
+
+        <FadeInUp delay={0} style={{ ...styles.dhCenter, paddingHorizontal: tight ? 20 : 40 }}>
+          {/* Badge pill */}
+          <View style={styles.dhPill}>
+            <Ionicons name="globe-outline" size={12} color={P.gold} />
+            <Text style={styles.dhPillText}>IMPORT & EXPORT · DUBAI FOOD TRADE</Text>
+          </View>
+
+          {/* Heading — continuous letter-by-letter typewriter */}
+          <View style={{ width: '100%', alignItems: 'center', minHeight: (tight ? 34 : narrow ? 52 : 70) * 1.06 * 2 }}>
+            <Typewriter
+              segments={HEAD_SEGMENTS}
+              textStyle={styles.dhHeading}
+              accentStyle={styles.dhAccent}
+              sizeStyle={{ fontSize: tight ? 34 : narrow ? 52 : 70, lineHeight: (tight ? 34 : narrow ? 52 : 70) * 1.06 }}
+            />
+          </View>
+
+          {/* Subtext */}
+          <Text style={[styles.dhSub, { fontSize: tight ? 14 : 16, lineHeight: tight ? 22 : 26, maxWidth: 620, marginTop: tight ? 8 : 16 }]}>
+            Connect with verified global grocery suppliers for spices, grains, fresh produce, and
+            packaged goods — backed by bulk pricing, full trade documentation, and end-to-end
+            logistics support from Dubai.
+          </Text>
+        </FadeInUp>
+
+        {/* CTA buttons */}
+        <FadeInUp delay={320} style={{ alignItems: 'center', paddingTop: tight ? 44 : 72, paddingBottom: 8, paddingHorizontal: tight ? 20 : 40 }}>
+          <View style={[styles.dhBtns, tight && { flexDirection: 'column', alignItems: 'center' }]}>
+            <Pressable style={({ hovered }: any) => [styles.dhBtnRed, { paddingHorizontal: 36, paddingVertical: 15 }, hovered && { opacity: 0.88 }]} onPress={openForm}>
+              <Text style={[styles.dhBtnRedTxt, { fontSize: 15 }]}>Begin Registration</Text>
+              <Ionicons name="arrow-forward" size={17} color="#fff" />
+            </Pressable>
+            <Pressable style={({ hovered }: any) => [styles.dhBtnGhost, hovered && { borderColor: 'rgba(255,255,255,0.65)' }]} onPress={scrollToBenefits}>
+              <Text style={styles.dhBtnGhostTxt}>How it works</Text>
+            </Pressable>
           </View>
         </FadeInUp>
 
-        <View style={[styles.heroTop, narrow && { flexDirection: 'column', gap: 20 }]}>
-          <FadeInUp delay={120} style={{ flex: narrow ? undefined : 1.25 }}>
-            <Text style={[styles.display, { fontSize: colStack ? 30 : narrow ? 38 : 46, lineHeight: (colStack ? 30 : narrow ? 38 : 46) * 1.06 }]}>
-              Partner with <Text style={styles.displayAccent}>RPK</Text>{'\n'}worldwide.
-            </Text>
-          </FadeInUp>
-          <FadeInUp delay={220} style={{ flex: narrow ? undefined : 1, gap: 18 }}>
-            <Text style={styles.intro}>
-              Trade food & groceries worldwide with <Text style={{ fontWeight: '800', color: P.espresso }}>{BRAND.legal}</Text>. Bulk
-              pricing, a dedicated application review, and full logistics support — direct from Dubai.
-            </Text>
-            <View style={styles.chipRow}>
-              <Chip icon="pricetags-outline" label="Bulk pricing" />
-              <Chip icon="cube-outline" label="Logistics support" />
-              <Chip icon="shield-checkmark-outline" label="Dedicated review" />
-            </View>
-            <View style={[styles.heroBtns, colStack && { flexDirection: 'column', alignSelf: 'stretch' }]}>
-              <Pressable style={styles.btnRed} onPress={openForm}>
-                <Text style={styles.btnRedText}>Start registration</Text>
-                <Ionicons name="arrow-forward" size={18} color={P.cream} />
-              </Pressable>
-              <Pressable style={styles.btnWa} onPress={() => Linking.openURL(waUrl)}>
-                <Ionicons name="logo-whatsapp" size={19} color={colors.white} />
-                <Text style={styles.btnWaText}>Chat on WhatsApp</Text>
-              </Pressable>
-            </View>
-          </FadeInUp>
+        {/* Scroll cue */}
+        <View pointerEvents="none" style={styles.dhScrollCue}>
+          <Ionicons name="chevron-down" size={22} color="rgba(255,255,255,0.55)" />
         </View>
-
-        <Reveal style={{ marginTop: colStack ? 26 : 40 }}>
-          <View style={styles.heroMedia}>
-            <RotatingVideo sources={HERO_VIDEOS} style={StyleSheet.absoluteFill} />
-            <View pointerEvents="none" style={styles.heroMediaShade} />
-            <View style={styles.heroMediaContent}>
-              <Text style={styles.heroMediaQuote}>“Quality food, traded worldwide — direct from Dubai.”</Text>
-              <View style={styles.heroPoints}>
-                {['Bulk pricing', 'Logistics support', 'Dedicated review'].map((p) => (
-                  <View key={p} style={styles.heroPoint}>
-                    <Ionicons name="checkmark-circle" size={16} color={P.gold} />
-                    <Text style={styles.heroPointText}>{p}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        </Reveal>
-      </Container>
+      </View>
 
       <View style={styles.body} onLayout={(e) => { bodyY.current = e.nativeEvent.layout.y; }}>
-        {/* ───────── WHY PARTNER (benefits) ───────── */}
-        <View style={styles.benefitsWrap}>
+        {/* ───────── WHY PARTNER — luxury gold layout ───────── */}
+        <View style={styles.whyLux} onLayout={(e) => { benY.current = e.nativeEvent.layout.y; }}>
+          {/* warm ambient glows evoking the Dubai-interior render */}
+          <View pointerEvents="none" style={styles.whyGlowGold} />
+          <View pointerEvents="none" style={styles.whyGlowRed} />
+
+          <View style={[styles.whyInner, narrow && { flexDirection: 'column', gap: 32 }]}>
+            {/* Left — heading */}
+            <Reveal style={narrow ? { width: '100%' } : { flex: 0.42, paddingRight: 24 }}>
+              <View style={styles.kickerRow}>
+                <Text style={styles.kicker}>WHY RPK</Text>
+                <View style={styles.kickerLine} />
+              </View>
+              <Text style={[styles.whyHead, { fontSize: tight ? 30 : narrow ? 38 : 46, lineHeight: (tight ? 30 : narrow ? 38 : 46) * 1.08 }]}>
+                Why partner with <Text style={styles.displayAccent}>RPK</Text>
+              </Text>
+              <Text style={styles.whySub}>
+                Everything you need to import or export food & groceries at scale — sourced, documented and shipped from Dubai.
+              </Text>
+              <Pressable style={({ hovered }: any) => [styles.whyCta, hovered && { opacity: 0.9 }]} onPress={openForm}>
+                <Text style={styles.whyCtaTxt}>Become a partner</Text>
+                <Ionicons name="arrow-forward" size={17} color="#fff" />
+              </Pressable>
+            </Reveal>
+
+            {/* Right — staggered gold cards */}
+            <View style={[styles.whyCards, narrow && { width: '100%' }]}>
+              {BENEFITS.map((b, i) => (
+                <LuxCard key={b.t} b={b} index={i} narrow={narrow} colStack={colStack} />
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* ───────── HOW IT WORKS — luxury panel (matches Why RPK) ───────── */}
+        <View style={styles.whyLux}>
+          <View pointerEvents="none" style={styles.whyGlowGold} />
+          <View pointerEvents="none" style={styles.whyGlowRed} />
           <Reveal style={styles.benefitsHead}>
-            <Text style={styles.blockKicker}>WHY RPK</Text>
-            <Text style={styles.blockHeading}>Why partner with RPK</Text>
-            <Text style={styles.blockSub}>
-              Everything you need to import or export food & groceries at scale — sourced, documented and shipped from Dubai.
-            </Text>
+            <Text style={styles.blockKicker}>THE PROCESS</Text>
+            <Text style={styles.blockHeading}>How it works</Text>
+            <Text style={styles.blockSub}>From first contact to delivered cargo — four straightforward steps.</Text>
           </Reveal>
-          <View style={styles.benefits}>
-            {BENEFITS.map((b, i) => (
-              <BenefitCard key={b.t} b={b} index={i} sizeStyle={colStack ? { width: '100%' } : narrow ? { width: '47%' } : { width: '23%' }} />
+          <View style={styles.howSteps}>
+            {HOW_STEPS.map((s, i) => (
+              <HowCard key={s.n} s={s} index={i} narrow={narrow} colStack={colStack} />
             ))}
           </View>
         </View>
@@ -442,12 +552,15 @@ export default function ImportExport() {
             <Reveal style={{ width: '100%' }}>
               <Pressable onHoverIn={ctaHover.onHoverIn} onHoverOut={ctaHover.onHoverOut} onPress={openForm} style={{ width: '100%' }}>
                 <Animated.View style={[styles.ctaPanel, { transform: [{ scale: ctaHover.scale }] }]}>
+                  {/* Soft brand-light accents for depth */}
+                  <View pointerEvents="none" style={styles.ctaBlob1} />
+                  <View pointerEvents="none" style={styles.ctaBlob2} />
                   <Animated.View style={[styles.ctaIcon, { transform: [{ translateY: rocketFloat }] }]}>
-                    <Ionicons name="rocket-outline" size={26} color={colors.white} />
+                    <Ionicons name="rocket" size={26} color={colors.white} />
                   </Animated.View>
                   <Text style={styles.ctaTitle}>Ready to become a partner?</Text>
                   <Text style={styles.ctaSub}>Complete a short registration form — it takes a couple of minutes and we reply within hours.</Text>
-                  <Button label="Start registration" icon="create-outline" onPress={openForm} style={{ marginTop: 6, paddingHorizontal: 26, backgroundColor: colors.white }} textStyle={{ color: colors.red }} />
+                  <Button label="Start registration" icon="create-outline" onPress={openForm} style={{ marginTop: 8, paddingHorizontal: 28, backgroundColor: colors.white, ...(Platform.OS === 'web' ? ({ boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } as any) : null) }} textStyle={{ color: colors.red }} />
                   <Text style={styles.ctaFine}>No obligation · Your details stay confidential</Text>
                 </Animated.View>
               </Pressable>
@@ -561,6 +674,20 @@ export default function ImportExport() {
             </FadeInUp>
           )}
         </View>
+
+        {/* ───────── FAQ ───────── */}
+        <View style={styles.faqWrap}>
+          <Reveal style={styles.benefitsHead}>
+            <Text style={styles.blockKicker}>COMMON QUESTIONS</Text>
+            <Text style={styles.blockHeading}>Frequently asked</Text>
+            <Text style={styles.blockSub}>Everything you need to know before registering as an import or export partner.</Text>
+          </Reveal>
+          <View style={{ width: '100%', gap: 12, marginTop: 8 }}>
+            {FAQS.map((f, i) => (
+              <FaqItem key={i} f={f} index={i} open={openFaq === i} onToggle={() => setOpenFaq(openFaq === i ? null : i)} />
+            ))}
+          </View>
+        </View>
       </View>
 
       <Footer />
@@ -569,14 +696,87 @@ export default function ImportExport() {
 }
 
 const styles = StyleSheet.create({
+  /* HERO — dark section with spice/grain side imagery & gold accents */
+  darkHero: {
+    width: '100%', overflow: 'hidden', alignItems: 'center',
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'radial-gradient(120% 90% at 50% 40%, #1C0F0C 0%, #140A09 55%, #0C0605 100%)' } as any)
+      : { backgroundColor: '#140A09' }),
+  },
+  dhOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? { backgroundImage: 'linear-gradient(180deg,rgba(10,6,5,0.68) 0%,rgba(10,6,5,0.58) 50%,rgba(10,6,5,0.44) 100%)' } as any
+      : { backgroundColor: 'rgba(10,6,5,0.6)' }),
+  },
+  // Maroon edge blooms echoing the reference's burgundy corners.
+  dhBlob1: { position: 'absolute', width: 620, height: 620, borderRadius: 999, backgroundColor: 'rgba(120,18,14,0.30)', top: -260, left: -180 },
+  dhBlob2: { position: 'absolute', width: 520, height: 520, borderRadius: 999, backgroundColor: 'rgba(120,18,14,0.26)', top: -120, right: -180 },
+  // Side image panels (spices left / grains right) with an inner fade to dark.
+  dhSide: { position: 'absolute', top: 0, bottom: 0, overflow: 'hidden' },
+  dhSideFadeL: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(to right, rgba(20,10,9,0.35) 0%, rgba(20,10,9,0.5) 45%, rgba(20,10,9,1) 100%)' } as any)
+      : { backgroundColor: 'rgba(20,10,9,0.55)' }),
+  },
+  dhSideFadeR: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(to left, rgba(20,10,9,0.35) 0%, rgba(20,10,9,0.5) 45%, rgba(20,10,9,1) 100%)' } as any)
+      : { backgroundColor: 'rgba(20,10,9,0.55)' }),
+  },
+  // Soft red glow behind the headline (keeps the accent reading as clean brand red).
+  dhGoldGlow: {
+    position: 'absolute', width: 720, height: 420, alignSelf: 'center', top: '22%', borderRadius: 999,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'radial-gradient(closest-side, rgba(225,29,42,0.16) 0%, rgba(225,29,42,0) 100%)' } as any)
+      : { backgroundColor: 'transparent' }),
+  },
+  dhScrollCue: { position: 'absolute', bottom: 22, alignSelf: 'center', alignItems: 'center' },
+  dhCenter: { width: '100%', maxWidth: 860, alignItems: 'center', gap: 20, alignSelf: 'center', zIndex: 2 },
+  dhPill: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(224,164,72,0.35)', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
+  dhPillText: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
+  dhHeading: { color: '#FFFFFF', fontWeight: '900', letterSpacing: -1, textAlign: 'center' },
+  dhAccent: { color: P.red, fontWeight: '900' },
+  dhSub: {
+    color: 'rgba(255,255,255,0.94)', fontWeight: '600', lineHeight: 26, textAlign: 'center', maxWidth: 580,
+    ...(Platform.OS === 'web' ? ({ textShadow: '0 2px 10px rgba(0,0,0,0.55)' } as any) : { textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } }),
+  },
+  dhStats: { flexDirection: 'row', alignItems: 'center', gap: 28, flexWrap: 'wrap', justifyContent: 'center' },
+  dhStat: { alignItems: 'center', gap: 3 },
+  dhStatN: { color: '#FFFFFF', fontWeight: '900', fontSize: 22, letterSpacing: -0.5 },
+  dhStatL: { color: 'rgba(255,255,255,0.45)', fontWeight: '800', fontSize: 9.5, letterSpacing: 1.2 },
+  dhStatDiv: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
+  dhBtns: { flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center' },
+  dhBtnRed: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: P.red, paddingHorizontal: 26, paddingVertical: 14, borderRadius: 999 },
+  dhBtnRedTxt: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  dhBtnGhost: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999 },
+  dhBtnGhostTxt: { color: 'rgba(255,255,255,0.88)', fontWeight: '800', fontSize: 15 },
+  dhSubBrand: { color: 'rgba(255,255,255,0.9)', fontWeight: '800' },
+
   /* HERO — editorial (cream), matches the About page */
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   kicker: { color: P.red, fontWeight: '800', fontSize: 12, letterSpacing: 2 },
   kickerLine: { height: 1.5, width: 56, backgroundColor: P.red, opacity: 0.6 },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 40, marginTop: 24 },
+  heroSplit: { flexDirection: 'row', alignItems: 'center', gap: 44, marginTop: 26 },
   display: { color: P.espresso, fontWeight: '900', letterSpacing: -0.5 },
   displayAccent: { color: P.red, fontWeight: '900' },
   intro: { color: P.muted, fontSize: 16, lineHeight: 26 },
+  btnOutline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(30,24,19,0.22)', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999, backgroundColor: 'transparent' },
+  btnOutlineText: { color: P.espresso, fontWeight: '800', fontSize: 15 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 24, marginTop: 6, flexWrap: 'wrap' },
+  stat: { gap: 3 },
+  statNum: { color: P.espresso, fontWeight: '900', fontSize: 27, letterSpacing: -0.5 },
+  statLabel: { color: P.muted, fontWeight: '800', fontSize: 10.5, letterSpacing: 1.1 },
+  statDiv: { width: 1, height: 36, backgroundColor: 'rgba(30,24,19,0.14)' },
+  heroImageWrap: { width: '100%', aspectRatio: 5 / 6, borderRadius: 28, overflow: 'hidden', backgroundColor: P.band },
+  heroImgShade: { ...StyleSheet.absoluteFillObject, ...(Platform.OS === 'web' ? ({ backgroundImage: 'linear-gradient(180deg, rgba(20,15,11,0) 52%, rgba(20,15,11,0.6) 100%)' } as any) : { backgroundColor: 'rgba(20,15,11,0.2)' }) },
+  featuredCard: { position: 'absolute', left: 16, right: 16, bottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.white, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, ...shadow.card },
+  featuredIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: P.red },
+  featuredKicker: { color: P.red, fontWeight: '800', fontSize: 10, letterSpacing: 1 },
+  featuredTitle: { color: P.espresso, fontWeight: '800', fontSize: 14, marginTop: 2 },
   chipRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: P.gold, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { color: P.espresso, fontWeight: '700', fontSize: 13.5 },
@@ -598,6 +798,40 @@ const styles = StyleSheet.create({
 
   /* BENEFITS (clean cards on cream — matches the About page) */
   benefitsWrap: { width: '100%', maxWidth: 1100, marginTop: 24, marginBottom: 30, alignItems: 'center' },
+
+  /* WHY RPK — luxury gold layout */
+  whyLux: {
+    width: '100%', maxWidth: 1160, marginTop: 24, marginBottom: 36, borderRadius: 30, overflow: 'hidden',
+    paddingHorizontal: 34, paddingVertical: 44, position: 'relative',
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(135deg, #FBF6EC 0%, #F3E8D2 55%, #EADBBB 100%)' } as any)
+      : { backgroundColor: '#F3E8D2' }),
+    borderWidth: 1, borderColor: 'rgba(193,154,75,0.35)',
+    ...shadow.card, shadowColor: '#B8923F', shadowOpacity: 0.18, shadowRadius: 34, shadowOffset: { width: 0, height: 18 },
+  },
+  whyGlowGold: { position: 'absolute', width: 460, height: 460, borderRadius: 999, backgroundColor: 'rgba(193,154,75,0.22)', top: -180, right: -120 },
+  whyGlowRed: { position: 'absolute', width: 360, height: 360, borderRadius: 999, backgroundColor: 'rgba(225,29,42,0.08)', bottom: -160, left: -100 },
+  whyInner: { flexDirection: 'row', alignItems: 'center', gap: 40, width: '100%' },
+  whyHead: { color: P.espresso, fontWeight: '900', letterSpacing: -0.6, marginTop: 12 },
+  whySub: { color: '#6E6455', fontSize: 15, lineHeight: 24, marginTop: 14, fontStyle: 'italic', maxWidth: 380 },
+  whyCta: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 9, backgroundColor: P.red, paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999, marginTop: 22 },
+  whyCtaTxt: { color: '#fff', fontWeight: '800', fontSize: 14.5 },
+  whyCards: { flex: 0.58, flexDirection: 'row', flexWrap: 'wrap', gap: 18, justifyContent: 'space-between' },
+  luxCard: {
+    width: '100%', borderRadius: 20, padding: 20, minHeight: 172, overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(155deg, #D92419 0%, #C11B10 55%, #9E0F08 100%)' } as any)
+      : { backgroundColor: '#D92419' }),
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)',
+    shadowColor: '#6E0C07', shadowOpacity: 0.30, shadowRadius: 22, shadowOffset: { width: 0, height: 14 },
+  },
+  luxIcon: {
+    width: 50, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+    backgroundColor: 'rgba(0,0,0,0.16)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
+  },
+  luxTitle: { color: '#FFFFFF', fontWeight: '800', fontSize: 16, letterSpacing: -0.2, marginBottom: 7 },
+  luxDesc: { color: 'rgba(255,255,255,0.82)', fontSize: 13, lineHeight: 19.5 },
   benefitsHead: { width: '100%', alignItems: 'center' },
   blockKicker: { color: P.red, fontWeight: '800', fontSize: 12, letterSpacing: 2, marginBottom: 8, textAlign: 'center' },
   blockHeading: { fontWeight: '900', fontSize: 28, color: P.espresso, letterSpacing: -0.4, textAlign: 'center' },
@@ -610,11 +844,21 @@ const styles = StyleSheet.create({
 
   /* REGISTER CTA (dark espresso band — echoes the About Mission/Vision band) */
   cardWrap: { width: '100%', maxWidth: 880, alignItems: 'center' },
-  ctaPanel: { width: '100%', alignItems: 'center', backgroundColor: P.espresso, borderRadius: 24, paddingHorizontal: 28, paddingVertical: 44, gap: 12, ...shadow.card },
-  ctaIcon: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(193,154,75,0.14)', borderWidth: 1, borderColor: 'rgba(193,154,75,0.5)', marginBottom: 4 },
-  ctaTitle: { fontWeight: '900', fontSize: 26, color: colors.white, letterSpacing: -0.3, textAlign: 'center' },
-  ctaSub: { color: '#D6D3D1', fontSize: 15, lineHeight: 23, textAlign: 'center', maxWidth: 480 },
-  ctaFine: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 },
+  ctaPanel: {
+    width: '100%', alignItems: 'center', borderRadius: 28, overflow: 'hidden',
+    paddingHorizontal: 28, paddingVertical: 50, gap: 12,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(135deg, #D92419 0%, #C11B10 50%, #9E0F08 100%)' } as any)
+      : { backgroundColor: colors.red }),
+    shadowColor: '#6E0C07', shadowOpacity: 0.28, shadowRadius: 32, shadowOffset: { width: 0, height: 16 },
+  },
+  // Deeper-red light-blooms for depth (no pinkish white overlay).
+  ctaBlob1: { position: 'absolute', width: 300, height: 300, borderRadius: 999, backgroundColor: 'rgba(110,12,7,0.30)', top: -100, right: -70 },
+  ctaBlob2: { position: 'absolute', width: 240, height: 240, borderRadius: 999, backgroundColor: 'rgba(110,12,7,0.24)', bottom: -90, left: -60 },
+  ctaIcon: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)', marginBottom: 4 },
+  ctaTitle: { fontWeight: '900', fontSize: 27, color: colors.white, letterSpacing: -0.3, textAlign: 'center' },
+  ctaSub: { color: 'rgba(255,255,255,0.92)', fontSize: 15, lineHeight: 23, textAlign: 'center', maxWidth: 480 },
+  ctaFine: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 },
 
   /* FORM CARD */
   card: {
@@ -667,4 +911,70 @@ const styles = StyleSheet.create({
 
   doneBadge: { width: 76, height: 76, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(30,158,98,0.12)' },
   success: { color: colors.text, textAlign: 'center', maxWidth: 440, lineHeight: 22, fontSize: 14.5 },
+
+  /* HOW IT WORKS — red-gradient cards (match Why RPK LuxCards) */
+  howSteps: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center', width: '100%', marginTop: 4 },
+  howCard: {
+    width: '100%', height: '100%', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 22, gap: 10, minHeight: 200, overflow: 'hidden',
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, ...shadow.card,
+    ...(Platform.OS === 'web' ? ({ transition: 'box-shadow 0.3s ease, border-color 0.3s ease' } as any) : null),
+  },
+  howCardHover: {
+    borderColor: 'rgba(255,255,255,0.18)',
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(155deg, #D92419 0%, #C11B10 55%, #9E0F08 100%)', boxShadow: '0 24px 46px rgba(110,12,7,0.42)' } as any)
+      : { backgroundColor: '#D92419' }),
+  },
+  howIcon: {
+    width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.redSoft, borderWidth: 1, borderColor: 'rgba(217,36,25,0.18)',
+    ...(Platform.OS === 'web' ? ({ transition: 'all 0.3s ease' } as any) : null),
+  },
+  howIconHover: {
+    backgroundColor: 'rgba(0,0,0,0.16)', borderColor: 'rgba(255,255,255,0.3)',
+  },
+  howTitle: { fontWeight: '800', color: P.espresso, fontSize: 16, letterSpacing: -0.2 },
+  howDesc: { color: P.muted, fontSize: 13, lineHeight: 19.5 },
+
+  /* FAQ */
+  faqWrap: { width: '100%', maxWidth: 800, marginTop: 52, marginBottom: 16, alignItems: 'center' },
+  faqRow: {
+    width: '100%', backgroundColor: colors.white, borderRadius: 18, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 18, paddingVertical: 17, ...shadow.soft,
+    ...(Platform.OS === 'web' ? ({ transition: 'border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease' } as any) : null),
+  },
+  faqRowHover: {
+    borderColor: 'rgba(217,36,25,0.35)',
+    ...(Platform.OS === 'web' ? ({ boxShadow: '0 12px 26px rgba(217,36,25,0.12)' } as any) : null),
+  },
+  faqRowOpen: {
+    borderColor: 'rgba(217,36,25,0.45)', backgroundColor: '#FFF9F8',
+    ...(Platform.OS === 'web' ? ({ boxShadow: '0 16px 34px rgba(217,36,25,0.16)' } as any) : null),
+  },
+  faqQ: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  faqNum: {
+    width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.redSoft, borderWidth: 1, borderColor: 'rgba(217,36,25,0.16)',
+    ...(Platform.OS === 'web' ? ({ transition: 'all 0.25s ease' } as any) : null),
+  },
+  faqNumOpen: {
+    borderColor: 'transparent',
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(150deg, #E11D2A 0%, #B0110A 100%)' } as any)
+      : { backgroundColor: P.red }),
+  },
+  faqNumTxt: { color: P.red, fontWeight: '900', fontSize: 12.5, letterSpacing: 0.3 },
+  faqQText: { fontWeight: '800', color: P.espresso, fontSize: 15, flex: 1, letterSpacing: -0.2 },
+  faqChev: {
+    width: 30, height: 30, borderRadius: 999, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.redSoft,
+    ...(Platform.OS === 'web' ? ({ transition: 'background-color 0.25s ease' } as any) : null),
+  },
+  faqChevOpen: {
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(150deg, #E11D2A 0%, #B0110A 100%)' } as any)
+      : { backgroundColor: P.red }),
+  },
+  faqAWrap: { paddingLeft: 48, paddingRight: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(217,36,25,0.12)' },
+  faqA: { color: P.muted, fontSize: 13.5, lineHeight: 22 },
 });
