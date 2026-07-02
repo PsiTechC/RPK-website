@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { BRAND } from '../lib/theme';
 import { Footer } from '../components/Footer';
+import { HeroVideo } from '../components/HeroVideo';
 import { Container } from '../components/ui';
 import { Reveal, FadeInUp, CountUp, useHoverScale } from '../components/Motion';
 
@@ -105,9 +106,9 @@ export default function About() {
 
   return (
     <ScrollView style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
-      {/* ───────── 1 · HERO (full background image) ───────── */}
+      {/* ───────── 1 · HERO (same rotating cinematic background as the home page) ───────── */}
       <View style={[styles.hero, { minHeight: tight ? 540 : 660 }]}>
-        <Image source={{ uri: PIC.port }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+        <HeroVideo showDots={false} />
         <View style={styles.heroShade} />
         <Container max={1180} style={{ paddingVertical: tight ? 48 : 72 }}>
           <FadeInUp delay={40}>
