@@ -105,7 +105,7 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
             }}
           >
             <Ionicons name="cart-outline" size={16} color={out ? colors.muted : colors.white} />
-            <Text style={[styles.addText, out && styles.addDisabledText]}>{out ? 'Out of stock' : 'Add to cart'}</Text>
+            <Text numberOfLines={1} style={[styles.addText, out && styles.addDisabledText]}>{out ? 'Out of stock' : 'Add to cart'}</Text>
           </Pressable>
           <Pressable
             style={styles.callBtn}
@@ -210,9 +210,11 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 14, fontWeight: '700', minHeight: 38 },
   desc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   noRating: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
-  // Primary "Add to cart" — filled brand red, takes the remaining width.
-  add: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: colors.red, paddingVertical: 9, borderRadius: 999 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 },
+  // Primary "Add to cart" — filled brand red. Grows to fill the row; on a narrow
+  // (2-col mobile) card it can't fit beside both icons, so it takes the full width
+  // and the call/WhatsApp icons wrap to the line below instead of squishing the text.
+  add: { flexGrow: 1, flexBasis: 120, minWidth: 120, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: colors.red, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 999 },
   addText: { color: colors.white, fontWeight: '800', fontSize: 13 },
   addDisabled: { backgroundColor: colors.offWhite, borderWidth: 1.5, borderColor: colors.border, opacity: 0.85 },
   addDisabledText: { color: colors.muted },
