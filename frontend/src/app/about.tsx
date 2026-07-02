@@ -329,13 +329,20 @@ function FBtn({ icon, label, onPress }: { icon: Ion; label: string; onPress?: ()
 
 function ValueCard({ v, i }: { v: { icon: Ion; title: string; desc: string }; i: number }) {
   const { scale, onHoverIn, onHoverOut } = useHoverScale(1.03);
+  const [hovered, setHovered] = useState(false);
   return (
     <Reveal delay={i * 90} style={styles.valueCol}>
-      <Pressable onHoverIn={onHoverIn} onHoverOut={onHoverOut} style={{ width: '100%' }}>
-        <Animated.View style={[styles.valueCard, { transform: [{ scale }] }]}>
-          <View style={styles.valueIcon}><Ionicons name={v.icon} size={22} color={colors.white} /></View>
-          <Text style={styles.valueTitle}>{v.title}</Text>
-          <Text style={styles.valueDesc}>{v.desc}</Text>
+      <Pressable
+        onHoverIn={() => { onHoverIn(); setHovered(true); }}
+        onHoverOut={() => { onHoverOut(); setHovered(false); }}
+        style={{ width: '100%' }}
+      >
+        <Animated.View style={[styles.valueCard, hovered && styles.valueCardHover, { transform: [{ scale }] }]}>
+          <View style={[styles.valueIcon, hovered && styles.valueIconHover]}>
+            <Ionicons name={v.icon} size={22} color={hovered ? colors.white : RED} />
+          </View>
+          <Text style={[styles.valueTitle, hovered && styles.valueTitleHover]}>{v.title}</Text>
+          <Text style={[styles.valueDesc, hovered && styles.valueDescHover]}>{v.desc}</Text>
         </Animated.View>
       </Pressable>
     </Reveal>
@@ -463,12 +470,23 @@ const styles = StyleSheet.create({
   valueCol: { flexGrow: 1, flexBasis: '30%', minWidth: 230 },
   valueCard: {
     borderRadius: 16, padding: 20, gap: 8, height: '100%',
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, ...shadow.card,
+    ...(Platform.OS === 'web' ? ({ transition: 'box-shadow 0.35s ease, border-color 0.35s ease' } as any) : null),
+  },
+  valueCardHover: {
+    borderColor: 'transparent',
     ...(Platform.OS === 'web' ? ({ backgroundImage: CARD_GRADIENT } as any) : { backgroundColor: RED }),
     shadowColor: '#7A0D08', shadowOpacity: 0.22, shadowRadius: 22, shadowOffset: { width: 0, height: 14 },
   },
-  valueIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  valueTitle: { color: colors.white, fontWeight: '900', fontSize: 17, letterSpacing: -0.2 },
-  valueDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 14, lineHeight: 21 },
+  valueIcon: {
+    width: 42, height: 42, borderRadius: 12, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 2,
+    ...(Platform.OS === 'web' ? ({ transition: 'background-color 0.35s ease' } as any) : null),
+  },
+  valueIconHover: { backgroundColor: 'rgba(255,255,255,0.18)' },
+  valueTitle: { color: INK, fontWeight: '900', fontSize: 17, letterSpacing: -0.2, ...(Platform.OS === 'web' ? ({ transition: 'color 0.35s ease' } as any) : null) },
+  valueTitleHover: { color: colors.white },
+  valueDesc: { color: MUTED, fontSize: 14, lineHeight: 21, ...(Platform.OS === 'web' ? ({ transition: 'color 0.35s ease' } as any) : null) },
+  valueDescHover: { color: 'rgba(255,255,255,0.9)' },
 
   /* VISION / MISSION — diagonal split (two rounded panels, white gap) */
   vmWrap: {
