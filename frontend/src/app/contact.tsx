@@ -225,7 +225,10 @@ function FeedbackSection() {
 
   return (
     <View style={styles.fbBand}>
-      <Container>
+      {/* Same rotating grocery background as the hero, so the page reads as one piece. */}
+      <View style={StyleSheet.absoluteFillObject as any}><HeroVideo showDots={false} /></View>
+      <View pointerEvents="none" style={styles.heroBgOverlay} />
+      <Container style={{ zIndex: 2 }}>
         <Reveal>
           <View style={[styles.fbCard, FROST]}>
             <Text style={styles.fbTitle}>How was your experience?</Text>
@@ -307,7 +310,7 @@ const styles = StyleSheet.create({
   uErr: { color: colors.red, fontSize: 12, marginTop: 3 },
 
   // feedback band — same backdrop as the hero
-  fbBand: { backgroundColor: colors.white, paddingVertical: 30, paddingHorizontal: 18, zIndex: 2 },
+  fbBand: { position: 'relative', overflow: 'hidden', backgroundColor: '#140A09', paddingVertical: 44, paddingHorizontal: 18, zIndex: 2 },
   fbCard: {
     alignSelf: 'center', width: '100%', maxWidth: 660, zIndex: 2,
     backgroundColor: 'rgba(247,240,229,0.90)',
