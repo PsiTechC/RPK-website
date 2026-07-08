@@ -58,7 +58,9 @@ export default function Products() {
   const mainGap = 26;
   const mainW = useSidebar ? contentW - sidebarW - mainGap : contentW;
   // Phones show one full-width card per row (cleaner than two cramped columns).
-  const cols = width < 560 ? 1 : width < 860 ? 3 : useSidebar ? (mainW >= 900 ? 5 : 4) : width < 1180 ? 4 : 5;
+  // Sidebar (category) view: 4 wide cards so the CTA + call + WhatsApp fit one row
+  // (5 made cards too narrow and the icons wrapped). Falls to 3 on smaller desktops.
+  const cols = width < 560 ? 1 : width < 860 ? 3 : useSidebar ? (mainW >= 980 ? 4 : 3) : width < 1180 ? 4 : 5;
   // Percentage widths (like the home page) keep exactly N cards per row regardless
   // of scrollbar width or sub-pixel rounding — fixed-pixel widths dropped mobile to
   // one card per row once the vertical scrollbar appeared.
