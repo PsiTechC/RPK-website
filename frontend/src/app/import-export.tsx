@@ -469,7 +469,7 @@ export default function ImportExport() {
           </View>
 
           {/* Subtext */}
-          <Text style={[styles.dhSub, { fontSize: tight ? 14 : 16, lineHeight: tight ? 22 : 26, maxWidth: 620, marginTop: tight ? 8 : 16 }]}>
+          <Text style={[styles.dhSub, { fontSize: tight ? 14 : 16, lineHeight: tight ? 22 : 26, width: '100%', maxWidth: 620, marginTop: tight ? 8 : 16 }]}>
             Connect with verified global grocery suppliers for spices, grains, fresh produce, and
             packaged goods — backed by bulk pricing, full trade documentation, and end-to-end
             logistics support from Dubai.
@@ -478,7 +478,7 @@ export default function ImportExport() {
 
         {/* CTA buttons */}
         <FadeInUp delay={320} style={{ alignItems: 'center', paddingTop: tight ? 44 : 72, paddingBottom: 8, paddingHorizontal: tight ? 20 : 40 }}>
-          <View style={[styles.dhBtns, tight && { flexDirection: 'column', alignItems: 'center' }]}>
+          <View style={[styles.dhBtns, tight && { flexDirection: 'column', alignSelf: 'stretch', alignItems: 'stretch' }]}>
             <Pressable style={({ hovered }: any) => [styles.dhBtnRed, { paddingHorizontal: 36, paddingVertical: 15 }, hovered && { opacity: 0.88 }]} onPress={openForm}>
               <Text style={[styles.dhBtnRedTxt, { fontSize: 15 }]}>Begin Registration</Text>
               <Ionicons name="arrow-forward" size={17} color="#fff" />
@@ -495,9 +495,9 @@ export default function ImportExport() {
         </View>
       </View>
 
-      <View style={styles.body} onLayout={(e) => { bodyY.current = e.nativeEvent.layout.y; }}>
+      <View style={[styles.body, tight && { paddingHorizontal: 12 }]} onLayout={(e) => { bodyY.current = e.nativeEvent.layout.y; }}>
         {/* ───────── WHY PARTNER — luxury gold layout ───────── */}
-        <View style={styles.whyLux} onLayout={(e) => { benY.current = e.nativeEvent.layout.y; }}>
+        <View style={[styles.whyLux, tight && styles.whyLuxTight]} onLayout={(e) => { benY.current = e.nativeEvent.layout.y; }}>
           {/* warm ambient glows evoking the Dubai-interior render */}
           <View pointerEvents="none" style={styles.whyGlowGold} />
           <View pointerEvents="none" style={styles.whyGlowRed} />
@@ -531,7 +531,7 @@ export default function ImportExport() {
         </View>
 
         {/* ───────── HOW IT WORKS — luxury panel (matches Why RPK) ───────── */}
-        <View style={styles.whyLux}>
+        <View style={[styles.whyLux, tight && styles.whyLuxTight]}>
           <View pointerEvents="none" style={styles.whyGlowGold} />
           <View pointerEvents="none" style={styles.whyGlowRed} />
           <Reveal style={styles.benefitsHead}>
@@ -617,14 +617,14 @@ export default function ImportExport() {
 
                       <SectionLabel text="CONTACT" />
 
-                      <View style={[styles.grid, colStack && { flexDirection: 'column' }]}>
+                      <View style={[styles.grid, colStack && { flexDirection: 'column', alignItems: 'stretch' }]}>
                         <UField label="CONTACT PERSON" icon="person-outline" value={form.contact_person} onChangeText={(t) => set('contact_person')(sanitizeName(t))} placeholder="Full name" error={errors.contact_person} />
                         <UField label="EMAIL *" icon="mail-outline" value={form.email} onChangeText={set('email')} placeholder="you@company.com" keyboardType="email-address" error={errors.email} />
                       </View>
 
                       <PhoneField label={`Phone * & Country — ${country.name}`} country={country} onCountryChange={selectCountry} number={form.phone} onNumberChange={set('phone')} error={errors.phone} />
 
-                      <View style={[styles.grid, colStack && { flexDirection: 'column' }]}>
+                      <View style={[styles.grid, colStack && { flexDirection: 'column', alignItems: 'stretch' }]}>
                         <UField label="WHATSAPP" icon="logo-whatsapp" value={form.whatsapp} onChangeText={set('whatsapp')} placeholder="+971 5x xxx xxxx" keyboardType="phone-pad" />
                         <UField label="MONTHLY BUYING CAPACITY" icon="cube-outline" value={form.monthly_capacity} onChangeText={set('monthly_capacity')} placeholder="e.g. 2 containers / 5 tonnes" />
                       </View>
@@ -644,7 +644,7 @@ export default function ImportExport() {
 
                       <RequirementBuilder items={items} onChange={setItems} />
 
-                      <View style={[styles.grid, colStack && { flexDirection: 'column' }]}>
+                      <View style={[styles.grid, colStack && { flexDirection: 'column', alignItems: 'stretch' }]}>
                         <UField label="OTHER PRODUCTS / NOTES" icon="pricetag-outline" value={form.product_interest} onChangeText={(t) => setForm({ ...form, product_interest: t })} placeholder="Anything not listed above…" />
                         <UField label="MESSAGE" icon="chatbox-ellipses-outline" value={form.message} onChangeText={(t) => setForm({ ...form, message: t })} placeholder="Tell us about your business…" multiline />
                       </View>
@@ -656,8 +656,8 @@ export default function ImportExport() {
                         </View>
                       )}
 
-                      <View style={[styles.submitRow, colStack && { flexDirection: 'column' }]}>
-                        <Button label={busy ? 'Submitting…' : 'Submit registration'} onPress={submit} disabled={busy} style={{ flex: colStack ? undefined : 1 }} />
+                      <View style={[styles.submitRow, colStack && { flexDirection: 'column', alignItems: 'stretch' }]}>
+                        <Button label={busy ? 'Submitting…' : 'Submit registration'} onPress={submit} disabled={busy} style={{ flex: colStack ? undefined : 1, width: colStack ? '100%' : undefined }} />
                         <Pressable style={[styles.waBtn, colStack && { width: '100%' }]} onPress={() => Linking.openURL(waUrl)}>
                           <Ionicons name="logo-whatsapp" size={20} color={colors.white} />
                           <Text style={styles.waBtnText}>WhatsApp</Text>
@@ -749,9 +749,9 @@ const styles = StyleSheet.create({
   dhStatL: { color: 'rgba(255,255,255,0.45)', fontWeight: '800', fontSize: 9.5, letterSpacing: 1.2 },
   dhStatDiv: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
   dhBtns: { flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center' },
-  dhBtnRed: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: P.red, paddingHorizontal: 26, paddingVertical: 14, borderRadius: 999 },
+  dhBtnRed: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: P.red, paddingHorizontal: 26, paddingVertical: 14, borderRadius: 999 },
   dhBtnRedTxt: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
-  dhBtnGhost: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999 },
+  dhBtnGhost: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999 },
   dhBtnGhostTxt: { color: 'rgba(255,255,255,0.88)', fontWeight: '800', fontSize: 15 },
   dhSubBrand: { color: 'rgba(255,255,255,0.9)', fontWeight: '800' },
 
@@ -809,6 +809,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(193,154,75,0.35)',
     ...shadow.card, shadowColor: '#B8923F', shadowOpacity: 0.18, shadowRadius: 34, shadowOffset: { width: 0, height: 18 },
   },
+  // Tighter padding + radius so the panel breathes on phones (avoids the squeezed column).
+  whyLuxTight: { paddingHorizontal: 16, paddingVertical: 30, borderRadius: 22 },
   whyGlowGold: { position: 'absolute', width: 460, height: 460, borderRadius: 999, backgroundColor: 'rgba(193,154,75,0.22)', top: -180, right: -120 },
   whyGlowRed: { position: 'absolute', width: 360, height: 360, borderRadius: 999, backgroundColor: 'rgba(225,29,42,0.08)', bottom: -160, left: -100 },
   whyInner: { flexDirection: 'row', alignItems: 'center', gap: 40, width: '100%' },

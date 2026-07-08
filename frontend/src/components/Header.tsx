@@ -14,8 +14,7 @@ import { LanguageSelector } from './LanguageSelector';
 
 const NAV = [
   { href: '/', label: 'Home', icon: 'home-outline' },
-  { href: '/products', label: 'Shop', icon: 'bag-handle-outline' },
-  { href: '/products', label: 'Categories', icon: 'grid-outline', dropdown: true },
+  { href: '/products', label: 'Shop', icon: 'bag-handle-outline', dropdown: true },
   { href: '/import-export', label: 'Import / Export', icon: 'globe-outline' },
   { href: '/about', label: 'About Us', icon: 'information-circle-outline' },
   { href: '/contact', label: 'Contact Us', icon: 'mail-outline' },

@@ -82,6 +82,7 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.auth.Required)
 			r.Get("/auth/me", s.handleMe)
+			r.With(authLimit.middleware).Post("/auth/change-password", s.handleChangePassword)
 			r.Post("/orders", s.handleCreateOrder) // checkout requires an account
 			r.Post("/products/{id}/reviews", s.handleCreateReview) // post a review (login required)
 			r.Get("/my/orders", s.handleMyOrders)

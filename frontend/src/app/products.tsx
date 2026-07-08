@@ -57,11 +57,12 @@ export default function Products() {
   const sidebarW = 234;
   const mainGap = 26;
   const mainW = useSidebar ? contentW - sidebarW - mainGap : contentW;
-  const cols = width < 560 ? 2 : width < 860 ? 3 : useSidebar ? (mainW >= 900 ? 5 : 4) : width < 1180 ? 4 : 5;
+  // Phones show one full-width card per row (cleaner than two cramped columns).
+  const cols = width < 560 ? 1 : width < 860 ? 3 : useSidebar ? (mainW >= 900 ? 5 : 4) : width < 1180 ? 4 : 5;
   // Percentage widths (like the home page) keep exactly N cards per row regardless
   // of scrollbar width or sub-pixel rounding — fixed-pixel widths dropped mobile to
   // one card per row once the vertical scrollbar appeared.
-  const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%' } as Record<number, string>)[cols] ?? '47%';
+  const cardW = ({ 1: '100%', 2: '47%', 3: '31%', 4: '23%', 5: '18%' } as Record<number, string>)[cols] ?? '47%';
 
   const activeName =
     active !== 'all'
@@ -160,7 +161,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 }
 
 const styles = StyleSheet.create({
-  catPage: { width: '100%', maxWidth: 1480, alignSelf: 'flex-start', paddingLeft: 12, paddingRight: 16, paddingTop: 8 },
+  catPage: { width: '100%', maxWidth: 1480, alignSelf: 'center', paddingLeft: 12, paddingRight: 16, paddingTop: 8 },
   layout: { flexDirection: 'row', alignItems: 'flex-start', gap: 26, marginTop: 0 },
   sidebar: {
     width: 234, backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,

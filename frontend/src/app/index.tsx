@@ -37,12 +37,13 @@ export default function Home() {
 
   // Full-screen hero (fills the viewport below the header).
   const heroHeight = Math.max(520, height - HEADER_H);
-  const cols = width < 560 ? 2 : width < 900 ? 3 : width < 1100 ? 4 : 5;
+  // Phones show one full-width card per row (cleaner than two cramped columns).
+  const cols = width < 560 ? 1 : width < 900 ? 3 : width < 1100 ? 4 : 5;
   const gap = 16;
   const contentW = Math.min(width, 1600) - 36;
   // Percentage card width keeps exactly N per row regardless of scrollbar width
   // or sub-pixel rounding (which broke fixed-pixel widths on mobile).
-  const cardW = ({ 2: '47%', 3: '31%', 4: '23%', 5: '18%', 6: '15%' } as Record<number, string>)[cols];
+  const cardW = ({ 1: '100%', 2: '47%', 3: '31%', 4: '23%', 5: '18%', 6: '15%' } as Record<number, string>)[cols];
   // single-line category carousel: ~2.4 tiles visible at once so one sits centred
   const carouselItemW = Math.min(320, Math.max(220, Math.round(contentW / (width < 560 ? 1.4 : 2.6))));
 
@@ -65,7 +66,8 @@ export default function Home() {
     const base = picked.length
       ? picked
       : [...products].sort((a, b) => b.rating - a.rating || b.review_count - a.review_count);
-    return base.slice(0, cols * 2);
+    // Keep a healthy set on phones (1 col) too — at least 4, otherwise two rows.
+    return base.slice(0, Math.max(4, cols * 2));
   }, [products, cols]);
 
   return (
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   pillChili: { width: 26, height: 14 },
   pillText: { color: colors.white, fontWeight: '700', fontSize: 13 },
   heroTitle: { color: colors.white, fontWeight: '900', textAlign: 'center', marginBottom: 14 },
-  heroSub: { color: '#F3E7E5', fontSize: 16, textAlign: 'center', lineHeight: 24, maxWidth: 640, marginBottom: 22 },
+  heroSub: { color: '#F3E7E5', fontSize: 16, textAlign: 'center', lineHeight: 24, width: '100%', maxWidth: 640, marginBottom: 22 },
   heroBtns: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'center' },
   importExportBtn: { borderColor: colors.white, backgroundColor: colors.white },
   trustRow: { flexDirection: 'row', gap: 36, marginTop: 28 },

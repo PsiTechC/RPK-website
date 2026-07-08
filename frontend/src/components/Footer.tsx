@@ -33,7 +33,7 @@ export function Footer() {
   return (
     <View style={styles.wrap}>
       <View style={styles.inner}>
-        <View style={[styles.cols, compact && { flexDirection: 'column', gap: 26 }]}>
+        <View style={[styles.cols, compact && { flexDirection: 'column', gap: 40 }]}>
           {/* Quick links */}
           <View style={styles.col}>
             <Text style={styles.colTitle}>Quick Links</Text>

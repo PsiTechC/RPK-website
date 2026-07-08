@@ -15,7 +15,7 @@ func (s *Server) handlePublicStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := map[string]int{
-		"products":   scalar(`SELECT COUNT(*) FROM products WHERE is_active = TRUE`),
+		"products":   scalar(`SELECT COUNT(*) FROM products WHERE is_active = TRUE AND archived_at IS NULL`),
 		"categories": scalar(`SELECT COUNT(*) FROM categories`),
 		"countries": scalar(`SELECT COUNT(DISTINCT lower(trim(country)))
 		                     FROM import_export_registrations

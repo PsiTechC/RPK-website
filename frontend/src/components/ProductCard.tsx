@@ -25,6 +25,9 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
   const v = visualByName(product.category_name);
   const usePhoto = !isPlaceholder(product.image_url);
   const out = product.stock <= 0; // out of stock → blur image + disable cart
+  // Full-width single-column card (mobile) — scale up the CTA + icons so they're
+  // proportionate to the large card instead of looking tiny.
+  const big = width === '100%';
   const hover = useHoverScale(1.035);
   // Call icon opens a small modal: "Call for Inquiry" or "Register as Partner".
   const [callOpen, setCallOpen] = useState(false);
@@ -92,9 +95,9 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
           <Text style={styles.noRating}>No reviews yet</Text>
         )}
         {/* Action row: Add to cart (primary) → Call icon → WhatsApp icon */}
-        <View style={styles.actions}>
+        <View style={[styles.actions, big && styles.actionsBig]}>
           <Pressable
-            style={[styles.add, out && styles.addDisabled]}
+            style={[styles.add, big && styles.addBig, out && styles.addDisabled]}
             disabled={out}
             onPress={(e) => {
               // @ts-ignore stop card navigation on web
@@ -104,31 +107,34 @@ export function ProductCard({ product, width = 220 }: { product: Product; width?
               toast(`“${product.name}” added to cart`, 'success');
             }}
           >
-            <Ionicons name="cart-outline" size={16} color={out ? colors.muted : colors.white} />
-            <Text numberOfLines={1} style={[styles.addText, out && styles.addDisabledText]}>{out ? 'Out of stock' : 'Add to cart'}</Text>
+            <Ionicons name="cart-outline" size={big ? 18 : 16} color={out ? colors.muted : colors.white} />
+            <Text numberOfLines={1} style={[styles.addText, big && styles.addTextBig, out && styles.addDisabledText]}>{out ? 'Out of stock' : 'Add to cart'}</Text>
           </Pressable>
-          <Pressable
-            style={styles.callBtn}
-            accessibilityLabel="Call options"
-            onPress={(e) => {
-              // @ts-ignore stop card navigation on web
-              e.stopPropagation?.();
-              setCallOpen(true);
-            }}
-          >
-            <Ionicons name="call" size={18} color={colors.red} />
-          </Pressable>
-          <Pressable
-            style={styles.wa}
-            accessibilityLabel="Chat on WhatsApp"
-            onPress={(e) => {
-              // @ts-ignore stop card navigation on web
-              e.stopPropagation?.();
-              openWhatsApp();
-            }}
-          >
-            <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
-          </Pressable>
+          {/* Icons kept together so they wrap as a pair (never a lone WhatsApp). */}
+          <View style={[styles.actionIcons, big && styles.actionIconsBig]}>
+            <Pressable
+              style={[styles.callBtn, big && styles.iconBtnBig]}
+              accessibilityLabel="Call options"
+              onPress={(e) => {
+                // @ts-ignore stop card navigation on web
+                e.stopPropagation?.();
+                setCallOpen(true);
+              }}
+            >
+              <Ionicons name="call" size={big ? 20 : 18} color={colors.red} />
+            </Pressable>
+            <Pressable
+              style={[styles.wa, big && styles.iconBtnBig]}
+              accessibilityLabel="Chat on WhatsApp"
+              onPress={(e) => {
+                // @ts-ignore stop card navigation on web
+                e.stopPropagation?.();
+                openWhatsApp();
+              }}
+            >
+              <Ionicons name="logo-whatsapp" size={big ? 24 : 20} color="#25D366" />
+            </Pressable>
+          </View>
         </View>
       </View>
       {out && (
@@ -211,10 +217,19 @@ const styles = StyleSheet.create({
   desc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   noRating: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 },
-  // Primary "Add to cart" — filled brand red. Grows to fill the row; on a narrow
-  // (2-col mobile) card it can't fit beside both icons, so it takes the full width
-  // and the call/WhatsApp icons wrap to the line below instead of squishing the text.
+  // Primary "Add to cart" — filled brand red. Grows to share the row with the icon
+  // pair on wide cards (all three inline); on a narrow mobile card the icon pair
+  // wraps together to the line below (never a lone WhatsApp icon).
+  // Compact so the full label + both icons fit one row even on the narrow grid
+  // cards. Floor still fits the whole "Add to cart" text (never truncates).
   add: { flexGrow: 1, flexBasis: 120, minWidth: 120, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: colors.red, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 999 },
+  actionIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Full-width (mobile single-column) card — bigger CTA + icons to match the card.
+  actionsBig: { gap: 10, marginTop: 12 },
+  addBig: { flexBasis: 150, minWidth: 150, gap: 8, paddingVertical: 13, paddingHorizontal: 16 },
+  addTextBig: { fontSize: 15 },
+  actionIconsBig: { gap: 10 },
+  iconBtnBig: { width: 46, height: 46 },
   addText: { color: colors.white, fontWeight: '800', fontSize: 13 },
   addDisabled: { backgroundColor: colors.offWhite, borderWidth: 1.5, borderColor: colors.border, opacity: 0.85 },
   addDisabledText: { color: colors.muted },

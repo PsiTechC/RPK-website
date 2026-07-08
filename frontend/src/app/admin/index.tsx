@@ -84,6 +84,26 @@ const TAB_LABELS: Record<Tab, string> = {
   archived: 'Archived',
 };
 
+// Grouped sidebar navigation — each tab lives under a titled section (matches the
+// dashboard IA: Overview / Catalogue / Commerce / Trade / Content).
+const NAV_SECTIONS: { title: string; tabs: Tab[] }[] = [
+  { title: 'OVERVIEW', tabs: ['dashboard'] },
+  { title: 'CATALOGUE', tabs: ['products', 'arrange'] },
+  { title: 'COMMERCE', tabs: ['orders', 'customers', 'registrations'] },
+  { title: 'TRADE', tabs: ['inquiries', 'rfqs', 'porders'] },
+  { title: 'CONTENT', tabs: ['feedback', 'news', 'founders', 'archived'] },
+];
+
+// Which admin-stats field supplies the small count badge next to a nav item.
+const TAB_COUNT_KEY: Partial<Record<Tab, string>> = {
+  products: 'total_products',
+  orders: 'total_orders',
+  customers: 'total_customers',
+  registrations: 'total_registrations',
+  rfqs: 'total_rfqs',
+  porders: 'partner_orders',
+};
+
 export default function Admin() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string }>();
@@ -98,6 +118,14 @@ export default function Admin() {
   useEffect(() => {
     if (params.tab && ALL_TABS.includes(params.tab as Tab)) setTab(params.tab as Tab);
   }, [params.tab]);
+
+  // Sidebar count badges + the topbar profile dropdown (holds Log out).
+  const [counts, setCounts] = useState<any>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  useEffect(() => {
+    if (token) api.admin.stats(token).then(setCounts).catch(() => {});
+  }, [token]);
 
   // Products controls live in the topbar, so their state is lifted here.
   const [prodSearch, setProdSearch] = useState('');
@@ -126,26 +154,33 @@ export default function Admin() {
         <Pressable style={styles.brand} onPress={() => router.push('/')}>
           <Logo size={compact ? 26 : 30} />
         </Pressable>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 6, gap: 2 }} showsVerticalScrollIndicator={false}>
-          {ALL_TABS.map((t) => {
-            const active = tab === t;
-            return (
-              <Pressable key={t} style={[styles.navItem, compact && styles.navItemCompact, active && styles.navItemActive]} onPress={() => setTab(t)}>
-                {active && <View style={styles.navActiveBar} />}
-                <Ionicons name={TAB_ICONS[t]} size={20} color={active ? colors.red : colors.muted} />
-                {!compact && <Text style={[styles.navLabel, active && styles.navLabelActive]}>{TAB_LABELS[t]}</Text>}
-              </Pressable>
-            );
-          })}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 6 }} showsVerticalScrollIndicator={false}>
+          {NAV_SECTIONS.map((section) => (
+            <View key={section.title} style={styles.navSection}>
+              {!compact && <Text style={styles.navSectionLabel}>{section.title}</Text>}
+              {compact && <View style={styles.navSectionDivider} />}
+              {section.tabs.map((t) => {
+                const active = tab === t;
+                const countKey = TAB_COUNT_KEY[t];
+                const count = countKey && counts ? Number(counts[countKey] ?? 0) : undefined;
+                return (
+                  <Pressable key={t} style={({ hovered }: any) => [styles.navItem, compact && styles.navItemCompact, hovered && !active && styles.navItemHover, active && styles.navItemActive]} onPress={() => setTab(t)}>
+                    {active && <View style={styles.navActiveBar} />}
+                    <Ionicons name={TAB_ICONS[t]} size={20} color={active ? colors.red : colors.muted} />
+                    {!compact && <Text style={[styles.navLabel, active && styles.navLabelActive]} numberOfLines={1}>{TAB_LABELS[t]}</Text>}
+                    {!compact && count !== undefined && count > 0 && (
+                      <Text style={[styles.navCount, active && styles.navCountActive]}>{count}</Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
         </ScrollView>
         <View style={styles.sideFooter}>
-          <Pressable style={[styles.navItem, compact && styles.navItemCompact]} onPress={() => router.push('/')}>
-            <Ionicons name="open-outline" size={20} color={colors.muted} />
-            {!compact && <Text style={styles.navLabel}>View site</Text>}
-          </Pressable>
-          <Pressable style={[styles.navItem, compact && styles.navItemCompact]} onPress={() => { logout(); router.replace('/'); }}>
-            <Ionicons name="log-out-outline" size={20} color={colors.red} />
-            {!compact && <Text style={[styles.navLabel, { color: colors.red }]}>Log out</Text>}
+          <Pressable style={({ hovered }: any) => [styles.navItem, compact && styles.navItemCompact, hovered && styles.navItemHover]} onPress={() => router.push('/')}>
+            <Ionicons name="open-outline" size={20} color={colors.ink} />
+            {!compact && <Text style={[styles.navLabel, { fontWeight: '900', color: colors.ink }]}>View site</Text>}
           </Pressable>
         </View>
       </View>
@@ -191,7 +226,34 @@ export default function Admin() {
               </>
             )}
             {tab === 'orders' && <StatusFilter value={orderStatus} onChange={setOrderStatus} />}
-            <View style={styles.adminAvatar}><Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text></View>
+            <View style={styles.profileWrap}>
+              <Pressable style={styles.adminAvatar} onPress={() => setProfileOpen((o) => !o)} accessibilityLabel="Account menu">
+                <Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text>
+              </Pressable>
+              {profileOpen && (
+                <>
+                  <Pressable style={styles.profileScrim} onPress={() => setProfileOpen(false)} />
+                  <View style={styles.profileMenu}>
+                    <View style={styles.profileHead}>
+                      <View style={styles.profileHeadAvatar}><Text style={styles.adminAvatarText}>{user?.name?.[0]?.toUpperCase() || 'A'}</Text></View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.profileName} numberOfLines={1}>{user?.name || 'Admin'}</Text>
+                        <Text style={styles.profileEmail} numberOfLines={1}>{user?.email || ''}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.profileDivider} />
+                    <Pressable style={({ hovered }: any) => [styles.profileItem, hovered && styles.profileItemHover]} onPress={() => { setProfileOpen(false); setPwOpen(true); }}>
+                      <Ionicons name="key-outline" size={18} color={colors.muted} />
+                      <Text style={styles.profileItemText}>Change password</Text>
+                    </Pressable>
+                    <Pressable style={({ hovered }: any) => [styles.profileItem, hovered && styles.profileItemHover]} onPress={() => { setProfileOpen(false); logout(); router.replace('/'); }}>
+                      <Ionicons name="log-out-outline" size={18} color={colors.red} />
+                      <Text style={[styles.profileItemText, { color: colors.red }]}>Log out</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: compact ? 16 : 28, paddingBottom: 64 }}>
@@ -212,6 +274,91 @@ export default function Admin() {
           </View>
         </ScrollView>
       </View>
+
+      {pwOpen && token && <ChangePasswordModal token={token} onClose={() => setPwOpen(false)} />}
+    </View>
+  );
+}
+
+// ---------- Change password modal ----------
+function ChangePasswordModal({ token, onClose }: { token: string; onClose: () => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    setErr('');
+    if (!current) return setErr('Enter your current password.');
+    if (next.length < 6) return setErr('New password must be at least 6 characters.');
+    if (next !== confirm) return setErr('New passwords do not match.');
+    if (next === current) return setErr('New password must be different from the current one.');
+    setBusy(true);
+    try {
+      await api.changePassword(current, next, token);
+      setDone(true);
+    } catch (e: any) {
+      setErr(e?.message || 'Could not change password.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const content = (
+    <View style={styles.pwOverlay}>
+      <Pressable style={StyleSheet.absoluteFill as any} onPress={onClose} />
+      <View style={styles.pwModal}>
+        <View style={styles.pwHead}>
+          <View style={styles.pwHeadIcon}><Ionicons name="key-outline" size={20} color={colors.red} /></View>
+          <Text style={styles.pwTitle}>Change password</Text>
+          <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Close"><Ionicons name="close" size={22} color={colors.muted} /></Pressable>
+        </View>
+
+        {done ? (
+          <View style={{ alignItems: 'center', gap: 12, paddingVertical: 18 }}>
+            <Ionicons name="checkmark-circle" size={52} color={colors.green} />
+            <Text style={styles.pwDone}>Password updated successfully.</Text>
+            <Button label="Done" onPress={onClose} style={{ marginTop: 4 }} />
+          </View>
+        ) : (
+          <View style={{ gap: 12, marginTop: 6 }}>
+            <PwInput label="Current password" value={current} onChangeText={setCurrent} show={show} placeholder="Enter current password" />
+            <PwInput label="New password" value={next} onChangeText={setNext} show={show} placeholder="At least 6 characters" />
+            <PwInput label="Confirm new password" value={confirm} onChangeText={setConfirm} show={show} placeholder="Re-enter new password" />
+            <Pressable style={styles.pwShowRow} onPress={() => setShow((s) => !s)}>
+              <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.muted} />
+              <Text style={styles.pwShowText}>{show ? 'Hide passwords' : 'Show passwords'}</Text>
+            </Pressable>
+            {!!err && <Text style={styles.pwErr}>{err}</Text>}
+            <Button label={busy ? 'Updating…' : 'Update password'} onPress={submit} disabled={busy} style={{ marginTop: 2 }} />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    return require('react-dom').createPortal(content, document.body);
+  }
+  return content;
+}
+
+function PwInput({ label, value, onChangeText, show, placeholder }: { label: string; value: string; onChangeText: (t: string) => void; show: boolean; placeholder?: string }) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.pwLabel}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.muted}
+        secureTextEntry={!show}
+        autoCapitalize="none"
+        autoCorrect={false}
+        style={styles.pwInput}
+      />
     </View>
   );
 }
@@ -2015,13 +2162,50 @@ const styles = StyleSheet.create({
   shell: { flex: 1, flexDirection: 'row', backgroundColor: colors.soft },
   sidebar: { backgroundColor: colors.white, borderRightWidth: 1, borderRightColor: colors.border, paddingTop: 14 },
   brand: { paddingHorizontal: 16, paddingBottom: 14, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.line, alignItems: 'flex-start' },
-  navItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 10, paddingHorizontal: 12, paddingVertical: 11, borderRadius: radius.md, position: 'relative' },
+  navSection: { marginBottom: 6 },
+  navSectionLabel: { color: colors.ink, fontWeight: '900', fontSize: 11.5, letterSpacing: 1.4, textTransform: 'uppercase', paddingHorizontal: 22, paddingTop: 14, paddingBottom: 5 },
+  navSectionDivider: { height: 1, backgroundColor: colors.line, marginHorizontal: 12, marginVertical: 6 },
+  navItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.md, position: 'relative' },
   navItemCompact: { justifyContent: 'center', marginHorizontal: 8, paddingHorizontal: 0 },
   navItemActive: { backgroundColor: colors.redSoft },
+  navItemHover: { backgroundColor: 'rgba(217,36,25,0.06)', ...(Platform.OS === 'web' ? ({ transition: 'background-color 0.18s ease' } as any) : null) },
   navActiveBar: { position: 'absolute', left: -10, top: 8, bottom: 8, width: 3, borderRadius: 3, backgroundColor: colors.red },
-  navLabel: { color: colors.muted, fontWeight: '700', fontSize: 14 },
+  navLabel: { color: colors.muted, fontWeight: '700', fontSize: 14, flex: 1 },
   navLabelActive: { color: colors.red },
+  navCount: { color: colors.muted, fontWeight: '800', fontSize: 12, opacity: 0.8 },
+  navCountActive: { color: colors.red },
   sideFooter: { borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: 8, gap: 2 },
+
+  // Topbar profile dropdown (holds View site + Log out)
+  profileWrap: { position: 'relative' },
+  profileScrim: Platform.OS === 'web'
+    ? ({ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 } as any)
+    : { position: 'absolute', top: -1000, left: -1000, right: -1000, height: 3000, zIndex: 40 },
+  profileMenu: {
+    position: 'absolute', top: 50, right: 0, width: 240, backgroundColor: colors.white,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 8, zIndex: 50, ...shadow.card,
+  },
+  profileHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 10 },
+  profileHeadAvatar: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
+  profileName: { color: colors.ink, fontWeight: '900', fontSize: 14 },
+  profileEmail: { color: colors.muted, fontSize: 12 },
+  profileDivider: { height: 1, backgroundColor: colors.line, marginBottom: 6 },
+  profileItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10, marginHorizontal: 6, borderRadius: 8 },
+  profileItemHover: { backgroundColor: colors.offWhite },
+  profileItemText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+
+  // Change-password modal
+  pwOverlay: { ...StyleSheet.absoluteFillObject, ...(Platform.OS === 'web' ? ({ position: 'fixed' } as any) : null), alignItems: 'center', justifyContent: 'center', padding: 22, backgroundColor: 'rgba(15,12,10,0.55)', zIndex: 1000 },
+  pwModal: { width: '100%', maxWidth: 420, backgroundColor: colors.white, borderRadius: radius.lg, padding: 22, ...shadow.card },
+  pwHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pwHeadIcon: { width: 40, height: 40, borderRadius: 999, backgroundColor: colors.redSoft, alignItems: 'center', justifyContent: 'center' },
+  pwTitle: { flex: 1, color: colors.ink, fontWeight: '900', fontSize: 18 },
+  pwLabel: { color: colors.ink, fontWeight: '800', fontSize: 12, letterSpacing: 0.4 },
+  pwInput: { borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: colors.ink, backgroundColor: colors.white, outlineStyle: 'none' as any },
+  pwShowRow: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', paddingVertical: 2 },
+  pwShowText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
+  pwErr: { color: colors.red, fontSize: 13, fontWeight: '600' },
+  pwDone: { color: colors.ink, fontWeight: '800', fontSize: 15, textAlign: 'center' },
   main: { flex: 1 },
   topbar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 28, paddingVertical: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, zIndex: 30 },
   topbarCompact: { paddingHorizontal: 14, flexWrap: 'wrap', rowGap: 10 },

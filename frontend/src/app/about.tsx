@@ -92,7 +92,7 @@ export default function About() {
   return (
     <ScrollView style={{ backgroundColor: CREAM }} contentContainerStyle={{ flexGrow: 1 }}>
       {/* ───────── 1 · HERO — full screen: content centred + stats bar at the bottom ───────── */}
-      <View style={[styles.heroFull, { height: heroH, minHeight: undefined, justifyContent: 'flex-start' }]}>
+      <View style={[styles.heroFull, { minHeight: heroH, justifyContent: 'flex-start' }]}>
         <View style={StyleSheet.absoluteFillObject as any}>
           <HeroVideo showDots={false} />
         </View>
@@ -100,20 +100,20 @@ export default function About() {
 
         {/* centred content fills the space above the stats bar */}
         <View style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-          <FadeInUp delay={60} style={{ ...styles.heroContent, paddingTop: tight ? 16 : 24, paddingBottom: tight ? 16 : 24 }}>
+          <FadeInUp delay={60} style={{ ...styles.heroContent, paddingHorizontal: tight ? 18 : 24, gap: tight ? 14 : 20, paddingTop: tight ? 16 : 24, paddingBottom: tight ? 16 : 24 }}>
             <View style={[styles.kickerRow, { justifyContent: 'center' }]}>
               <Text style={[styles.kicker, { color: 'rgba(255,255,255,0.7)' }]}>ABOUT RPK · DUBAI</Text>
               <View style={[styles.kickerLine, { backgroundColor: 'rgba(255,255,255,0.4)' }]} />
             </View>
-            <Text style={[styles.display, { fontSize: display, lineHeight: display * 1.05, color: '#FFFFFF', textAlign: 'center' }]}>
+            <Text style={[styles.display, { fontSize: display, lineHeight: display * 1.05, color: '#FFFFFF', textAlign: 'center', width: '100%' }]}>
               We trade <Text style={styles.displayAccent}>good food</Text>, worldwide.
             </Text>
-            <Text style={[styles.intro, { color: 'rgba(255,255,255,0.72)', textAlign: 'center', maxWidth: 540 }]}>
+            <Text style={[styles.intro, { color: 'rgba(255,255,255,0.72)', textAlign: 'center', width: '100%', maxWidth: 540 }]}>
               <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>{BRAND.legal}</Text> is a Dubai-based importer and
               exporter of premium groceries — basmati, spices, oils, pulses and more — supplying wholesale and
               retail markets with quality you can rely on.
             </Text>
-            <View style={[styles.heroBtns, { justifyContent: 'center' }, tight && { flexDirection: 'column', alignSelf: 'stretch', alignItems: 'center' }]}>
+            <View style={[styles.heroBtns, { justifyContent: 'center' }, tight && { flexDirection: 'column', alignSelf: 'stretch', alignItems: 'stretch' }]}>
               <Pressable style={({ hovered }: any) => [styles.btnRed, hovered && { opacity: 0.92 }]} onPress={() => router.push('/products')}>
                 <Text style={styles.btnRedText}>Browse products</Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.white} />
@@ -150,7 +150,7 @@ export default function About() {
         <View style={[styles.timelineWrap, narrow && { flexDirection: 'column', gap: 36 }]}>
           <Reveal style={narrow ? undefined : { flex: 0.42, paddingRight: 52 }}>
             <Text style={styles.kicker}>OUR STORY</Text>
-            <Text style={[styles.timelineHead, { fontSize: tight ? 26 : narrow ? 30 : 38, marginTop: 12 }]}>
+            <Text style={[styles.timelineHead, { fontSize: tight ? 26 : narrow ? 30 : 38, lineHeight: (tight ? 26 : narrow ? 30 : 38) * 1.16, marginTop: 12 }]}>
               From a Dubai warehouse to{' '}
               <Text style={styles.displayAccent}>markets worldwide</Text>
             </Text>
@@ -183,9 +183,9 @@ export default function About() {
             A full pantry, <Text style={styles.displayAccent}>one trusted source</Text>
           </Text>
         </Reveal>
-        <View style={[styles.valueGrid, narrow && { flexDirection: 'column' }]}>
+        <View style={[styles.valueGrid, narrow && { flexDirection: 'column', flexWrap: 'nowrap' }]}>
           {TRADE.map((v, i) => (
-            <ValueCard key={v.title} v={v} i={i} />
+            <ValueCard key={v.title} v={v} i={i} narrow={narrow} />
           ))}
         </View>
       </Container>
@@ -327,17 +327,19 @@ function FBtn({ icon, label, onPress }: { icon: Ion; label: string; onPress?: ()
   );
 }
 
-function ValueCard({ v, i }: { v: { icon: Ion; title: string; desc: string }; i: number }) {
+function ValueCard({ v, i, narrow }: { v: { icon: Ion; title: string; desc: string }; i: number; narrow?: boolean }) {
   const { scale, onHoverIn, onHoverOut } = useHoverScale(1.03);
   const [hovered, setHovered] = useState(false);
   return (
-    <Reveal delay={i * 90} style={styles.valueCol}>
+    // On mobile the grid stacks in a column, so cards must NOT flex-grow (that
+    // stretched them to fill the column and opened huge gaps) — full width, natural height.
+    <Reveal delay={i * 90} style={narrow ? { ...styles.valueCol, flexGrow: 0, flexBasis: 'auto', width: '100%', minWidth: 0 } : styles.valueCol}>
       <Pressable
         onHoverIn={() => { onHoverIn(); setHovered(true); }}
         onHoverOut={() => { onHoverOut(); setHovered(false); }}
         style={{ width: '100%' }}
       >
-        <Animated.View style={[styles.valueCard, hovered && styles.valueCardHover, { transform: [{ scale }] }]}>
+        <Animated.View style={[styles.valueCard, narrow && { height: undefined }, hovered && styles.valueCardHover, { transform: [{ scale }] }]}>
           <View style={[styles.valueIcon, hovered && styles.valueIconHover]}>
             <Ionicons name={v.icon} size={22} color={hovered ? colors.white : RED} />
           </View>

@@ -162,7 +162,7 @@ export function PartnerDashboard({ kind }: { kind: Kind }) {
         {/* Branded welcome hero */}
         <View style={[styles.hero, compact && { flexDirection: 'column', alignItems: 'flex-start', gap: 14 }]}>
           <View style={styles.heroAccent} />
-          <View style={{ flex: 1, gap: 6 }}>
+          <View style={[{ flex: 1, gap: 6 }, compact && { flexGrow: 0, flexBasis: 'auto', width: '100%' }]}>
             <View style={styles.kicker}>
               <Ionicons name="ribbon-outline" size={14} color={colors.white} />
               <Text style={styles.kickerText}>{title.toUpperCase()} · RPK FOOD TRADING</Text>
@@ -191,7 +191,7 @@ export function PartnerDashboard({ kind }: { kind: Kind }) {
                 key={c.label}
                 disabled={!c.view}
                 onPress={() => c.view && setView(c.view)}
-                style={({ hovered }: any) => [styles.statCard, active && styles.statActive, hovered && c.view && !active && { borderColor: colors.red }]}
+                style={({ hovered }: any) => [styles.statCard, compact && { flexGrow: 0, flexBasis: 'auto', width: '100%' }, active && styles.statActive, hovered && c.view && !active && { borderColor: colors.red }]}
               >
                 <View style={styles.statIcon}>
                   <Ionicons name={c.icon} size={20} color={colors.red} />
@@ -230,7 +230,7 @@ export function PartnerDashboard({ kind }: { kind: Kind }) {
             and quick-action above selects one of these views. */}
         {isImport && (
           <>
-            <View style={styles.sectionRow}>
+            <View style={[styles.sectionRow, compact && { flexWrap: 'wrap', gap: 8 }]}>
               <Text style={styles.section}>{viewTitle[view]}</Text>
               {view === 'rfqs' && <Button label="+ New request" onPress={() => setShowNew(true)} />}
             </View>

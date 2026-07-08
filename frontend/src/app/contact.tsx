@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, Pressable, Linking, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
@@ -107,10 +107,10 @@ export default function Contact() {
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.page}>
-        {/* Rotating cinematic background — same as the home page hero */}
-        <HeroVideo showDots={false} />
-        <View style={styles.scrim} />
-        <View style={[styles.hero, { paddingVertical: stacked ? 36 : 56 }]}>
+        {/* Rotating grocery hero background — same as the Home & About pages. */}
+        <View style={[styles.hero, { paddingVertical: stacked ? 40 : 64 }]}>
+        <View style={StyleSheet.absoluteFillObject as any}><HeroVideo showDots={false} /></View>
+        <View pointerEvents="none" style={styles.heroBgOverlay} />
         <View style={[styles.row, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
           {/* LEFT — headline + copy */}
           <FadeInUp delay={100} distance={26} style={[styles.left, stacked && { width: '100%' }]}>
@@ -155,7 +155,7 @@ export default function Contact() {
                       <View style={styles.productPill}><Text style={styles.productPillText}>Product: {form.product}</Text></View>
                     )}
 
-                    <View style={[styles.grid, stacked && { flexDirection: 'column' }]}>
+                    <View style={[styles.grid, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
                       <UField label="YOUR NAME *" icon="person-outline" value={form.name} onChangeText={(t) => set('name')(sanitizeName(t))} placeholder="Full name" error={errors.name} />
                       <UField label="EMAIL *" icon="mail-outline" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" error={errors.email} />
                     </View>
@@ -164,17 +164,19 @@ export default function Contact() {
 
                     <RequirementBuilder items={items} onChange={setItems} />
 
-                    <View style={[styles.grid, stacked && { flexDirection: 'column' }]}>
+                    <View style={[styles.grid, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
                       <UField label="OTHER PRODUCTS / NOTES" icon="pricetag-outline" value={form.product} onChangeText={set('product')} placeholder="Anything not listed above…" />
                       <UField label="MESSAGE" icon="chatbox-ellipses-outline" value={form.message} onChangeText={set('message')} placeholder="Quantity, delivery location…" multiline />
                     </View>
 
                     {!!error && <Text style={styles.uErr}>{error}</Text>}
 
-                    <View style={[styles.submitRow, stacked && { flexDirection: 'column' }]}>
-                      <Button label={busy ? 'Sending…' : 'Send inquiry'} onPress={submit} disabled={busy} style={{ flex: stacked ? undefined : 1 }} />
+                    <View style={[styles.submitRow, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
+                      <Button label={busy ? 'Sending…' : 'Send inquiry'} onPress={submit} disabled={busy} style={{ flex: stacked ? undefined : 1, width: stacked ? '100%' : undefined }} />
                       <Pressable style={[styles.waBtn, stacked && { width: '100%' }]} onPress={() => Linking.openURL(waUrl)}>
-                        <Ionicons name="logo-whatsapp" size={20} color={colors.white} />
+                        <View style={styles.waBadge}>
+                          <Ionicons name="logo-whatsapp" size={18} color={colors.white} />
+                        </View>
                         <Text style={styles.waBtnText}>WhatsApp</Text>
                       </Pressable>
                     </View>
@@ -261,20 +263,26 @@ function FeedbackSection() {
 }
 
 const styles = StyleSheet.create({
-  page: { position: 'relative', overflow: 'hidden', backgroundColor: colors.bg },
-  hero: { backgroundColor: 'transparent', paddingHorizontal: 18, alignItems: 'center' },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,12,26,0.72)' },
-  row: { width: '100%', maxWidth: 1280, flexDirection: 'row', gap: 40, alignItems: 'center', zIndex: 2 },
+  page: { position: 'relative', overflow: 'hidden', backgroundColor: colors.white },
+  hero: { position: 'relative', overflow: 'hidden', backgroundColor: '#140A09', paddingHorizontal: 18, alignItems: 'center' },
+  // Dark scrim over the photo so the headline copy stays legible.
+  heroBgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ backgroundImage: 'linear-gradient(160deg, rgba(10,6,5,0.82) 0%, rgba(18,10,8,0.66) 100%)' } as any)
+      : { backgroundColor: 'rgba(10,6,5,0.72)' }),
+  },
+  row: { width: '100%', maxWidth: 1280, flexDirection: 'row', gap: 40, alignItems: 'flex-start', zIndex: 2 },
 
   left: { flex: 1, paddingTop: 4 },
-  kicker: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.redSoft, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999 },
-  kickerText: { color: colors.red, fontWeight: '800', fontSize: 11.5, letterSpacing: 1.2 },
+  kicker: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999 },
+  kickerText: { color: '#fff', fontWeight: '800', fontSize: 11.5, letterSpacing: 1.2 },
   h1: { color: '#FFFFFF', fontWeight: '900', letterSpacing: -1, marginTop: 16 },
-  lead: { color: '#F1E9DE', fontSize: 15.5, lineHeight: 25, maxWidth: 440, marginTop: 16 },
+  lead: { color: 'rgba(255,255,255,0.92)', fontSize: 15.5, lineHeight: 25, maxWidth: 440, marginTop: 16 },
   trustRow: { marginTop: 24, gap: 6 },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   trustScore: { color: '#FFFFFF', fontWeight: '900', fontSize: 16, marginLeft: 8 },
-  trustText: { color: '#E7DED2', fontSize: 13 },
+  trustText: { color: 'rgba(255,255,255,0.85)', fontSize: 13 },
 
   // wide, low form
   cardWrap: { width: 640 },
@@ -299,7 +307,7 @@ const styles = StyleSheet.create({
   uErr: { color: colors.red, fontSize: 12, marginTop: 3 },
 
   // feedback band — same backdrop as the hero
-  fbBand: { backgroundColor: 'transparent', paddingVertical: 30, paddingHorizontal: 18, zIndex: 2 },
+  fbBand: { backgroundColor: colors.white, paddingVertical: 30, paddingHorizontal: 18, zIndex: 2 },
   fbCard: {
     alignSelf: 'center', width: '100%', maxWidth: 660, zIndex: 2,
     backgroundColor: 'rgba(247,240,229,0.90)',
@@ -315,8 +323,9 @@ const styles = StyleSheet.create({
   productPill: { alignSelf: 'flex-start', backgroundColor: colors.cream, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.border },
   productPillText: { color: colors.orangeDark, fontWeight: '800', fontSize: 13 },
   submitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
-  waBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: '#25D366', paddingHorizontal: 20, paddingVertical: 14, borderRadius: radius.pill },
-  waBtnText: { color: colors.white, fontWeight: '800', fontSize: 15 },
+  waBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: '#E7F8EE', borderWidth: 1, borderColor: 'rgba(37,211,102,0.45)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: radius.pill },
+  waBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#25D366', alignItems: 'center', justifyContent: 'center' },
+  waBtnText: { color: '#0E7A38', fontWeight: '800', fontSize: 15 },
   note: { color: '#4a4a4a', fontSize: 12, textAlign: 'center' },
   success: { color: colors.text, textAlign: 'center', maxWidth: 420, lineHeight: 22, fontSize: 14.5 },
 

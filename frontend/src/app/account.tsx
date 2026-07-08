@@ -25,6 +25,7 @@ export default function Account() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const fits = width >= 720; // below this, tables scroll horizontally
+  const narrow = width < 600; // below this, the partner CTA stacks to a column
   const { user, token, ready } = useApp();
   const isAdmin = user?.role === 'admin'; // only the admin sees amounts
   const [orders, setOrders] = useState<Order[]>([]);
@@ -105,9 +106,9 @@ export default function Account() {
         {isPartner && (
           <>
             <View style={{ height: 26 }} />
-            <View style={styles.partnerCta}>
+            <View style={[styles.partnerCta, narrow && { flexDirection: 'column', alignItems: 'stretch' }]}>
               <Ionicons name="briefcase-outline" size={22} color={colors.red} />
-              <View style={{ flex: 1 }}>
+              <View style={narrow ? { width: '100%' } : { flex: 1 }}>
                 <Text style={styles.ctaTitle}>You're an approved {user?.role === 'export_partner' ? 'export' : 'import'} partner</Text>
                 <Text style={styles.empty}>Open your dashboard to request quotations and track trade.</Text>
               </View>

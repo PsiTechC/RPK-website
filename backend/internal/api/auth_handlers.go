@@ -102,3 +102,48 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, u)
 }
+
+// POST /api/auth/change-password { current_password, new_password }
+// Authenticated: verifies the caller's current password before setting a new one.
+func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	uid := auth.UserIDFrom(r.Context())
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if len(req.NewPassword) < 6 {
+		writeErr(w, http.StatusBadRequest, "new password must be at least 6 characters")
+		return
+	}
+	var hash string
+	if err := s.pool.QueryRow(r.Context(),
+		`SELECT password_hash FROM users WHERE id=$1`, uid,
+	).Scan(&hash); err != nil {
+		writeErr(w, http.StatusNotFound, "user not found")
+		return
+	}
+	if !auth.CheckPassword(hash, req.CurrentPassword) {
+		writeErr(w, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+	if auth.CheckPassword(hash, req.NewPassword) {
+		writeErr(w, http.StatusBadRequest, "new password must be different from the current one")
+		return
+	}
+	newHash, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "could not update password")
+		return
+	}
+	if _, err := s.pool.Exec(r.Context(),
+		`UPDATE users SET password_hash=$1 WHERE id=$2`, newHash, uid,
+	); err != nil {
+		writeErr(w, http.StatusInternalServerError, "could not update password")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "changed"})
+}

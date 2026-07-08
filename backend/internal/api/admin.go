@@ -39,8 +39,10 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 		return v
 	}
 
-	stats["total_products"] = scalar(`SELECT COUNT(*) FROM products`)
-	stats["active_products"] = scalar(`SELECT COUNT(*) FROM products WHERE is_active=TRUE`)
+	// "In catalogue" = non-archived products. This matches the admin product list
+	// (which is ?all=1 → non-archived) and the sidebar badge, so counts never diverge.
+	stats["total_products"] = scalar(`SELECT COUNT(*) FROM products WHERE archived_at IS NULL`)
+	stats["active_products"] = scalar(`SELECT COUNT(*) FROM products WHERE is_active=TRUE AND archived_at IS NULL`)
 	stats["total_categories"] = scalar(`SELECT COUNT(*) FROM categories`)
 	stats["total_customers"] = scalar(`SELECT COUNT(*) FROM users WHERE role <> 'admin'`)
 	stats["total_orders"] = scalar(`SELECT COUNT(*) FROM orders`)

@@ -83,7 +83,7 @@ export default function Cart() {
               Thank you{form.customer_name ? `, ${form.customer_name.split(' ')[0]}` : ''}. Our team has received your
               product inquiry and will contact you shortly with pricing and availability.
             </Text>
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 8 }}>
               <Button label="Continue shopping" variant="primary" onPress={() => router.push('/products')} />
               <Button label="Contact us" variant="outline" onPress={() => router.push('/contact')} />
             </View>
@@ -106,7 +106,7 @@ export default function Cart() {
             <Button label="Browse products" onPress={() => router.push('/products')} />
           </Card>
         ) : (
-          <View style={[styles.layout, stacked && { flexDirection: 'column' }]}>
+          <View style={[styles.layout, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
             {/* Items */}
             <View style={stacked ? { width: '100%', gap: 12 } : { flex: 1, gap: 12 }}>
               {cart.map((l) => (

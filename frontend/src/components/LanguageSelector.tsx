@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, TextInput, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, TextInput, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { colors, radius, shadow } from '../lib/theme';
@@ -136,6 +136,10 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
   const [q, setQ] = useState('');
   const [current, setCurrent] = useState('English');
   const [currentCode, setCurrentCode] = useState('en');
+  const { width } = useWindowDimensions();
+  // On phones the button isn't at the screen edge, so a fixed-width right-aligned
+  // panel spills off the left. Pin it to the viewport instead.
+  const narrow = width < 480;
 
   useEffect(() => {
     loadGoogleTranslate();
@@ -165,7 +169,7 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
       {open && (
         <>
           <Pressable style={styles.scrim} onPress={() => setOpen(false)} />
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, narrow && styles.dropdownNarrow]}>
             <View style={styles.searchRow}>
               <Ionicons name="search" size={15} color={colors.muted} />
               <TextInput
@@ -210,6 +214,10 @@ const styles = StyleSheet.create({
     position: 'absolute' as any, top: 46, right: 0, width: 272, backgroundColor: colors.white,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, zIndex: 70, ...shadow.card,
   },
+  // Phone: pin to the viewport so the panel never runs off either edge.
+  dropdownNarrow: Platform.OS === 'web'
+    ? ({ position: 'fixed', top: 60, left: 12, right: 12, width: 'auto' } as any)
+    : { left: 0, right: 0, width: 'auto' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 8, marginBottom: 6, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.offWhite, borderRadius: radius.sm },
   search: { flex: 1, color: colors.text, fontSize: 14, outlineStyle: 'none' as any },
   item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 14, paddingVertical: 10 },

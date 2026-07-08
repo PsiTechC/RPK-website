@@ -280,6 +280,12 @@ export const api = {
   forgotPassword: (email: string) => request<{ status: string }>('/api/auth/forgot-password', { method: 'POST', body: { email } }),
   resetPassword: (token: string, password: string) =>
     request<{ status: string }>('/api/auth/reset-password', { method: 'POST', body: { token, password } }),
+  changePassword: (currentPassword: string, newPassword: string, token: string) =>
+    request<{ status: string }>('/api/auth/change-password', {
+      method: 'POST',
+      token,
+      body: { current_password: currentPassword, new_password: newPassword },
+    }),
 
   createOrder: (body: any, token?: string | null) =>
     request<any>('/api/orders', { method: 'POST', body, token }),
