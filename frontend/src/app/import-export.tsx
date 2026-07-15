@@ -19,9 +19,6 @@ import { vEmail, vName, vPhoneLen, vRequired, isClean, sanitizeName } from '../l
 // shown bright as-is. A soft white scrim over the top keeps the dark heading /
 // subtext readable (see dhBgImg / dhOverlay).
 const IE_HOME_IMG = require('../../assets/images/importexporthomepage.png');
-// The hero artwork's intrinsic size (1567x672) — a wide banner. Phones use it to
-// reserve an exact full-width band for the picture at the foot of the hero.
-const IE_ASPECT = 1567 / 672;
 
 // Hero headline split into a white line + a tomato-red accent line (for the typewriter).
 const HEAD_SEGMENTS = [
@@ -317,9 +314,6 @@ export default function ImportExport() {
   const narrow = width < 760;
   const colStack = width < 620;
   const tight = width < 600;
-  // Height the artwork occupies at full phone width, shown whole. The hero
-  // reserves exactly this much below its copy for the picture to sit in.
-  const ieBandH = Math.round(width / IE_ASPECT);
   const ctaHover = useHoverScale(1.02);
 
   // Gently floating rocket on the CTA — a lively, non-static touch.
@@ -450,35 +444,28 @@ export default function ImportExport() {
   return (
     <ScrollView ref={scrollRef} style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
       {/* ───────── HERO — dark section (fills the viewport) ───────── */}
-      {/* Phones don't force a viewport-tall hero: the artwork is a wide banner and
-          can only be shown whole as a short full-width band, so a full-screen hero
-          left a large empty stripe between the buttons and the picture. Instead the
-          hero hugs its copy and reserves exactly the band's height beneath it, so
-          the picture sits directly under the buttons with no dead space. */}
+      {/* Phones keep the hero to its 560 floor rather than filling the viewport.
+          The background is a wide 2.33:1 banner, so the taller the hero is relative
+          to its width, the more of the artwork `cover` throws away: viewport-tall on
+          a phone kept only ~21% of it, an unreadable zoom. At 560 a phone keeps
+          ~33%, which is what tablet shows — so the background reads the same across
+          sizes. Roomier screens are wide enough to fill the viewport safely. */}
       <View
         style={[
           styles.darkHero,
           {
-            minHeight: tight ? 0 : Math.max(560, height),
+            minHeight: tight ? 560 : Math.max(560, height),
             justifyContent: 'flex-start',
             paddingTop: tight ? 28 : 44,
-            paddingBottom: tight ? ieBandH : 0,
+            paddingBottom: tight ? 28 : 0,
           },
         ]}
       >
-        {/* Full-width background artwork — dimmed so the bright artwork reads dark.
-            The artwork is a wide 1567x672 (2.33:1). On phones the hero box is
-            taller than it is wide, so `cover` blew it up to ~2000px and threw away
-            ~79% of it, leaving an unreadable zoomed slice. There it's anchored to
-            the bottom and shown whole instead — full width, spices under the copy,
-            the hero's own gradient behind the text. Roomier screens are close
-            enough in shape to keep the full-bleed cover. */}
-        <Image
-          source={IE_HOME_IMG}
-          style={styles.dhBgImg}
-          contentFit={tight ? 'contain' : 'cover'}
-          contentPosition={tight ? 'bottom' : 'center'}
-        />
+        {/* Full-width background artwork behind the copy, at every size. The
+            artwork is a wide 1567x672 (2.33:1), so how much of it survives `cover`
+            depends on how tall the hero is relative to its width — see the hero's
+            own note on why phones keep it short. */}
+        <Image source={IE_HOME_IMG} style={styles.dhBgImg} contentFit="cover" />
         {/* Dark gradient + vignette for a deep background and text legibility */}
         <View pointerEvents="none" style={styles.dhOverlay} />
 
