@@ -34,17 +34,6 @@ const TAB_ICONS: Record<Tab, keyof typeof Ionicons.glyphMap> = {
   archived: 'archive-outline',
 };
 
-// TODO: wire to API — no historical/daily endpoints yet, so these are placeholders.
-const PLACEHOLDER_TRENDS: Record<string, { dir: 'up' | 'down'; pct: string }> = {
-  'Revenue (paid)': { dir: 'up', pct: '12%' },
-  'Total Orders': { dir: 'up', pct: '8%' },
-  'Pending Orders': { dir: 'down', pct: '3%' },
-  'Products': { dir: 'up', pct: '5%' },
-  'Customers': { dir: 'up', pct: '9%' },
-  'Registrations': { dir: 'up', pct: '6%' },
-  'Pending Reg.': { dir: 'down', pct: '2%' },
-  'Categories': { dir: 'up', pct: '0%' },
-};
 // TODO: wire to API — last 7 days of paid revenue. Placeholder shape only.
 const PLACEHOLDER_REVENUE_7D = [120, 240, 180, 360, 300, 520, 460];
 
@@ -257,7 +246,7 @@ export default function Admin() {
           </View>
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: compact ? 16 : 28, paddingBottom: 64 }}>
-          <View style={{ width: '100%', maxWidth: 1280, alignSelf: 'center' }}>
+          <View style={{ width: '100%', maxWidth: 1600, alignSelf: 'center' }}>
             {token && tab === 'dashboard' && <Dashboard token={token} onNavigate={setTab} />}
             {token && tab === 'products' && <Products token={token} search={prodSearch} onSearch={setProdSearch} view={prodView} addNonce={prodAddNonce} />}
             {token && tab === 'arrange' && <Arrange token={token} />}
@@ -383,17 +372,23 @@ function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) 
   }, [token]);
   if (!stats) return <Text style={styles.muted}>Loading…</Text>;
 
-  const cards: StatCardDef[] = [
-    { label: 'Revenue (paid)', value: money(stats.total_revenue), tone: colors.green, icon: 'cash-outline', to: 'orders', subtitle: 'Paid orders total', emphasize: true },
-    { label: 'Total Orders', value: stats.total_orders, tone: colors.navy, icon: 'receipt-outline', to: 'orders', subtitle: 'All orders' },
-    { label: 'Pending Orders', value: stats.pending_orders, tone: colors.red, icon: 'time-outline', to: 'orders', subtitle: 'Need attention' },
-    { label: 'Products', value: stats.total_products, tone: colors.navy, icon: 'cube-outline', to: 'products', subtitle: 'In catalogue' },
-    { label: 'Customers', value: stats.total_customers, tone: colors.navy, icon: 'people-outline', to: 'customers', subtitle: 'Registered users' },
-    { label: 'Registrations', value: stats.total_registrations, tone: colors.red, icon: 'document-text-outline', to: 'registrations', subtitle: `${Number(stats.pending_registrations || 0)} pending` },
-    { label: 'Partners', value: stats.total_partners, tone: colors.navy, icon: 'briefcase-outline', to: 'registrations', subtitle: 'Import / export partners' },
-    { label: 'RFQ Requests', value: stats.total_rfqs, tone: colors.red, icon: 'create-outline', to: 'rfqs', subtitle: `${Number(stats.open_rfqs || 0)} awaiting reply` },
-    { label: 'Partner Orders', value: stats.partner_orders, tone: colors.navy, icon: 'cube-outline', to: 'porders', subtitle: `${Number(stats.partner_orders_unpaid || 0)} unpaid` },
-    { label: 'Categories', value: stats.total_categories, tone: colors.navy, icon: 'pricetags-outline', to: 'arrange', subtitle: 'Product groups' },
+  // Primary KPIs — the four headline numbers, shown large at the top.
+  // Brand red icons (matches the red-forward site); numbers render charcoal.
+  // Revenue keeps green (money) via `emphasize`.
+  const heroCards: StatCardDef[] = [
+    { label: 'Revenue (paid)', value: money(stats.total_revenue), tone: colors.red, icon: 'cash-outline', to: 'orders', subtitle: 'Paid orders total', emphasize: true },
+    { label: 'Total Orders', value: stats.total_orders, tone: colors.red, icon: 'receipt-outline', to: 'orders', subtitle: 'All orders' },
+    { label: 'Customers', value: stats.total_customers, tone: colors.red, icon: 'people-outline', to: 'customers', subtitle: 'Registered users' },
+    { label: 'Products', value: stats.total_products, tone: colors.red, icon: 'cube-outline', to: 'products', subtitle: 'In catalogue' },
+  ];
+
+  // Secondary metrics — informational counts, shown small below the charts.
+  const secondaryCards: StatCardDef[] = [
+    { label: 'Registrations', value: stats.total_registrations, tone: colors.red, icon: 'document-text-outline', to: 'registrations', subtitle: 'Import / export' },
+    { label: 'Partners', value: stats.total_partners, tone: colors.red, icon: 'briefcase-outline', to: 'registrations', subtitle: 'Active partners' },
+    { label: 'RFQ Requests', value: stats.total_rfqs, tone: colors.red, icon: 'create-outline', to: 'rfqs', subtitle: 'All quotes' },
+    { label: 'Partner Orders', value: stats.partner_orders, tone: colors.red, icon: 'cube-outline', to: 'porders', subtitle: 'All partner orders' },
+    { label: 'Categories', value: stats.total_categories, tone: colors.red, icon: 'pricetags-outline', to: 'arrange', subtitle: 'Product groups' },
   ];
 
   const byStatus: Record<string, number> = stats.orders_by_status || {};
@@ -404,22 +399,34 @@ function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) 
   const activeProducts = Number(stats.active_products || 0);
   const totalProducts = Number(stats.total_products || 0);
   const pendingReg = Number(stats.pending_registrations || 0);
-  const totalReg = Number(stats.total_registrations || 0);
   const pendingOrders = Number(stats.pending_orders || 0);
+  const deliveredOrders = Number(byStatus.delivered || 0);
+  const cancelledOrders = Number(byStatus.cancelled || 0);
 
-  // Revenue trend (placeholder series — see PLACEHOLDER_REVENUE_7D / TODO above).
+  // Actionable items — surfaced in a highlighted band so daily to-dos aren't
+  // lost among the vanity metrics. Each is clickable through to its tab.
+  const attention: AttnItem[] = [
+    { label: 'Pending orders', value: pendingOrders, icon: 'time-outline', to: 'orders' },
+    { label: 'Pending registrations', value: pendingReg, icon: 'document-text-outline', to: 'registrations' },
+    { label: 'Open RFQs', value: Number(stats.open_rfqs || 0), icon: 'create-outline', to: 'rfqs' },
+    { label: 'Unpaid partner orders', value: Number(stats.partner_orders_unpaid || 0), icon: 'cube-outline', to: 'porders' },
+  ];
+  const attentionTotal = attention.reduce((s, a) => s + a.value, 0);
+
+  // Revenue sparkline (placeholder series — see PLACEHOLDER_REVENUE_7D / TODO above).
   const rev7d = PLACEHOLDER_REVENUE_7D;
-  const revGrowth = rev7d.length >= 2 && rev7d[0] > 0
-    ? Math.round(((rev7d[rev7d.length - 1] - rev7d[0]) / rev7d[0]) * 100)
-    : 0;
 
   return (
     <View style={{ gap: 20 }}>
-      <View style={styles.cardGrid}>
-        {cards.map((c) => (
+      {/* Primary KPIs */}
+      <View style={styles.heroGrid}>
+        {heroCards.map((c) => (
           <StatCard key={c.label} card={c} onNavigate={onNavigate} />
         ))}
       </View>
+
+      {/* Needs attention — actionable counts */}
+      <NeedsAttention items={attention} total={attentionTotal} onNavigate={onNavigate} />
 
       <View style={styles.dashRow}>
         {/* Orders by status — pie chart + legend */}
@@ -449,31 +456,32 @@ function Dashboard({ token, onNavigate }: { token: string; onNavigate: (t: Tab) 
           )}
         </Card>
 
-        {/* Revenue trend — 7-day area chart */}
+        {/* Revenue — all-time total + a sparkline of recent activity */}
         <Card style={styles.dashCard}>
-          <View style={styles.cardHeadRow}>
-            <Text style={styles.h}>Revenue (7 days)</Text>
-            <View style={[styles.trendBadge, revGrowth >= 0 ? styles.trendUp : styles.trendDown]}>
-              <Ionicons name={revGrowth >= 0 ? 'arrow-up' : 'arrow-down'} size={12} color={revGrowth >= 0 ? colors.green : colors.red} />
-              <Text style={[styles.trendText, { color: revGrowth >= 0 ? colors.green : colors.red }]}>{Math.abs(revGrowth)}%</Text>
-            </View>
-          </View>
-          <Text style={[styles.statValue, { color: colors.green, fontSize: 24, marginTop: 4 }]}>{money(stats.total_revenue)}</Text>
+          <Text style={styles.h}>Revenue</Text>
+          <Text style={[styles.statValue, { color: colors.red, fontSize: 24, marginTop: 4 }]}>{money(stats.total_revenue)}</Text>
           <Text style={styles.statLabel}>Paid revenue · all time</Text>
           <View style={{ marginTop: 14 }}>
-            <AreaChart data={rev7d} height={92} color={colors.green} />
+            <AreaChart data={rev7d} height={92} color={colors.red} />
           </View>
         </Card>
 
-        {/* Meaningful breakdowns */}
+        {/* Fulfilment breakdown — ratios that aren't in the attention band above */}
         <Card style={styles.dashCard}>
           <Text style={styles.h}>At a glance</Text>
           <View style={{ gap: 14, marginTop: 12 }}>
-            <MiniBar label="Active products" value={activeProducts} total={totalProducts} color={colors.green} suffix={`${activeProducts}/${totalProducts}`} />
-            <MiniBar label="Pending orders" value={pendingOrders} total={totalOrders} color={colors.red} suffix={`${pendingOrders}/${totalOrders}`} />
-            <MiniBar label="Pending registrations" value={pendingReg} total={totalReg} color={colors.red} suffix={`${pendingReg}/${totalReg}`} />
+            <MiniBar label="Active products" value={activeProducts} total={totalProducts} color={colors.red} suffix={`${activeProducts}/${totalProducts}`} />
+            <MiniBar label="Delivered orders" value={deliveredOrders} total={totalOrders} color={colors.red} suffix={`${deliveredOrders}/${totalOrders}`} />
+            <MiniBar label="Cancelled orders" value={cancelledOrders} total={totalOrders} color={colors.red} suffix={`${cancelledOrders}/${totalOrders}`} />
           </View>
         </Card>
+      </View>
+
+      {/* Secondary metrics — smaller informational counts */}
+      <View style={styles.secGrid}>
+        {secondaryCards.map((c) => (
+          <StatCard key={c.label} card={c} onNavigate={onNavigate} compact />
+        ))}
       </View>
 
       {/* Recent orders */}
@@ -529,32 +537,28 @@ function MiniBar({ label, value, total, color, suffix }: { label: string; value:
   );
 }
 
-// A single dashboard stat. Clickable (with hover lift + chevron) when it has a
-// `to` tab; otherwise a plain informational card.
-function StatCard({ card, onNavigate }: { card: StatCardDef; onNavigate: (t: Tab) => void }) {
+// A single dashboard stat. Clickable (with hover lift) when it has a `to` tab;
+// otherwise a plain informational card. `compact` renders the smaller secondary
+// variant (smaller icon/number, no subtitle).
+function StatCard({ card, onNavigate, compact }: { card: StatCardDef; onNavigate: (t: Tab) => void; compact?: boolean }) {
   const [hover, setHover] = useState(false);
   const clickable = !!card.to;
 
-  const trend = PLACEHOLDER_TRENDS[card.label];
   const body = (
     <>
-      <View style={styles.statTop}>
-        <View style={[styles.statIcon, { backgroundColor: card.tone + '1A' }]}>
-          <Ionicons name={card.icon} size={18} color={card.tone} />
-        </View>
-        {trend && (
-          <View style={[styles.trendBadge, trend.dir === 'up' ? styles.trendUp : styles.trendDown]}>
-            <Ionicons name={trend.dir === 'up' ? 'arrow-up' : 'arrow-down'} size={11} color={trend.dir === 'up' ? colors.green : colors.red} />
-            <Text style={[styles.trendText, { color: trend.dir === 'up' ? colors.green : colors.red }]}>{trend.pct}</Text>
-          </View>
-        )}
+      <View style={[styles.statIcon, compact && styles.statIconSm, { backgroundColor: card.tone + '1A' }]}>
+        <Ionicons name={card.icon} size={compact ? 15 : 18} color={card.tone} />
       </View>
-      <Text style={[styles.statValue, { color: card.tone }]}>{card.value}</Text>
-      <Text style={styles.statLabel}>{card.label}</Text>
+      {/* Value stays charcoal for readability; only the emphasized card (Revenue)
+          uses its tone (green) so money reads positive. */}
+      <Text style={[styles.statValue, compact && styles.statValueSm, { color: card.emphasize ? card.tone : colors.ink }]}>{card.value}</Text>
+      <Text style={styles.statLabel} numberOfLines={1}>{card.label}</Text>
+      {!compact && !!card.subtitle && <Text style={styles.statHint} numberOfLines={1}>{card.subtitle}</Text>}
     </>
   );
 
-  if (!clickable) return <View style={[styles.statCard, card.emphasize && styles.statCardRing]}>{body}</View>;
+  const base = [styles.statCard, compact && styles.statCardSm, card.emphasize && styles.statCardRing];
+  if (!clickable) return <View style={base}>{body}</View>;
 
   return (
     <Pressable
@@ -562,15 +566,56 @@ function StatCard({ card, onNavigate }: { card: StatCardDef; onNavigate: (t: Tab
       onHoverIn={() => setHover(true)}
       onHoverOut={() => setHover(false)}
       style={({ pressed }) => [
-        styles.statCard,
+        ...base,
         styles.statCardClickable,
-        card.emphasize && styles.statCardRing,
         hover && { borderColor: card.tone, ...shadow.card, transform: [{ translateY: -2 }] },
         pressed && { opacity: 0.92 },
       ]}
     >
       {body}
     </Pressable>
+  );
+}
+
+// ---------- Needs attention band ----------
+type AttnItem = { label: string; value: number; icon: keyof typeof Ionicons.glyphMap; to: Tab };
+
+// Highlighted strip of actionable counts. Items with a non-zero count read as
+// urgent (red); zero counts stay calm. When everything is zero, shows an
+// "all caught up" state instead of a wall of zeros.
+function NeedsAttention({ items, total, onNavigate }: { items: AttnItem[]; total: number; onNavigate: (t: Tab) => void }) {
+  return (
+    <Card style={styles.attnCard}>
+      <View style={styles.attnHead}>
+        <View style={[styles.attnHeadIcon, total > 0 ? styles.attnHeadIconActive : styles.attnHeadIconCalm]}>
+          <Ionicons name={total > 0 ? 'alert' : 'checkmark'} size={14} color={total > 0 ? colors.red : colors.green} />
+        </View>
+        <Text style={styles.h}>Needs attention</Text>
+        {total > 0 ? (
+          <View style={styles.attnCountPill}><Text style={styles.attnCountText}>{total}</Text></View>
+        ) : (
+          <Text style={styles.attnAllClear}>All caught up 🎉</Text>
+        )}
+      </View>
+      <View style={styles.attnRow}>
+        {items.map((it) => {
+          const urgent = it.value > 0;
+          return (
+            <Pressable
+              key={it.label}
+              onPress={() => onNavigate(it.to)}
+              style={({ hovered }: any) => [styles.attnItem, urgent && styles.attnItemUrgent, hovered && styles.attnItemHover]}
+            >
+              <View style={[styles.attnItemIcon, { backgroundColor: (urgent ? colors.red : colors.muted) + '18' }]}>
+                <Ionicons name={it.icon} size={16} color={urgent ? colors.red : colors.muted} />
+              </View>
+              <Text style={[styles.attnValue, { color: urgent ? colors.red : colors.ink }]}>{it.value}</Text>
+              <Text style={styles.attnLabel} numberOfLines={2}>{it.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Card>
   );
 }
 
@@ -586,7 +631,9 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
   const [confirming, setConfirming] = useState<Product | null>(null); // product pending delete
   const [selectedCat, setSelectedCat] = useState<string>('all'); // category sidebar filter
   const toast = useToast();
-  const stacked = width < 820;
+  // Below this the fixed category rail would starve the table of width, so the
+  // categories collapse to chips above it and the table gets the whole row.
+  const stacked = width < 1100;
 
   // "+ Add product" lives in the topbar; opening it bumps addNonce.
   useEffect(() => {
@@ -656,7 +703,11 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
 
   return (
     <View style={{ gap: 12 }}>
-      <View style={[styles.prodLayout, stacked && { flexDirection: 'column' }]}>
+      {/* alignItems:'flex-start' (from prodLayout) keeps the sticky category rail
+          from stretching in the row layout, but once stacked it would shrink-wrap
+          the children to their content width — letting the table's intrinsic
+          width win over the screen. Stretch them instead. */}
+      <View style={[styles.prodLayout, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
         {/* Category sidebar — filters the product list */}
         {stacked ? (
           <View style={styles.catChipRow}>{catList}</View>
@@ -668,7 +719,10 @@ function Products({ token, search, onSearch, view, addNonce }: { token: string; 
         )}
 
         {/* Main content (search / view / add live in the topbar on desktop) */}
-        <View style={{ flex: 1, gap: 12 }}>
+        {/* minWidth 0 lets this column shrink past the table's intrinsic width —
+            without it the table's min-width pushes the row wider than the page
+            and the whole admin scrolls sideways instead of the table alone. */}
+        <View style={{ flex: 1, minWidth: 0, gap: 12 }}>
           {/* Mobile-only search (topbar is too narrow on phones) */}
           {stacked && (
             <View style={styles.search}>
@@ -736,6 +790,46 @@ function CatItem({ label, active, stacked, onPress }: { label: string; active: b
   );
 }
 
+// Product table columns, widest-first render order. `prio` drives responsive
+// behaviour: 0 never drops, higher numbers drop first as the table narrows.
+// Dates go first (recoverable in the edit form), then unit/stock, then status
+// and category — so Name, Price and Actions survive down to the narrowest
+// desktop. `w` is a fixed width; `min` marks a flex column and its floor.
+const TABLE_COLS: { key: string; label: string; w?: number; min?: number; prio: number }[] = [
+  { key: 'sr', label: 'Sr No', w: 52, prio: 0 },
+  { key: 'img', label: 'Image', w: 52, prio: 1 },
+  { key: 'name', label: 'Name', min: 150, prio: 0 },
+  { key: 'cat', label: 'Category', min: 110, prio: 4 },
+  { key: 'price', label: 'Price', w: 96, prio: 0 },
+  { key: 'unit', label: 'Unit', w: 60, prio: 6 },
+  { key: 'stock', label: 'Stock', w: 60, prio: 5 },
+  { key: 'status', label: 'Status', w: 84, prio: 3 },
+  { key: 'created', label: 'Added', w: 100, prio: 7 },
+  { key: 'updated', label: 'Updated', w: 100, prio: 8 },
+  { key: 'actions', label: 'Actions', w: 186, prio: 0 },
+];
+
+// Narrowest width these columns render at without squashing — cells at their
+// fixed/min width, plus the row's horizontal padding and inter-cell gaps
+// (must track `tr` in the stylesheet).
+function colsWidth(keys: string[]): number {
+  const list = TABLE_COLS.filter((c) => keys.includes(c.key));
+  const cells = list.reduce((sum, c) => sum + (c.w ?? c.min ?? 0), 0);
+  return cells + 12 * 2 + 10 * Math.max(0, list.length - 1);
+}
+
+// The most columns that fit in `avail`, dropping lowest-priority first.
+function fitColumns(avail: number): string[] {
+  let keys = TABLE_COLS.map((c) => c.key);
+  while (colsWidth(keys) > avail) {
+    const droppable = TABLE_COLS.filter((c) => c.prio > 0 && keys.includes(c.key));
+    if (!droppable.length) break; // only essentials left — scroll from here
+    const drop = droppable.reduce((a, b) => (b.prio > a.prio ? b : a));
+    keys = keys.filter((k) => k !== drop.key);
+  }
+  return keys;
+}
+
 // Tabular (list) view — an image column plus all the product fields.
 function ProductTable({
   products,
@@ -748,60 +842,86 @@ function ProductTable({
   onDelete: (p: Product) => void;
   onToggleFeatured: (p: Product) => void;
 }) {
-  const { width } = useWindowDimensions();
-  // On roomy screens the table fills the container (flex columns absorb the
-  // extra width — no empty gap on the right). When the columns can't all fit it
-  // keeps its min width and scrolls horizontally so nothing gets squashed.
-  const fits = width >= 1040;
+  // Decide layout from the ACTUAL available width (the content area, already
+  // minus the nav + category panels) — not the window — so the table never
+  // overflows on laptops where the side panels eat most of the width. Columns
+  // drop by priority as space runs out; on roomy widths the flex columns absorb
+  // the extra. Only once the essentials alone won't fit does it scroll.
+  const [containerW, setContainerW] = useState(0);
+  const cols = useMemo(() => fitColumns(containerW || Infinity), [containerW]);
+  const has = (k: string) => cols.includes(k);
+  const minW = colsWidth(cols);
+  const fits = containerW >= minW;
 
   const table = (
-    <View style={[styles.table, fits ? styles.tableFull : styles.tableMin, fits && styles.tableStickyWrap]}>
+    <View style={[styles.table, fits ? styles.tableFull : { minWidth: minW }, fits && styles.tableStickyWrap]}>
         <View style={[styles.tr, styles.thead, fits && styles.theadSticky]}>
-          <Text style={[styles.th, styles.colSr]}>Sr No</Text>
-          <Text style={[styles.th, styles.colImg]}>Image</Text>
-          <Text style={[styles.th, styles.colName]}>Name</Text>
-          <Text style={[styles.th, styles.colCat]}>Category</Text>
-          <Text style={[styles.th, styles.colPrice]}>Price</Text>
-          <Text style={[styles.th, styles.colUnit]}>Unit</Text>
-          <Text style={[styles.th, styles.colStock]}>Stock</Text>
-          <Text style={[styles.th, styles.colStatus]}>Status</Text>
-          <Text style={[styles.th, styles.colDate]}>Added</Text>
-          <Text style={[styles.th, styles.colDate]}>Updated</Text>
-          <Text style={[styles.th, styles.colActions]}>Actions</Text>
+          {has('sr') && <Text style={[styles.th, styles.colSr]}>Sr No</Text>}
+          {has('img') && <Text style={[styles.th, styles.colImg]}>Image</Text>}
+          {has('name') && <Text style={[styles.th, styles.colName]}>Name</Text>}
+          {has('cat') && <Text style={[styles.th, styles.colCat]}>Category</Text>}
+          {has('price') && <Text style={[styles.th, styles.colPrice]}>Price</Text>}
+          {has('unit') && <Text style={[styles.th, styles.colUnit]}>Unit</Text>}
+          {has('stock') && <Text style={[styles.th, styles.colStock]}>Stock</Text>}
+          {has('status') && <Text style={[styles.th, styles.colStatus]}>Status</Text>}
+          {has('created') && <Text style={[styles.th, styles.colDate]}>Added</Text>}
+          {has('updated') && <Text style={[styles.th, styles.colDate]}>Updated</Text>}
+          {has('actions') && <Text style={[styles.th, styles.colActions]}>Actions</Text>}
         </View>
         {products.map((p, i) => (
           <View key={p.id} style={[styles.tr, i % 2 === 1 && styles.trAlt]}>
-            <Text style={[styles.td, styles.tdStrong, styles.colSr]}>{i + 1}</Text>
-            <View style={styles.colImg}><ProductThumb product={p} size={44} /></View>
-            <Text style={[styles.td, styles.colName, styles.tdStrong]} numberOfLines={2}>{p.name}</Text>
-            <Text style={[styles.td, styles.colCat]} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>
-            <Text style={[styles.td, styles.colPrice]}>{money(p.price, p.currency)}</Text>
-            <Text style={[styles.td, styles.colUnit]}>{p.unit}</Text>
-            <Text style={[styles.td, styles.colStock]}>{p.stock}</Text>
-            <View style={styles.colStatus}>
-              <Badge text={p.is_active ? 'active' : 'hidden'} tone={p.is_active ? 'green' : 'muted'} />
-            </View>
-            <Text style={[styles.td, styles.colDate]}>{fmtDate(p.created_at)}</Text>
-            <Text style={[styles.td, styles.colDate]}>{fmtDate(p.updated_at)}</Text>
-            <View style={[styles.colActions, styles.actionCell]}>
-              <Pressable
-                onPress={() => onToggleFeatured(p)}
-                hitSlop={6}
-                style={styles.starBtn}
-                accessibilityLabel={p.is_featured ? 'Remove from featured' : 'Add to featured'}
-              >
-                <Ionicons name={p.is_featured ? 'star' : 'star-outline'} size={20} color={p.is_featured ? colors.orange : colors.muted} />
-              </Pressable>
-              <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={styles.smallBtn} />
-              <Button label="Delete" variant="danger" onPress={() => onDelete(p)} style={styles.smallBtn} />
-            </View>
+            {has('sr') && <Text style={[styles.td, styles.tdStrong, styles.colSr]}>{i + 1}</Text>}
+            {has('img') && <View style={styles.colImg}><ProductThumb product={p} size={44} /></View>}
+            {has('name') && (
+              <View style={styles.colName}>
+                <Text style={[styles.td, styles.tdStrong]} numberOfLines={2}>{p.name}</Text>
+                {/* Category folds into the name cell once its own column drops */}
+                {!has('cat') && (
+                  <Text style={styles.subTd} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>
+                )}
+              </View>
+            )}
+            {has('cat') && <Text style={[styles.td, styles.colCat]} numberOfLines={1}>{p.category_name || 'Uncategorised'}</Text>}
+            {has('price') && <Text style={[styles.td, styles.colPrice]}>{money(p.price, p.currency)}</Text>}
+            {has('unit') && <Text style={[styles.td, styles.colUnit]}>{p.unit}</Text>}
+            {has('stock') && <Text style={[styles.td, styles.colStock]}>{p.stock}</Text>}
+            {has('status') && (
+              <View style={styles.colStatus}>
+                <Badge text={p.is_active ? 'active' : 'hidden'} tone={p.is_active ? 'green' : 'muted'} />
+              </View>
+            )}
+            {has('created') && <Text style={[styles.td, styles.colDate]}>{fmtDate(p.created_at)}</Text>}
+            {has('updated') && <Text style={[styles.td, styles.colDate]}>{fmtDate(p.updated_at)}</Text>}
+            {has('actions') && (
+              <View style={[styles.colActions, styles.actionCell]}>
+                <Pressable
+                  onPress={() => onToggleFeatured(p)}
+                  hitSlop={6}
+                  style={styles.starBtn}
+                  accessibilityLabel={p.is_featured ? 'Remove from featured' : 'Add to featured'}
+                >
+                  <Ionicons name={p.is_featured ? 'star' : 'star-outline'} size={20} color={p.is_featured ? colors.orange : colors.muted} />
+                </Pressable>
+                <Button label="Edit" variant="ghost" onPress={() => onEdit(p)} style={styles.smallBtn} />
+                <Button label="Delete" variant="danger" onPress={() => onDelete(p)} style={styles.smallBtn} />
+              </View>
+            )}
           </View>
         ))}
     </View>
   );
 
-  // Full width on desktop; horizontal scroll only when the screen is narrow.
-  return fits ? table : <ScrollView horizontal showsHorizontalScrollIndicator={false}>{table}</ScrollView>;
+  // Full width when the container is roomy; horizontal scroll only when even
+  // the essential columns are too wide for the space. width:100% pins the
+  // wrapper to the container (so onLayout measures the space we actually have,
+  // not the table's own width), and clipping while scrolling keeps the overflow
+  // inside the table instead of widening the page. No clip when it fits — the
+  // sticky header needs to escape the wrapper.
+  return (
+    <View style={[{ width: '100%' }, !fits && { overflow: 'hidden' }]} onLayout={(e) => setContainerW(e.nativeEvent.layout.width)}>
+      {fits ? table : <ScrollView horizontal showsHorizontalScrollIndicator={false}>{table}</ScrollView>}
+    </View>
+  );
 }
 
 // Grid view — image-forward cards.
@@ -2177,7 +2297,7 @@ const styles = StyleSheet.create({
   sideFooter: { borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: 8, gap: 2 },
 
   // Topbar profile dropdown (holds View site + Log out)
-  profileWrap: { position: 'relative' },
+  profileWrap: { position: 'relative', flexShrink: 0 },
   profileScrim: Platform.OS === 'web'
     ? ({ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 } as any)
     : { position: 'absolute', top: -1000, left: -1000, right: -1000, height: 3000, zIndex: 40 },
@@ -2212,8 +2332,11 @@ const styles = StyleSheet.create({
   addBtnCompact: { paddingHorizontal: 12, gap: 0 },
   pageTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
   pageSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
-  topSearch: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 240, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: colors.white },
+  // minWidth 0 lets this actually shrink — without it the search box's width
+  // pins the row open and the profile avatar spills off the right edge on the
+  // ~900–1100px band, where the topbar has not gone compact yet.
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1, minWidth: 0 },
+  topSearch: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 240, flexShrink: 1, minWidth: 132, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: colors.white },
   adminAvatar: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
   adminAvatarText: { color: colors.white, fontWeight: '900', fontSize: 16 },
   tabs: { gap: 8 },
@@ -2234,9 +2357,13 @@ const styles = StyleSheet.create({
   muted: { color: colors.muted, fontSize: 14 },
   h: { fontWeight: '900', fontSize: 16, color: colors.ink },
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  // Hero KPIs — four large cards across the top.
+  heroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  // Secondary metrics — a tighter row of smaller cards.
+  secGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: {
     minWidth: 150,
-    maxWidth: 300,
+    maxWidth: 360,
     flexGrow: 1,
     flexBasis: 150,
     gap: 6,
@@ -2247,7 +2374,26 @@ const styles = StyleSheet.create({
     padding: 16,
     ...shadow.soft,
   },
+  statCardSm: { padding: 13, gap: 3, minWidth: 132, flexBasis: 140, maxWidth: 400 },
+  statValueSm: { fontSize: 20 },
+  statIconSm: { width: 30, height: 30 },
   statCardClickable: { cursor: 'pointer' as any },
+  // Needs-attention band
+  attnCard: { gap: 12 },
+  attnHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  attnHeadIcon: { width: 26, height: 26, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  attnHeadIconActive: { backgroundColor: '#FDECEC' },
+  attnHeadIconCalm: { backgroundColor: '#E7F7EE' },
+  attnCountPill: { backgroundColor: colors.red, borderRadius: 999, minWidth: 22, height: 22, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
+  attnCountText: { color: colors.white, fontSize: 12, fontWeight: '900' },
+  attnAllClear: { color: colors.green, fontWeight: '800', fontSize: 13 },
+  attnRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  attnItem: { flexDirection: 'row', alignItems: 'center', gap: 10, flexGrow: 1, flexBasis: 180, minWidth: 158, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 12, paddingVertical: 11, backgroundColor: colors.white, cursor: 'pointer' as any },
+  attnItemUrgent: { borderColor: '#F6C9C6', backgroundColor: '#FEF6F5' },
+  attnItemHover: { ...shadow.card, transform: [{ translateY: -1 }] },
+  attnItemIcon: { width: 32, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  attnValue: { fontSize: 19, fontWeight: '900' },
+  attnLabel: { flex: 1, color: colors.muted, fontSize: 12.5, fontWeight: '700', lineHeight: 16 },
   statTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   statIcon: { width: 38, height: 38, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   statValue: { fontSize: 26, fontWeight: '900' },
@@ -2287,7 +2433,7 @@ const styles = StyleSheet.create({
   tabBar: { backgroundColor: colors.white, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, padding: 6, marginTop: 4, ...shadow.soft },
   // stat card extras
   statSub: { color: colors.muted, fontSize: 11, fontWeight: '600', marginTop: 2 },
-  statCardRing: { borderColor: colors.green, borderWidth: 1.5, backgroundColor: '#F2FBF6' },
+  statCardRing: { borderColor: colors.red, borderWidth: 1.5, backgroundColor: colors.redSoft },
   trendBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   trendUp: { backgroundColor: '#E7F7EE' },
   trendDown: { backgroundColor: '#FDECEC' },
@@ -2380,8 +2526,11 @@ const styles = StyleSheet.create({
   // products category sidebar
   prodLayout: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
   prodHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  catSidebar: { width: 220, backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 8, gap: 4 },
+  catSidebar: { width: 200, flexShrink: 0, backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 8, gap: 4 },
   // Keep the category list in view while the product list scrolls (web).
+  // Full viewport height (minus the topbar) so the rail reads as a full-height
+  // panel beside the long product table rather than stopping halfway down the
+  // page; scrolls on its own if the category list ever outgrows the screen.
   catSticky: { position: 'sticky' as any, top: 16, height: 'calc(100vh - 110px)' as any, overflowY: 'auto' as any },
   catSideTitle: { fontWeight: '900', fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 8, paddingTop: 6, paddingBottom: 4 },
   catRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.sm },
@@ -2405,7 +2554,7 @@ const styles = StyleSheet.create({
   catCountText: { fontSize: 11, fontWeight: '800', color: colors.muted },
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.white },
-  searchInput: { flex: 1, fontSize: 14, color: colors.text, outlineStyle: 'none' as any },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text, outlineStyle: 'none' as any },
   toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   viewToggle: { flexDirection: 'row', backgroundColor: '#F1F2F5', borderRadius: radius.pill, padding: 3 },
   viewBtn: { width: 38, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
@@ -2419,7 +2568,6 @@ const styles = StyleSheet.create({
   // can pin to the page scroll instead of being clipped by the rounded corners.
   tableStickyWrap: { overflow: 'visible' as any },
   theadSticky: { position: 'sticky' as any, top: 0, zIndex: 5, backgroundColor: '#FAFAFB', borderBottomWidth: 1, borderBottomColor: colors.border },
-  tableMin: { minWidth: 1012 },
   tr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: colors.border },
   thead: { backgroundColor: '#FAFAFB', borderTopWidth: 0 },
   trAlt: { backgroundColor: '#FCFCFD' },
@@ -2427,6 +2575,8 @@ const styles = StyleSheet.create({
   th: { fontSize: 12, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
   td: { fontSize: 14, color: colors.text },
   tdStrong: { fontWeight: '800', color: colors.ink },
+  // Secondary line inside the name cell (holds category once that column drops).
+  subTd: { fontSize: 12, color: colors.muted, marginTop: 2 },
   colSr: { width: 52 },
   colImg: { width: 52 },
   colName: { flex: 2.2, minWidth: 150 },
@@ -2436,8 +2586,8 @@ const styles = StyleSheet.create({
   colStock: { width: 60 },
   colStatus: { width: 84 },
   colDate: { width: 100, color: colors.muted },
-  colActions: { width: 150 },
-  actionCell: { flexDirection: 'row', gap: 8 },
+  colActions: { width: 186, flexShrink: 0 },
+  actionCell: { flexDirection: 'row', gap: 8, flexShrink: 0 },
   smallBtn: { paddingHorizontal: 12, paddingVertical: 7 },
   starBtn: { paddingHorizontal: 6, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   founderThumb: { width: 56, height: 56, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.border },
