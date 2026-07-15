@@ -15,8 +15,10 @@ import { parsePhone, Country } from '../lib/countries';
 import { vEmail, vName, vPhoneLen, vRequired, isClean, sanitizeName } from '../lib/validate';
 
 
-// Hero background — uploaded import/export artwork.
-const IE_HOME_IMG = require('../../assets/images/importexporthome.png');
+// Hero background — uploaded import/export artwork (light world-map + spices),
+// shown bright as-is. A soft white scrim over the top keeps the dark heading /
+// subtext readable (see dhBgImg / dhOverlay).
+const IE_HOME_IMG = require('../../assets/images/importexporthomepage.png');
 
 // Hero headline split into a white line + a tomato-red accent line (for the typewriter).
 const HEAD_SEGMENTS = [
@@ -443,9 +445,20 @@ export default function ImportExport() {
     <ScrollView ref={scrollRef} style={{ backgroundColor: P.cream }} contentContainerStyle={{ flexGrow: 1 }}>
       {/* ───────── HERO — dark section (fills the viewport) ───────── */}
       <View style={[styles.darkHero, { minHeight: Math.max(560, height), justifyContent: 'flex-start', paddingTop: tight ? 28 : 44 }]}>
-        {/* Full-width background artwork */}
-        <Image source={IE_HOME_IMG} style={StyleSheet.absoluteFillObject as any} contentFit="cover" />
-        {/* Dark overlay for text legibility */}
+        {/* Full-width background artwork — dimmed so the bright artwork reads dark.
+            The artwork is a wide 1567x672 (2.33:1). On phones the hero box is
+            taller than it is wide, so `cover` blew it up to ~2000px and threw away
+            ~79% of it, leaving an unreadable zoomed slice. There it's anchored to
+            the bottom and shown whole instead — full width, spices under the copy,
+            the hero's own gradient behind the text. Roomier screens are close
+            enough in shape to keep the full-bleed cover. */}
+        <Image
+          source={IE_HOME_IMG}
+          style={styles.dhBgImg}
+          contentFit={tight ? 'contain' : 'cover'}
+          contentPosition={tight ? 'bottom' : 'center'}
+        />
+        {/* Dark gradient + vignette for a deep background and text legibility */}
         <View pointerEvents="none" style={styles.dhOverlay} />
 
         {/* Warm gold glow behind the heading (the "network of light" feel) */}
@@ -483,7 +496,7 @@ export default function ImportExport() {
               <Text style={[styles.dhBtnRedTxt, { fontSize: 15 }]}>Begin Registration</Text>
               <Ionicons name="arrow-forward" size={17} color="#fff" />
             </Pressable>
-            <Pressable style={({ hovered }: any) => [styles.dhBtnGhost, hovered && { borderColor: 'rgba(255,255,255,0.65)' }]} onPress={scrollToBenefits}>
+            <Pressable style={({ hovered }: any) => [styles.dhBtnGhost, hovered && { borderColor: 'rgba(30,24,19,0.5)' }]} onPress={scrollToBenefits}>
               <Text style={styles.dhBtnGhostTxt}>How it works</Text>
             </Pressable>
           </View>
@@ -491,7 +504,7 @@ export default function ImportExport() {
 
         {/* Scroll cue */}
         <View pointerEvents="none" style={styles.dhScrollCue}>
-          <Ionicons name="chevron-down" size={22} color="rgba(255,255,255,0.55)" />
+          <Ionicons name="chevron-down" size={22} color="rgba(30,24,19,0.45)" />
         </View>
       </View>
 
@@ -700,14 +713,27 @@ const styles = StyleSheet.create({
   darkHero: {
     width: '100%', overflow: 'hidden', alignItems: 'center',
     ...(Platform.OS === 'web'
-      ? ({ backgroundImage: 'radial-gradient(120% 90% at 50% 40%, #1C0F0C 0%, #140A09 55%, #0C0605 100%)' } as any)
-      : { backgroundColor: '#140A09' }),
+      ? ({ backgroundImage: 'radial-gradient(120% 90% at 50% 40%, #FFFFFF 0%, #F6F1E9 60%, #EFE7D9 100%)' } as any)
+      : { backgroundColor: P.cream }),
   },
+  // Background photo shown as-is (light artwork). A hair of saturation keeps the
+  // spices vivid; no dimming — this is the bright hero.
+  dhBgImg: {
+    ...StyleSheet.absoluteFillObject,
+    ...(Platform.OS === 'web'
+      ? ({ filter: 'saturate(1.06)' } as any)
+      : null),
+  },
+  // Soft white scrim over the top third only, so the dark heading / subtext stay
+  // crisp while the spices lower down keep their full colour.
   dhOverlay: {
     ...StyleSheet.absoluteFillObject,
     ...(Platform.OS === 'web'
-      ? { backgroundImage: 'linear-gradient(180deg,rgba(10,6,5,0.68) 0%,rgba(10,6,5,0.58) 50%,rgba(10,6,5,0.44) 100%)' } as any
-      : { backgroundColor: 'rgba(10,6,5,0.6)' }),
+      ? {
+          backgroundImage:
+            'linear-gradient(180deg, rgba(255,255,255,0.74) 0%, rgba(255,255,255,0.4) 26%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 68%)',
+        } as any
+      : { backgroundColor: 'rgba(255,255,255,0.3)' }),
   },
   // Maroon edge blooms echoing the reference's burgundy corners.
   dhBlob1: { position: 'absolute', width: 620, height: 620, borderRadius: 999, backgroundColor: 'rgba(120,18,14,0.30)', top: -260, left: -180 },
@@ -730,18 +756,18 @@ const styles = StyleSheet.create({
   dhGoldGlow: {
     position: 'absolute', width: 720, height: 420, alignSelf: 'center', top: '22%', borderRadius: 999,
     ...(Platform.OS === 'web'
-      ? ({ backgroundImage: 'radial-gradient(closest-side, rgba(225,29,42,0.16) 0%, rgba(225,29,42,0) 100%)' } as any)
+      ? ({ backgroundImage: 'radial-gradient(closest-side, rgba(225,29,42,0.05) 0%, rgba(225,29,42,0) 100%)' } as any)
       : { backgroundColor: 'transparent' }),
   },
   dhScrollCue: { position: 'absolute', bottom: 22, alignSelf: 'center', alignItems: 'center' },
   dhCenter: { width: '100%', maxWidth: 860, alignItems: 'center', gap: 20, alignSelf: 'center', zIndex: 2 },
-  dhPill: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(224,164,72,0.35)', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
-  dhPillText: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
-  dhHeading: { color: '#FFFFFF', fontWeight: '900', letterSpacing: -1, textAlign: 'center' },
+  dhPill: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(193,154,75,0.5)', backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
+  dhPillText: { color: P.espresso, fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
+  dhHeading: { color: P.espresso, fontWeight: '900', letterSpacing: -1, textAlign: 'center' },
   dhAccent: { color: P.red, fontWeight: '900' },
   dhSub: {
-    color: 'rgba(255,255,255,0.94)', fontWeight: '600', lineHeight: 26, textAlign: 'center', maxWidth: 580,
-    ...(Platform.OS === 'web' ? ({ textShadow: '0 2px 10px rgba(0,0,0,0.55)' } as any) : { textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } }),
+    color: '#3D362E', fontWeight: '600', lineHeight: 26, textAlign: 'center', maxWidth: 580,
+    ...(Platform.OS === 'web' ? ({ textShadow: '0 1px 2px rgba(255,255,255,0.7)' } as any) : null),
   },
   dhStats: { flexDirection: 'row', alignItems: 'center', gap: 28, flexWrap: 'wrap', justifyContent: 'center' },
   dhStat: { alignItems: 'center', gap: 3 },
@@ -751,8 +777,8 @@ const styles = StyleSheet.create({
   dhBtns: { flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center' },
   dhBtnRed: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: P.red, paddingHorizontal: 26, paddingVertical: 14, borderRadius: 999 },
   dhBtnRedTxt: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
-  dhBtnGhost: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999 },
-  dhBtnGhostTxt: { color: 'rgba(255,255,255,0.88)', fontWeight: '800', fontSize: 15 },
+  dhBtnGhost: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(30,24,19,0.28)', backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999 },
+  dhBtnGhostTxt: { color: P.espresso, fontWeight: '800', fontSize: 15 },
   dhSubBrand: { color: 'rgba(255,255,255,0.9)', fontWeight: '800' },
 
   /* HERO — editorial (cream), matches the About page */
